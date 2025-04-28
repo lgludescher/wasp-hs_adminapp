@@ -13,6 +13,7 @@ __pycache__/
 
 # SQLite database files
 *.sqlite3
+test.db
 
 # Log files
 *.log

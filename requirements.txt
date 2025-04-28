@@ -1,6 +1,9 @@
 fastapi
 uvicorn[standard]
-sqlalchemy
+SQLAlchemy
 pydantic
+pydantic-settings
 python-dotenv
 alembic
+pytest
+httpx
