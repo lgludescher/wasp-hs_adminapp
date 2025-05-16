@@ -63,3 +63,42 @@ def test_create_and_list_user():
     users = response.json()
     usernames = [u["username"] for u in users]
     assert "bob" in usernames
+
+
+def test_update_user():
+    # Create a user “bob”
+    client.post(
+        "/users/",
+        json={"username": "bob", "name": "Bob", "email": "bob@e.com"},
+        headers={"X-Dev-User": "alice"}
+    )
+    # Update “bob” to change name & admin flag
+    resp = client.put(
+        "/users/bob",
+        json={"name": "Bobby", "is_admin": True},
+        headers={"X-Dev-User": "alice"}
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["username"] == "bob"
+    assert data["name"] == "Bobby"
+    assert data["is_admin"] is True
+
+
+def test_delete_user():
+    # Create “carol”
+    client.post(
+        "/users/",
+        json={"username": "carol", "name": "Carol", "email": "carol@e.com"},
+        headers={"X-Dev-User": "alice"}
+    )
+    # Delete “carol”
+    resp = client.delete(
+        "/users/carol",
+        headers={"X-Dev-User": "alice"}
+    )
+    assert resp.status_code == 204
+    # Ensure she’s gone
+    resp = client.get("/users/", headers={"X-Dev-User": "alice"})
+    usernames = [u["username"] for u in resp.json()]
+    assert "carol" not in usernames

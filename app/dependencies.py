@@ -26,8 +26,12 @@ def get_current_user(
         if not user:
             user = crud.create_user(
                 db,
-                schemas.UserCreate(username=x_dev_user, name=x_dev_user, email=f"{x_dev_user}@example.com"),
-                is_admin=True
+                schemas.UserCreate(
+                    username=x_dev_user,
+                    name=x_dev_user,
+                    email=f"{x_dev_user}@example.com",
+                    is_admin=True
+                )
             )
         return user
 
