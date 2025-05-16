@@ -41,12 +41,18 @@ client = TestClient(app)
 def test_create_and_list_user():
     response = client.post(
         "/users/",
-        json={"username": "bob"},
+        json={
+            "username": "bob",
+            "name": "Bob Example",
+            "email": "bob@example.com"
+        },
         headers={"X-Dev-User": "alice"}
     )
     assert response.status_code == 200
     data = response.json()
     assert data["username"] == "bob"
+    assert data["name"] == "Bob Example"
+    assert data["email"] == "bob@example.com"
     assert isinstance(data["id"], int)
 
     response = client.get(

@@ -5,7 +5,8 @@ from sqlalchemy import (
     ForeignKey, UniqueConstraint, CheckConstraint
 )
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, foreign
+from sqlalchemy import and_
 from .database import Base
 
 
@@ -142,7 +143,10 @@ class Course(Base):
     teachers = relationship("CourseTeacher", back_populates="course", cascade="all, delete-orphan")
     decision_letters = relationship(
         "DecisionLetter",
-        primaryjoin="and_(DecisionLetter.entity_type=='course', DecisionLetter.entity_id==Course.id)",
+        primaryjoin=lambda: and_(
+            DecisionLetter.entity_type == EntityType.COURSE,
+            foreign(DecisionLetter.entity_id) == Course.id
+        ),
         viewonly=True
     )
 
@@ -157,7 +161,16 @@ class GradSchoolActivity(Base):
 
     activity_type = relationship("GradSchoolActivityType", back_populates="activities",
                                  foreign_keys="GradSchoolActivity.activity_type_id")
-    student_activities = relationship("GradSchoolStudentActivity", back_populates="activity", viewonly=True)
+
+    student_activities = relationship(
+        "GradSchoolStudentActivity",
+        back_populates="activity",
+        viewonly=True,
+        primaryjoin=lambda: and_(
+            StudentActivity.activity_type == ActivityType.GRAD_SCHOOL,
+            foreign(StudentActivity.activity_id) == GradSchoolActivity.id
+        )
+    )
 
     # back‐reference: all courses linked to this grad‐school activity
     courses = relationship("Course", back_populates="grad_school_activity",
@@ -207,6 +220,14 @@ class PersonRole(Base):
         "CourseTeacher",
         back_populates="person_role",
         cascade="all, delete-orphan"
+    )
+    decision_letters = relationship(
+        "DecisionLetter",
+        primaryjoin=lambda: and_(
+            DecisionLetter.entity_type == EntityType.PERSON_ROLE,
+            foreign(DecisionLetter.entity_id) == PersonRole.id
+        ),
+        viewonly=True
     )
 
 
@@ -298,7 +319,10 @@ class Project(Base):
                                            cascade="all, delete-orphan")
     decision_letters = relationship(
         "DecisionLetter",
-        primaryjoin="and_(DecisionLetter.entity_type=='project', DecisionLetter.entity_id==Project.id)",
+        primaryjoin=lambda: and_(
+            DecisionLetter.entity_type == EntityType.PROJECT,
+            foreign(DecisionLetter.entity_id) == Project.id
+        ),
         viewonly=True
     )
 
@@ -427,11 +451,11 @@ class GradSchoolStudentActivity(StudentActivity):
     activity = relationship(
         "GradSchoolActivity",
         back_populates="student_activities",
-        primaryjoin=(
-            "and_(StudentActivity.activity_type=='grad_school', "  
-            "StudentActivity.activity_id==GradSchoolActivity.id)"
-        ),
-        viewonly=True
+        viewonly=True,
+        primaryjoin=lambda: and_(
+            StudentActivity.activity_type == ActivityType.GRAD_SCHOOL,
+            foreign(StudentActivity.activity_id) == GradSchoolActivity.id
+        )
     )
 
 
@@ -499,25 +523,25 @@ class DecisionLetter(Base):
 
     person_role = relationship(
         "PersonRole",
-        primaryjoin=(
-            "and_(DecisionLetter.entity_type=='person_role', "
-            "DecisionLetter.entity_id==PersonRole.id)"
+        primaryjoin=lambda: and_(
+            DecisionLetter.entity_type == EntityType.PERSON_ROLE,
+            foreign(DecisionLetter.entity_id) == PersonRole.id
         ),
         viewonly=True
     )
     project = relationship(
         "Project",
-        primaryjoin=(
-            "and_(DecisionLetter.entity_type=='project', "
-            "DecisionLetter.entity_id==Project.id)"
+        primaryjoin=lambda: and_(
+            DecisionLetter.entity_type == EntityType.PROJECT,
+            foreign(DecisionLetter.entity_id) == Project.id
         ),
         viewonly=True
     )
     course = relationship(
         "Course",
-        primaryjoin=(
-            "and_(DecisionLetter.entity_type=='course', "
-            "DecisionLetter.entity_id==Course.id)"
+        primaryjoin=lambda: and_(
+            DecisionLetter.entity_type == EntityType.COURSE,
+            foreign(DecisionLetter.entity_id) == Course.id
         ),
         viewonly=True
     )

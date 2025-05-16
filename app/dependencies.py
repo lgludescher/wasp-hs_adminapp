@@ -15,25 +15,30 @@ def get_db():
 
 def get_current_user(
     x_remote_user: str = Header(None),
+    auth:          str = Header(None, alias="Auth"),
     x_dev_user:    str = Header(None, alias="X-Dev-User"),
     db: Session = Depends(get_db)
 ) -> schemas.UserRead:
-    # 1) Production path: Apache will set X-Remote-User
-    if x_remote_user:
-        user = crud.get_user(db, x_remote_user)
-        if not user:
-            raise HTTPException(403, "User not provisioned")
-        return user
 
-    # 2) Local fallback: only when DEBUG is on
+    # -- Local development fallback (only when debug=True) --
     if settings.debug and x_dev_user:
         user = crud.get_user(db, x_dev_user)
         if not user:
-            # auto-create a dev admin so you can test
-            user = crud.create_user(db,
-                                    schemas.UserCreate(username=x_dev_user),
-                                    is_admin=True)
+            user = crud.create_user(
+                db,
+                schemas.UserCreate(username=x_dev_user, name=x_dev_user, email=f"{x_dev_user}@example.com"),
+                is_admin=True
+            )
         return user
 
-    # 3) otherwise, block
-    raise HTTPException(401, "Authentication required")
+    # -- Production path: require static header, then remote-user --
+    if auth != settings.auth_token:
+        raise HTTPException(401, "Invalid auth token")
+
+    if not x_remote_user:
+        raise HTTPException(401, "Authentication required")
+
+    user = crud.get_user(db, x_remote_user)
+    if not user:
+        raise HTTPException(403, "User not provisioned")
+    return user
