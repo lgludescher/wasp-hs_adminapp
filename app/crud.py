@@ -1,5 +1,7 @@
 from sqlalchemy.orm import Session
 from . import models, schemas
+from typing import Optional
+from sqlalchemy import or_
 
 
 class EntityNotFoundError(Exception):
@@ -10,8 +12,24 @@ def get_user(db: Session, username: str):
     return db.query(models.User).filter_by(username=username).first()
 
 
-def get_users(db: Session):
-    return db.query(models.User).all()
+def get_users(db: Session, is_admin: Optional[bool] = None, search: Optional[str] = None):
+    q = db.query(models.User)
+    if is_admin is not None:
+        q = q.filter_by(is_admin=is_admin)
+
+    if search:
+        term = f"%{search}%"
+        # case-insensitive substring match
+        q = q.filter(
+            or_(
+                models.User.username.ilike(term),
+                models.User.name.ilike(term),
+                models.User.email.ilike(term),
+            )
+        )
+
+    # always return in alphabetical order by username
+    return q.order_by(models.User.username).all()
 
 
 def create_user(db: Session, user_in: schemas.UserCreate, is_admin: bool = False):

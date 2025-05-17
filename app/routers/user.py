@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException, Response, Query
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from .. import crud, schemas, dependencies
 from ..crud import EntityNotFoundError
@@ -11,8 +11,31 @@ router = APIRouter(prefix="/users", tags=["users"])
 logger = logging.getLogger(__name__)
 
 
+@router.get("/{username}", response_model=schemas.UserRead)
+async def read_user(
+    username: str,
+    current_user: schemas.UserRead = Depends(dependencies.get_current_user),
+    db: Session = Depends(dependencies.get_db)
+):
+    # allow admins to fetch anyone, non-admins only themselves
+    if not current_user.is_admin and current_user.username != username:
+        logger.warning(f"{current_user.username} forbidden from reading {username}")
+        raise HTTPException(403, "Not allowed to fetch this user")
+
+    user = crud.get_user(db, username)
+    if not user:
+        logger.warning(f"User '{username}' not found")
+        raise HTTPException(404, f"User '{username}' not found")
+
+    logger.info(f"{current_user.username} fetched user '{username}'")
+
+    return user
+
+
 @router.get("/", response_model=List[schemas.UserRead])
 async def list_users(
+    is_admin: Optional[bool] = Query(None, description="Filter by admin status"),
+    search:   Optional[str] = Query(None, description="Substring search on username, name, or email"),
     current_user: schemas.UserRead = Depends(dependencies.get_current_user),
     db: Session = Depends(dependencies.get_db)
 ):
@@ -20,8 +43,8 @@ async def list_users(
         logger.warning(f"Unauthorized list_users attempt by {current_user.username}")
         raise HTTPException(403, "Only admins can list users")
 
-    logger.info(f"{current_user.username} listed all users")
-    return crud.get_users(db)
+    logger.info(f"{current_user.username} listed users (is_admin={is_admin}, search={search!r})")
+    return crud.get_users(db, is_admin=is_admin, search=search)
 
 
 @router.post("/", response_model=schemas.UserRead)
