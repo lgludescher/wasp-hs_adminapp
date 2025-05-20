@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 from . import models, schemas
-from typing import Optional
-from sqlalchemy import or_
+from typing import Optional, List
+from sqlalchemy import case, desc, and_, or_
+from .models import Season, CourseTerm, GradSchoolActivity
 
 
 class EntityNotFoundError(Exception):
@@ -214,4 +215,184 @@ def delete_field(db: Session, field_id: int):
     if not db_field:
         raise EntityNotFoundError(f"Field #{field_id} not found")
     db.delete(db_field)
+    db.commit()
+
+
+# ---------- Course ----------
+
+# Course Term
+SEASON_ORDER = {
+    Season.WINTER: 0,
+    Season.SPRING: 1,
+    Season.SUMMER: 2,
+    Season.FALL:   3,
+}
+
+
+def get_course_term(db: Session, term_id: int):
+    return db.query(models.CourseTerm).filter_by(id=term_id).first()
+
+
+def list_course_terms(db: Session, active: Optional[bool] = None) -> list[models.CourseTerm]:
+    q = db.query(models.CourseTerm)
+    if active is not None:
+        q = q.filter_by(is_active=active)
+
+    # build a *mapping* of condition → sort order so SQLAlchemy sees a Mapping
+    season_cases = {
+        models.CourseTerm.season == s: order
+        for s, order in SEASON_ORDER.items()
+    }
+    season_ordering = case(season_cases, else_=0)
+
+    terms = (
+        q.order_by(
+            desc(models.CourseTerm.year),
+            desc(season_ordering)
+        )
+        .all()
+    )
+    return terms  # type: ignore
+
+
+def create_next_course_term(db: Session) -> models.CourseTerm:
+    existing = list_course_terms(db)
+    if existing:
+        last = existing[0]
+        idx = SEASON_ORDER[last.season]
+        if idx < len(SEASON_ORDER) - 1:
+            next_season = list(SEASON_ORDER)[idx + 1]
+            next_year = last.year
+        else:
+            next_season = list(SEASON_ORDER)[0]
+            next_year = last.year + 1
+    else:
+        # very first term: WINTER 2019
+        next_season, next_year = list(SEASON_ORDER)[0], 2019
+
+    new = models.CourseTerm(season=next_season, year=next_year)
+    db.add(new)
+    db.commit()
+    db.refresh(new)
+    return new
+
+
+def update_course_term(db: Session, term_id: int, term_in: schemas.CourseTermUpdate):
+    term = get_course_term(db, term_id)
+    if not term:
+        raise EntityNotFoundError(f"CourseTerm #{term_id} not found")
+    term.is_active = term_in.is_active
+    db.commit()
+    db.refresh(term)
+    return term
+
+
+def delete_course_term(db: Session, term_id: int):
+    term = get_course_term(db, term_id)
+    if not term:
+        raise EntityNotFoundError(f"CourseTerm #{term_id} not found")
+
+    # only the very latest can be deleted, and only if no courses use it
+    latest = list_course_terms(db)[0]
+    if term.id != latest.id:
+        raise Exception("Only the most recent term may be deleted")
+    if term.courses:
+        raise Exception("Cannot delete term in use by courses")
+
+    db.delete(term)
+    db.commit()
+
+
+# Course
+def get_course(db: Session, course_id: int):
+    return db.query(models.Course).filter_by(id=course_id).first()
+
+
+def list_courses(db: Session, title: Optional[str] = None, term_id: Optional[int] = None,
+                 activity_id: Optional[int] = None, search: Optional[str] = None):
+    q = db.query(models.Course)
+
+    if title is not None:
+        q = q.filter_by(title=title)
+    if term_id is not None:
+        q = q.filter_by(course_term_id=term_id)
+    if activity_id is not None:
+        q = q.filter_by(grad_school_activity_id=activity_id)
+
+    if search:
+        term = f"%{search}%"
+        q = q.filter(models.Course.title.ilike(term))
+
+    # build a *mapping* of condition → sort order so SQLAlchemy sees a Mapping
+    season_cases = {
+        models.CourseTerm.season == s: order
+        for s, order in SEASON_ORDER.items()
+    }
+    season_ordering = case(season_cases, else_=0)
+
+    # join term and activity to extract year, then order by descending year/season
+    year_cases = {
+        models.CourseTerm.year.isnot(None): models.CourseTerm.year,
+        models.GradSchoolActivity.year.isnot(None): models.GradSchoolActivity.year
+    }
+
+    q = (
+        q.outerjoin(models.CourseTerm, models.Course.course_term_id == models.CourseTerm.id)
+        .outerjoin(models.GradSchoolActivity,
+                   models.Course.grad_school_activity_id == models.GradSchoolActivity.id)
+        .order_by(
+            desc(case(year_cases, else_=0)),
+            desc(season_ordering)
+        )
+    )
+
+    return q.all()  # type: ignore
+
+
+def create_course(db: Session, c_in: schemas.CourseCreate):
+    # guard duplicate within same term or same activity
+    dup_q = db.query(models.Course).filter_by(title=c_in.title)
+    if c_in.course_term_id:
+        dup_q = dup_q.filter_by(course_term_id=c_in.course_term_id)
+    if c_in.grad_school_activity_id:
+        dup_q = dup_q.filter_by(grad_school_activity_id=c_in.grad_school_activity_id)
+    if dup_q.first():
+        raise Exception("Course with same title and same term/activity already exists")
+
+    c = models.Course(**c_in.model_dump())
+    db.add(c)
+    db.commit()
+    db.refresh(c)
+    return c
+
+
+def update_course(
+    db: Session,
+    course_id: int,
+    c_in: schemas.CourseUpdate
+):
+    c = get_course(db, course_id)
+    if not c:
+        raise EntityNotFoundError(f"Course #{course_id} not found")
+
+    for field in ("title", "course_term_id", "grad_school_activity_id", "credit_points", "notes"):
+        val = getattr(c_in, field)
+        if val is not None:
+            setattr(c, field, val)
+
+    db.commit()
+    db.refresh(c)
+    return c
+
+
+def delete_course(db: Session, course_id: int):
+    c = get_course(db, course_id)
+    if not c:
+        raise EntityNotFoundError(f"Course #{course_id} not found")
+
+    # only if no related sub-entities
+    if c.student_courses or c.course_institutions or c.teachers or c.decision_letters:
+        raise Exception("Cannot delete course with linked entities")
+
+    db.delete(c)
     db.commit()

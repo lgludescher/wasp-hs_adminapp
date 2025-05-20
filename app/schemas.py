@@ -1,5 +1,6 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
+from enum import Enum as PyEnum
 
 
 # ---------- User ----------
@@ -91,4 +92,48 @@ class FieldRead(FieldBase):
 class FieldUpdate(BaseModel):
     field: Optional[str] = None
     branch_id: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------- Course ----------
+
+# Course Term
+class CourseTermRead(BaseModel):
+    id:        int
+    season:    PyEnum  # uses Season enum
+    year:      int
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CourseTermUpdate(BaseModel):
+    is_active: bool
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Course
+class CourseBase(BaseModel):
+    title:                      str
+    course_term_id:             Optional[int] = None
+    grad_school_activity_id:    Optional[int] = None
+    credit_points:              Optional[int] = None
+    notes:                      Optional[str] = None
+
+
+class CourseCreate(CourseBase):
+    pass  # no extra
+
+
+class CourseRead(CourseBase):
+    id:        int
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CourseUpdate(BaseModel):
+    title:                      Optional[str] = None
+    course_term_id:             Optional[int] = None
+    grad_school_activity_id:    Optional[int] = None
+    credit_points:              Optional[int] = None
+    notes:                      Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
