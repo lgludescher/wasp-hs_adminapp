@@ -11,6 +11,8 @@ router = APIRouter(prefix="/institutions", tags=["institutions"])
 logger = logging.getLogger(__name__)
 
 
+# <editor-fold desc="Institution endpoints">
+
 @router.get("/{institution_id}", response_model=schemas.InstitutionRead)
 def read_institution(
     institution_id: int,
@@ -84,3 +86,6 @@ def delete_institution(
         logger.warning(str(e))
         raise HTTPException(404, str(e))
     return Response(status_code=204)
+
+
+# </editor-fold>

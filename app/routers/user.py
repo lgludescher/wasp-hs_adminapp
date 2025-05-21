@@ -11,6 +11,8 @@ router = APIRouter(prefix="/users", tags=["users"])
 logger = logging.getLogger(__name__)
 
 
+# <editor-fold desc="User endpoints">
+
 @router.get("/{username}", response_model=schemas.UserRead)
 async def read_user(
     username: str,
@@ -106,3 +108,6 @@ async def delete_user(
         logger.warning(f"Delete failed for {username}: {e}")
         raise HTTPException(404, str(e))
     return Response(status_code=204)
+
+
+# </editor-fold>

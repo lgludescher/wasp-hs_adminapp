@@ -14,7 +14,9 @@ router = APIRouter(tags=["domains"])
 logger = logging.getLogger(__name__)
 
 
+# <editor-fold desc="Branch endpoints">
 # --- Branch endpoints ---
+
 @router.get("/branches/{branch_id}", response_model=schemas.BranchRead)
 def read_branch(
     branch_id: int,
@@ -91,7 +93,11 @@ def delete_branch(
     return Response(status_code=204)
 
 
+# </editor-fold>
+
+# <editor-fold desc="Field endpoints">
 # --- Field endpoints ---
+
 @router.get("/fields/{field_id}", response_model=schemas.FieldRead)
 def read_field(
     field_id: int,
@@ -169,3 +175,6 @@ def delete_field(
         logger.warning(str(e))
         raise HTTPException(404, str(e))
     return Response(status_code=204)
+
+
+# </editor-fold>

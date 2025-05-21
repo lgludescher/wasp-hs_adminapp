@@ -1,14 +1,16 @@
 from sqlalchemy.orm import Session
 from . import models, schemas
 from typing import Optional, List
-from sqlalchemy import case, desc, and_, or_
-from .models import Season, CourseTerm, GradSchoolActivity
+from sqlalchemy import case, desc, and_, or_, select
+from .models import Season, CourseTerm, GradSchoolActivity, EntityType, GradeType
+from sqlalchemy.exc import NoResultFound
 
 
 class EntityNotFoundError(Exception):
     pass
 
 
+# <editor-fold desc="User-related functions">
 # ---------- User ----------
 
 def get_user(db: Session, username: str):
@@ -71,6 +73,9 @@ def delete_user(db: Session, username: str):
     db.commit()
 
 
+# </editor-fold>
+
+# <editor-fold desc="Institution-related functions">
 # ---------- Institution ----------
 
 def get_institution(db: Session, institution_id: int):
@@ -117,6 +122,9 @@ def delete_institution(db: Session, institution_id: int):
     db.commit()
 
 
+# </editor-fold>
+
+# <editor-fold desc="Domain-related functions">
 # ---------- Domain ----------
 
 # Academic Branch
@@ -218,6 +226,9 @@ def delete_field(db: Session, field_id: int):
     db.commit()
 
 
+# </editor-fold>
+
+# <editor-fold desc="Course-related functions">
 # ---------- Course ----------
 
 # Course Term
@@ -396,3 +407,207 @@ def delete_course(db: Session, course_id: int):
 
     db.delete(c)
     db.commit()
+
+
+# </editor-fold>
+
+# <editor-fold desc="Course relationships functions">
+# --- institutions for a course ---
+def get_course_institutions(db: Session, course_id: int) -> list[models.Institution]:
+    # ensure course exists
+    course = get_course(db, course_id)
+    if not course:
+        raise EntityNotFoundError(f"Course #{course_id} not found")
+    joins = db.query(models.CourseInstitution).filter_by(course_id=course_id).all()
+    return [j.institution for j in joins]
+
+
+def add_institution_to_course(db: Session, course_id: int, institution_id: int) -> models.Institution:
+    # look up both ends
+    course = get_course(db, course_id)
+    if not course:
+        raise EntityNotFoundError(f"Course #{course_id} not found")
+    inst = get_institution(db, institution_id)
+    if not inst:
+        raise EntityNotFoundError(f"Institution #{institution_id} not found")
+    # no dupes
+    exists = db.query(models.CourseInstitution).filter_by(
+        course_id=course_id, institution_id=institution_id
+    ).first()
+    if exists:
+        raise Exception(f"Institution #{institution_id} already linked to Course #{course_id}")
+    link = models.CourseInstitution(course_id=course_id, institution_id=institution_id)
+    db.add(link)
+    db.commit()
+    return inst  # type: ignore
+
+
+def remove_institution_from_course(db: Session, course_id: int, institution_id: int):
+    link = db.query(models.CourseInstitution).filter_by(
+        course_id=course_id, institution_id=institution_id
+    ).first()
+    if not link:
+        raise EntityNotFoundError(
+            f"Institution #{institution_id} not linked to Course #{course_id}"
+        )
+    db.delete(link)
+    db.commit()
+
+# def list_course_institutions(db: Session, course_id: int) -> list[models.Institution]:
+#     return (
+#         db.query(models.Institution)
+#         .join(models.CourseInstitution)
+#         .filter(models.CourseInstitution.course_id == course_id)
+#         .all()
+#     )
+#
+#
+# def add_course_institution(db: Session, course_id: int, inst_id: int) -> models.CourseInstitution:
+#     obj = models.CourseInstitution(course_id=course_id, institution_id=inst_id)
+#     db.add(obj)
+#     db.commit()
+#     db.refresh(obj)
+#     return obj
+#
+#
+# def remove_course_institution(db: Session, course_id: int, inst_id: int) -> None:
+#     ci = (
+#         db.query(models.CourseInstitution)
+#         .filter_by(course_id=course_id, institution_id=inst_id)
+#         .one()
+#     )
+#     db.delete(ci)
+#     db.commit()
+
+
+# --- students for a course ---
+# def list_course_students(db: Session, course_id: int) -> list[models.PhDStudent]:
+#     return (
+#         db.query(models.PhDStudent)
+#         .join(models.PhDStudentCourse)
+#         .filter(models.PhDStudentCourse.course_id == course_id)
+#         .all()
+#     )
+#
+#
+# def add_course_student(db: Session, course_id: int, s: schemas.CourseStudentCreate) -> models.PhDStudentCourse:
+#     obj = models.PhDStudentCourse(
+#         course_id=course_id,
+#         phd_student_id=s.phd_student_id,
+#         is_completed=s.is_completed,
+#         grade=s.grade
+#     )
+#     db.add(obj)
+#     db.commit()
+#     db.refresh(obj)
+#     return obj
+#
+#
+# def remove_course_student(db: Session, course_id: int, phd_student_id: int) -> None:
+#     sc = (
+#         db.query(models.PhDStudentCourse)
+#         .filter_by(course_id=course_id, phd_student_id=phd_student_id)
+#         .one()
+#     )
+#     db.delete(sc)
+#     db.commit()
+
+
+# --- teachers for a course ---
+# def list_course_teachers(db: Session, course_id: int) -> list[models.PersonRole]:
+#     return (
+#         db.query(models.PersonRole)
+#         .join(models.CourseTeacher)
+#         .filter(models.CourseTeacher.course_id == course_id)
+#         .all()
+#     )
+#
+#
+# def add_course_teacher(db: Session, course_id: int, person_role_id: int) -> models.CourseTeacher:
+#     obj = models.CourseTeacher(course_id=course_id, person_role_id=person_role_id)
+#     db.add(obj)
+#     db.commit()
+#     db.refresh(obj)
+#     return obj
+#
+#
+# def remove_course_teacher(db: Session, course_id: int, person_role_id: int) -> None:
+#     ct = (
+#         db.query(models.CourseTeacher)
+#         .filter_by(course_id=course_id, person_role_id=person_role_id)
+#         .one()
+#     )
+#     db.delete(ct)
+#     db.commit()
+
+
+# --- decision letters for a course ---
+
+def get_decision_letter(db: Session, letter_id: int):
+    return db.query(models.DecisionLetter).filter_by(id=letter_id).one()
+
+
+def list_course_decision_letters(db: Session, course_id: int) -> list[models.DecisionLetter]:
+    q = (db.query(models.DecisionLetter).filter_by(entity_type=EntityType.COURSE, entity_id=course_id).all())
+    return q  # type: ignore
+
+
+def add_course_decision_letter(db: Session, course_id: int, link: str) -> models.DecisionLetter:
+    obj = models.DecisionLetter(
+        entity_type=EntityType.COURSE,
+        entity_id=course_id,
+        link=link
+    )
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+
+def update_decision_letter(db: Session, letter_id: int, letter_in: schemas.DecisionLetterUpdate):
+    db_letter = get_decision_letter(db, letter_id)
+    if not db_letter:
+        raise EntityNotFoundError(f"Decision letter #{letter_id} not found")
+    if letter_in.link is not None:
+        db_letter.link = letter_in.link
+    db.commit()
+    db.refresh(db_letter)
+    return db_letter
+
+
+def remove_course_decision_letter(db: Session, letter_id: int) -> None:
+    db_letter = get_decision_letter(db, letter_id)
+    if not db_letter:
+        raise EntityNotFoundError(f"Decision letter #{letter_id} not found")
+    db.delete(db_letter)
+    db.commit()
+
+
+# --- helpers to seed PhDStudent in tests ---
+# def create_person(db: Session, first_name: str, last_name: str, email: str) -> models.Person:
+#     p = models.Person(first_name=first_name, last_name=last_name, email=email)
+#     db.add(p)
+#     db.commit()
+#     db.refresh(p)
+#     return p
+#
+#
+# def create_person_role(db: Session, person_id: int, role_name: schemas.PyEnum) -> models.PersonRole:
+#     # assume role already exists
+#     r = db.query(models.Role).filter_by(role=role_name).one()
+#     pr = models.PersonRole(person_id=person_id, role_id=r.id)
+#     db.add(pr)
+#     db.commit()
+#     db.refresh(pr)
+#     return pr
+#
+#
+# def create_phd_student(db: Session, person_role_id: int) -> models.PhDStudent:
+#     s = models.PhDStudent(person_role_id=person_role_id)
+#     db.add(s)
+#     db.commit()
+#     db.refresh(s)
+#     return s
+
+
+# </editor-fold>

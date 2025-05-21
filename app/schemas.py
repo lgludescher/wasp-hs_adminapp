@@ -1,8 +1,10 @@
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
 from enum import Enum as PyEnum
+from .models import GradeType, EntityType
 
 
+# <editor-fold desc="User-related entities">
 # ---------- User ----------
 
 class UserBase(BaseModel):
@@ -31,6 +33,9 @@ class UserUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# </editor-fold>
+
+# <editor-fold desc="Institution-related entities">
 # ---------- Institution ----------
 
 class InstitutionBase(BaseModel):
@@ -53,6 +58,9 @@ class InstitutionUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# </editor-fold>
+
+# <editor-fold desc="Domain-related entities">
 # ---------- Domain ----------
 
 # Academic Branch
@@ -95,6 +103,9 @@ class FieldUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# </editor-fold>
+
+# <editor-fold desc="Course-related entities">
 # ---------- Course ----------
 
 # Course Term
@@ -137,3 +148,73 @@ class CourseUpdate(BaseModel):
     credit_points:              Optional[int] = None
     notes:                      Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Course relationships entities">
+# --- Course ↔ Institutions ---
+class CourseInstitutionLink(BaseModel):
+    institution_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# class CourseInstitutionCreate(BaseModel):
+#     institution_id: int
+#
+#
+# class CourseInstitutionRead(BaseModel):
+#     id: int
+#     institution: str
+#
+#     model_config = ConfigDict(from_attributes=True)
+
+
+# --- Course ↔ Students ---
+# class CourseStudentCreate(BaseModel):
+#     phd_student_id: int
+#     is_completed: Optional[bool] = False
+#     grade: Optional[GradeType] = None
+#
+#
+# class CourseStudentRead(BaseModel):
+#     id: int
+#     phd_student_id: int
+#     is_completed: bool
+#     grade: Optional[GradeType]
+#
+#     model_config = ConfigDict(from_attributes=True)
+
+
+# --- Course ↔ Teachers ---
+# class CourseTeacherCreate(BaseModel):
+#     person_role_id: int
+#
+#
+# class CourseTeacherRead(BaseModel):
+#     id: int
+#     person_role_id: int
+#
+#     model_config = ConfigDict(from_attributes=True)
+
+
+# --- Course ↔ DecisionLetters ---
+class DecisionLetterCreate(BaseModel):
+    link: str
+
+
+class DecisionLetterRead(BaseModel):
+    id:   int
+    link: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DecisionLetterUpdate(BaseModel):
+    link: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>

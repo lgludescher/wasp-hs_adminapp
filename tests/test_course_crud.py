@@ -10,23 +10,33 @@ from app.main import app
 from app import schemas
 
 # in-memory
-engine = create_engine(
+test_engine = create_engine(
     "sqlite:///:memory:",
     connect_args={"check_same_thread": False},
     poolclass=StaticPool
 )
-TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+TestingSessionLocal = sessionmaker(bind=test_engine, autocommit=False, autoflush=False)
 
-Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=test_engine)
 
-app.dependency_overrides[get_db] = lambda: next(__import__('__main__').TestingSessionLocal())  # type: ignore
+
+def override_get_db():
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+# app.dependency_overrides[get_db] = lambda: next(__import__('__main__').TestingSessionLocal())  # type: ignore
+app.dependency_overrides[get_db] = override_get_db  # type: ignore
 client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
 def reset():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.drop_all(bind=test_engine)
+    Base.metadata.create_all(bind=test_engine)
     yield
 
 
