@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
 from enum import Enum as PyEnum
@@ -105,6 +106,77 @@ class FieldUpdate(BaseModel):
 
 # </editor-fold>
 
+# <editor-fold desc="Decision Letter-related entities">
+# ---------- Decision Letter ----------
+
+class DecisionLetterCreate(BaseModel):
+    link: str
+
+
+class DecisionLetterRead(BaseModel):
+    id:   int
+    link: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DecisionLetterUpdate(BaseModel):
+    link: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Grad School Activity-related entities">
+# ---------- Grad School Activity ----------
+
+# Grad School Activity Type
+class GradSchoolActivityTypeBase(BaseModel):
+    type: str
+
+
+class GradSchoolActivityTypeCreate(GradSchoolActivityTypeBase):
+    pass
+
+
+class GradSchoolActivityTypeRead(GradSchoolActivityTypeBase):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GradSchoolActivityTypeUpdate(BaseModel):
+    type: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Grad School Activity
+class GradSchoolActivityBase(BaseModel):
+    activity_type_id:   Optional[int] = None
+    description:        Optional[str] = None
+    year:               Optional[int] = None
+
+
+class GradSchoolActivityCreate(GradSchoolActivityBase):
+    pass
+
+
+class GradSchoolActivityRead(GradSchoolActivityBase):
+    id:             int
+    activity_type:  GradSchoolActivityTypeRead
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GradSchoolActivityUpdate(BaseModel):
+    activity_type_id:   Optional[int] = None
+    description:        Optional[str] = None
+    year:               Optional[int] = None
+    model_config = ConfigDict(from_attributes=True)
+
+# </editor-fold>
+
 # <editor-fold desc="Course-related entities">
 # ---------- Course ----------
 
@@ -138,6 +210,8 @@ class CourseCreate(CourseBase):
 
 class CourseRead(CourseBase):
     id:        int
+    course_term: Optional[CourseTermRead] = None
+    grad_school_activity: Optional[GradSchoolActivityRead] = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -146,6 +220,84 @@ class CourseUpdate(BaseModel):
     course_term_id:             Optional[int] = None
     grad_school_activity_id:    Optional[int] = None
     credit_points:              Optional[int] = None
+    notes:                      Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Project-related entities">
+# ---------- Project ----------
+
+# Project Call Type
+class ProjectCallTypeBase(BaseModel):
+    type: str
+
+
+class ProjectCallTypeCreate(ProjectCallTypeBase):
+    pass
+
+
+class ProjectCallTypeRead(ProjectCallTypeBase):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectCallTypeUpdate(BaseModel):
+    type: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Research output report
+class ResearchOutputReportCreate(BaseModel):
+    link: str
+
+
+class ResearchOutputReportRead(BaseModel):
+    id:   int
+    link: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ResearchOutputReportUpdate(BaseModel):
+    link: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Project
+class ProjectBase(BaseModel):
+    call_type_id:   int
+    title:          str
+    project_number: str
+    is_affiliated:  Optional[bool] = False
+    is_extended:    Optional[bool] = False
+    start_date:     Optional[datetime] = None
+    end_date:       Optional[datetime] = None
+    notes:          Optional[str] = None
+
+
+class ProjectCreate(ProjectBase):
+    pass  # no extra
+
+
+class ProjectRead(ProjectBase):
+    id:         int
+    call_type:  ProjectCallTypeRead
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectUpdate(BaseModel):
+    call_type_id:               Optional[int] = None
+    title:                      Optional[str] = None
+    project_number:             Optional[str] = None
+    is_affiliated:              Optional[bool] = None
+    is_extended:                Optional[bool] = None
+    start_date:                 Optional[datetime] = None
+    end_date:                   Optional[datetime] = None
     notes:                      Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
@@ -199,20 +351,12 @@ class CourseInstitutionLink(BaseModel):
 #     model_config = ConfigDict(from_attributes=True)
 
 
-# --- Course ↔ DecisionLetters ---
-class DecisionLetterCreate(BaseModel):
-    link: str
+# </editor-fold>
 
-
-class DecisionLetterRead(BaseModel):
-    id:   int
-    link: str
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class DecisionLetterUpdate(BaseModel):
-    link: Optional[str] = None
+# <editor-fold desc="Project relationships entities">
+# --- Project ↔ Fields ---
+class ProjectFieldLink(BaseModel):
+    field_id: int
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from .. import crud, schemas, dependencies
 from ..crud import EntityNotFoundError
+from ..models import EntityType
 
 router = APIRouter(tags=["courses"])
 logger = logging.getLogger(__name__)
@@ -327,7 +328,7 @@ def remove_course_institution(
 def course_decision_letters(cid: int, db: Session = Depends(dependencies.get_db),
                             current_user=Depends(dependencies.get_current_user)):
     logger.info(f"{current_user.username} listed decision letters for course {cid}")
-    return crud.list_course_decision_letters(db, cid)
+    return crud.list_decision_letters(db, EntityType.COURSE, cid)
 
 
 @router.post("/courses/{cid}/decision-letters/", response_model=schemas.DecisionLetterRead)
@@ -338,7 +339,7 @@ def add_course_decision_letter(cid: int, dl_in: schemas.DecisionLetterCreate,
         logger.warning(f"Course #{cid} not found")
         raise HTTPException(404, f"Course #{cid} not found")
     logger.info(f"{current_user.username} adding decision letter {dl_in.link} for course {cid}")
-    return crud.add_course_decision_letter(db, cid, dl_in.link)
+    return crud.add_decision_letter(db, EntityType.COURSE, cid, dl_in.link)
 
 
 @router.put("/courses/{cid}/decision-letters/{dlid}", response_model=schemas.DecisionLetterRead)
@@ -362,7 +363,7 @@ def del_course_decision_letter(cid: int, dlid: int,
                                db: Session = Depends(dependencies.get_db),
                                current_user=Depends(dependencies.get_current_user)):
     logger.info(f"{current_user.username} removing decision letter {dlid} for course {cid}")
-    crud.remove_course_decision_letter(db, dlid)
+    crud.remove_decision_letter(db, dlid)
     return Response(status_code=204)
 
 

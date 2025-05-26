@@ -1,7 +1,9 @@
-from sqlalchemy.orm import Session
+from datetime import datetime
+from sqlalchemy.orm import Session, selectinload
 from . import models, schemas
 from typing import Optional, List
 from sqlalchemy import case, desc, and_, or_, select
+from sqlalchemy import cast, String
 from .models import Season, CourseTerm, GradSchoolActivity, EntityType, GradeType
 from sqlalchemy.exc import NoResultFound
 
@@ -228,6 +230,208 @@ def delete_field(db: Session, field_id: int):
 
 # </editor-fold>
 
+# <editor-fold desc="Decision Letter-related functions">
+# ---------- Decision Letter ----------
+
+def get_decision_letter(db: Session, letter_id: int):
+    return db.query(models.DecisionLetter).filter_by(id=letter_id).one()
+
+
+def list_decision_letters(db: Session,
+                          entity_type: EntityType,
+                          entity_id: int) -> list[models.DecisionLetter]:
+    q = (db.query(models.DecisionLetter).filter_by(entity_type=entity_type, entity_id=entity_id).all())
+    return q  # type: ignore
+
+
+def add_decision_letter(db: Session,
+                        entity_type: EntityType,
+                        entity_id: int,
+                        link: str) -> models.DecisionLetter:
+    obj = models.DecisionLetter(
+        entity_type=entity_type,
+        entity_id=entity_id,
+        link=link
+    )
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+
+def update_decision_letter(db: Session, letter_id: int, letter_in: schemas.DecisionLetterUpdate):
+    db_letter = get_decision_letter(db, letter_id)
+    if not db_letter:
+        raise EntityNotFoundError(f"Decision letter #{letter_id} not found")
+    if letter_in.link is not None:
+        db_letter.link = letter_in.link
+    db.commit()
+    db.refresh(db_letter)
+    return db_letter
+
+
+def remove_decision_letter(db: Session, letter_id: int) -> None:
+    db_letter = get_decision_letter(db, letter_id)
+    if not db_letter:
+        raise EntityNotFoundError(f"Decision letter #{letter_id} not found")
+    db.delete(db_letter)
+    db.commit()
+
+
+# </editor-fold>
+
+# <editor-fold desc="Grad School Activity-related functions">
+# ---------- Grad School Activity ----------
+
+# Grad School Activity Type
+def get_grad_school_activity_type(db: Session, gsat_id: int):
+    return db.query(models.GradSchoolActivityType).filter_by(id=gsat_id).first()
+
+
+def list_grad_school_activity_types(db: Session) -> list[models.GradSchoolActivityType]:
+    q = db.query(models.GradSchoolActivityType)
+    return q.order_by(models.GradSchoolActivityType.type).all()  # type: ignore
+
+
+def create_grad_school_activity_type(db: Session, gsat_in: schemas.GradSchoolActivityTypeCreate):
+    db_gsat = models.GradSchoolActivityType(type=gsat_in.type)
+    db.add(db_gsat)
+    db.commit()
+    db.refresh(db_gsat)
+    return db_gsat
+
+
+def update_grad_school_activity_type(db: Session, gsat_id: int, gsat_in: schemas.GradSchoolActivityTypeUpdate):
+    db_gsat = get_grad_school_activity_type(db, gsat_id)
+    if not db_gsat:
+        raise EntityNotFoundError(f"Grad School Activity Type #{gsat_id} not found")
+    if gsat_in.type is not None:
+        db_gsat.type = gsat_in.type
+    db.commit()
+    db.refresh(db_gsat)
+    return db_gsat
+
+
+def delete_grad_school_activity_type(db: Session, gsat_id: int):
+    db_gsat = get_grad_school_activity_type(db, gsat_id)
+    if not db_gsat:
+        raise EntityNotFoundError(f"Grad School Activity Type #{gsat_id} not found")
+
+    # only if no related sub-entities
+    if db_gsat.activities:
+        raise Exception("Cannot delete grad school activity type with linked entities")
+
+    db.delete(db_gsat)
+    db.commit()
+
+
+# Grad School Activity
+def get_grad_school_activity(db: Session, gsa_id: int):
+    return db.query(models.GradSchoolActivity).filter_by(id=gsa_id).first()
+
+
+def list_grad_school_activities(
+    db: Session,
+    activity_type_id: Optional[int] = None,
+    description:      Optional[str] = None,
+    year:             Optional[int] = None,
+    search:           Optional[str] = None
+) -> list[models.GradSchoolActivity]:
+    q = (
+        db
+        .query(models.GradSchoolActivity)
+        # tell SQLAlchemy to eager‐load the .activity_type relationship in one go:
+        .options(selectinload(models.GradSchoolActivity.activity_type))
+    )
+
+    if activity_type_id is not None:
+        q = q.filter_by(activity_type_id=activity_type_id)
+    if description is not None:
+        q = q.filter_by(description=description)
+    if year is not None:
+        q = q.filter_by(year=year)
+
+    if search:
+        term = f"%{search}%"
+        q = q.filter(
+            or_(
+                # note: .has(...) allows for searching across the FK‐relationship
+                models.GradSchoolActivity.activity_type.has(
+                    models.GradSchoolActivityType.type.ilike(term)
+                ),
+                models.GradSchoolActivity.description.ilike(term),
+                # cast year to string for substring matches
+                cast(models.GradSchoolActivity.year, String).ilike(term),
+            )
+        )
+
+    q = (
+        q.outerjoin(
+            models.GradSchoolActivityType,
+            models.GradSchoolActivity.activity_type_id == models.GradSchoolActivityType.id
+        )
+        .order_by(
+            desc(models.GradSchoolActivity.year),
+            models.GradSchoolActivityType.type
+        )
+    )
+
+    return q.all()  # type: ignore
+
+
+def create_grad_school_activity(db: Session, gsa_in: schemas.GradSchoolActivityCreate):
+    # guard duplicate
+    dup_q = db.query(models.GradSchoolActivity).filter_by(activity_type_id=gsa_in.activity_type_id)
+    if gsa_in.description is not None:
+        dup_q = dup_q.filter_by(description=gsa_in.description)
+    if gsa_in.year is not None:
+        dup_q = dup_q.filter_by(year=gsa_in.year)
+    else:
+        raise Exception("Grad school activity must have a year")
+    if dup_q.first():
+        raise Exception("Grad school activity with same activity type, description and year already exists")
+
+    gsa = models.GradSchoolActivity(**gsa_in.model_dump())
+    db.add(gsa)
+    db.commit()
+    db.refresh(gsa)
+    return gsa
+
+
+def update_grad_school_activity(
+    db: Session,
+    gsa_id: int,
+    gsa_in: schemas.GradSchoolActivityUpdate
+):
+    gsa = get_grad_school_activity(db, gsa_id)
+    if not gsa:
+        raise EntityNotFoundError(f"Grad school activity #{gsa_id} not found")
+
+    for field in ("activity_type_id", "description", "year"):
+        val = getattr(gsa_in, field)
+        if val is not None:
+            setattr(gsa, field, val)
+
+    db.commit()
+    db.refresh(gsa)
+    return gsa
+
+
+def delete_grad_school_activity(db: Session, gsa_id: int):
+    gsa = get_grad_school_activity(db, gsa_id)
+    if not gsa_id:
+        raise EntityNotFoundError(f"Grad school activity #{gsa_id} not found")
+
+    # only if no related sub-entities
+    if gsa.student_activities or gsa.courses:
+        raise Exception("Cannot delete grad school activity with linked entities")
+
+    db.delete(gsa)
+    db.commit()
+
+
+# </editor-fold>
+
 # <editor-fold desc="Course-related functions">
 # ---------- Course ----------
 
@@ -411,6 +615,186 @@ def delete_course(db: Session, course_id: int):
 
 # </editor-fold>
 
+# <editor-fold desc="Project-related functions">
+# ---------- Project ----------
+
+# Project Call Type
+def get_project_call_type(db: Session, pct_id: int):
+    return db.query(models.ProjectCallType).filter_by(id=pct_id).first()
+
+
+def list_project_call_types(db: Session) -> list[models.ProjectCallType]:
+    q = db.query(models.ProjectCallType)
+    return q.order_by(models.ProjectCallType.type).all()  # type: ignore
+
+
+def create_project_call_type(db: Session, pct_in: schemas.ProjectCallTypeCreate):
+    db_pct = models.ProjectCallType(type=pct_in.type)
+    db.add(db_pct)
+    db.commit()
+    db.refresh(db_pct)
+    return db_pct
+
+
+def update_project_call_type(db: Session, pct_id: int, pct_in: schemas.ProjectCallTypeUpdate):
+    db_pct = get_project_call_type(db, pct_id)
+    if not db_pct:
+        raise EntityNotFoundError(f"Project Call Type #{pct_id} not found")
+    if pct_in.type is not None:
+        db_pct.type = pct_in.type
+    db.commit()
+    db.refresh(db_pct)
+    return db_pct
+
+
+def delete_project_call_type(db: Session, pct_id: int):
+    db_pct = get_project_call_type(db, pct_id)
+    if not db_pct:
+        raise EntityNotFoundError(f"Project Call Type #{pct_id} not found")
+
+    # only if no related sub-entities
+    if db_pct.projects:
+        raise Exception("Cannot delete project call type with linked entities")
+
+    db.delete(db_pct)
+    db.commit()
+
+
+# Research output report
+def get_research_output_report(db: Session, report_id: int):
+    return db.query(models.ResearchOutputReport).filter_by(id=report_id).one()
+
+
+def list_research_output_reports(db: Session, project_id: int) -> list[models.ResearchOutputReport]:
+    q = (db.query(models.ResearchOutputReport).filter_by(project_id=project_id).all())
+    return q  # type: ignore
+
+
+def add_research_output_report(db: Session, project_id: int, link: str) -> models.ResearchOutputReport:
+    obj = models.ResearchOutputReport(
+        project_id=project_id,
+        link=link
+    )
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+
+def update_research_output_report(db: Session, report_id: int, report_in: schemas.ResearchOutputReportUpdate):
+    db_report = get_research_output_report(db, report_id)
+    if not db_report:
+        raise EntityNotFoundError(f"Research output report #{report_id} not found")
+    if report_in.link is not None:
+        db_report.link = report_in.link
+    db.commit()
+    db.refresh(db_report)
+    return db_report
+
+
+def remove_research_output_report(db: Session, report_id: int) -> None:
+    db_report = get_research_output_report(db, report_id)
+    if not db_report:
+        raise EntityNotFoundError(f"Research output report #{report_id} not found")
+    db.delete(db_report)
+    db.commit()
+
+
+# Project
+def get_project(db: Session, project_id: int):
+    return db.query(models.Project).filter_by(id=project_id).first()
+
+
+def list_projects(db: Session, call_type_id: Optional[int] = None, title: Optional[str] = None,
+                  project_number: Optional[str] = None, is_affiliated: Optional[bool] = None,
+                  is_extended: Optional[bool] = None,
+                  is_active: Optional[bool] = None,
+                  search: Optional[str] = None):
+    q = db.query(models.Project)
+
+    if call_type_id is not None:
+        q = q.filter_by(call_type_id=call_type_id)
+    if title is not None:
+        q = q.filter_by(title=title)
+    if project_number is not None:
+        q = q.filter_by(project_number=project_number)
+    if is_affiliated is not None:
+        q = q.filter_by(is_affiliated=is_affiliated)
+    if is_extended is not None:
+        q = q.filter_by(is_extended=is_extended)
+
+    if is_active is not None:
+        if is_active:
+            q = q.filter(models.Project.end_date.is_(None))
+        else:
+            q = q.filter(models.Project.end_date.is_not(None))
+
+    # if start_date is not None:
+    #     q = q.filter(models.Project.start_date >= start_date)
+    # if end_date is not None:
+    #     q = q.filter(models.Project.end_date <= end_date)
+
+    if search:
+        term = f"%{search}%"
+        q = q.filter(
+            or_(
+                models.Project.title.ilike(term),
+                models.Project.project_number.ilike(term),
+            )
+        )
+
+    q = (
+        q.outerjoin(models.ProjectCallType, models.Project.call_type_id == models.ProjectCallType.id)
+        .order_by(desc(models.Project.start_date))
+    )
+
+    return q.all()  # type: ignore
+
+
+def create_project(db: Session, p_in: schemas.ProjectCreate):
+    # guard duplicate within same term or same activity
+    dup_q = db.query(models.Project).filter_by(project_number=p_in.project_number)
+    if dup_q.first():
+        raise Exception("Project with same project number already exists")
+
+    p = models.Project(**p_in.model_dump())
+    db.add(p)
+    db.commit()
+    db.refresh(p)
+    return p
+
+
+def update_project(db: Session, project_id: int, p_in: schemas.ProjectUpdate):
+    p = get_project(db, project_id)
+    if not p:
+        raise EntityNotFoundError(f"Project #{project_id} not found")
+
+    for field in ("call_type_id", "title", "project_number", "is_affiliated",
+                  "is_extended", "start_date", "end_date", "notes"):
+        val = getattr(p_in, field)
+        if val is not None:
+            setattr(p, field, val)
+
+    db.commit()
+    db.refresh(p)
+    return p
+
+
+def delete_project(db: Session, project_id: int):
+    p = get_project(db, project_id)
+    if not p:
+        raise EntityNotFoundError(f"Project #{project_id} not found")
+
+    # only if no related sub-entities
+    if p.fields or p.person_projects or p.research_output_reports or p.decision_letters:
+        raise Exception("Cannot delete project with linked entities")
+
+    db.delete(p)
+    db.commit()
+
+
+# </editor-fold>
+
 # <editor-fold desc="Course relationships functions">
 # --- institutions for a course ---
 def get_course_institutions(db: Session, course_id: int) -> list[models.Institution]:
@@ -541,48 +925,6 @@ def remove_institution_from_course(db: Session, course_id: int, institution_id: 
 #     db.commit()
 
 
-# --- decision letters for a course ---
-
-def get_decision_letter(db: Session, letter_id: int):
-    return db.query(models.DecisionLetter).filter_by(id=letter_id).one()
-
-
-def list_course_decision_letters(db: Session, course_id: int) -> list[models.DecisionLetter]:
-    q = (db.query(models.DecisionLetter).filter_by(entity_type=EntityType.COURSE, entity_id=course_id).all())
-    return q  # type: ignore
-
-
-def add_course_decision_letter(db: Session, course_id: int, link: str) -> models.DecisionLetter:
-    obj = models.DecisionLetter(
-        entity_type=EntityType.COURSE,
-        entity_id=course_id,
-        link=link
-    )
-    db.add(obj)
-    db.commit()
-    db.refresh(obj)
-    return obj
-
-
-def update_decision_letter(db: Session, letter_id: int, letter_in: schemas.DecisionLetterUpdate):
-    db_letter = get_decision_letter(db, letter_id)
-    if not db_letter:
-        raise EntityNotFoundError(f"Decision letter #{letter_id} not found")
-    if letter_in.link is not None:
-        db_letter.link = letter_in.link
-    db.commit()
-    db.refresh(db_letter)
-    return db_letter
-
-
-def remove_course_decision_letter(db: Session, letter_id: int) -> None:
-    db_letter = get_decision_letter(db, letter_id)
-    if not db_letter:
-        raise EntityNotFoundError(f"Decision letter #{letter_id} not found")
-    db.delete(db_letter)
-    db.commit()
-
-
 # --- helpers to seed PhDStudent in tests ---
 # def create_person(db: Session, first_name: str, last_name: str, email: str) -> models.Person:
 #     p = models.Person(first_name=first_name, last_name=last_name, email=email)
@@ -608,6 +950,51 @@ def remove_course_decision_letter(db: Session, letter_id: int) -> None:
 #     db.commit()
 #     db.refresh(s)
 #     return s
+
+
+# </editor-fold>
+
+# <editor-fold desc="Project relationships functions">
+# --- academic fields for a project ---
+def get_project_fields(db: Session, project_id: int) -> list[models.AcademicField]:
+    # ensure project exists
+    project = get_project(db, project_id)
+    if not project:
+        raise EntityNotFoundError(f"Project #{project_id} not found")
+    joins = db.query(models.ProjectField).filter_by(project_id=project_id).all()
+    return [j.field for j in joins]
+
+
+def add_field_to_project(db: Session, project_id: int, field_id: int) -> models.AcademicField:
+    # look up both ends
+    project = get_project(db, project_id)
+    if not project:
+        raise EntityNotFoundError(f"Project #{project_id} not found")
+    field = get_field(db, field_id)
+    if not field:
+        raise EntityNotFoundError(f"Academic field #{field_id} not found")
+    # no dupes
+    exists = db.query(models.ProjectField).filter_by(
+        project_id=project_id, field_id=field_id
+    ).first()
+    if exists:
+        raise Exception(f"Academic field #{field_id} already linked to Project #{project_id}")
+    link = models.ProjectField(project_id=project_id, field_id=field_id)
+    db.add(link)
+    db.commit()
+    return field  # type: ignore
+
+
+def remove_field_from_project(db: Session, project_id: int, field_id: int):
+    link = db.query(models.ProjectField).filter_by(
+        project_id=project_id, field_id=field_id
+    ).first()
+    if not link:
+        raise EntityNotFoundError(
+            f"Academic field #{field_id} not linked to Project #{project_id}"
+        )
+    db.delete(link)
+    db.commit()
 
 
 # </editor-fold>

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi import Request
 from .database import engine, Base
 from .config import settings
-from .routers import user, institution, domain, course
+from .routers import user, institution, domain, grad_school_activity, course, project
 from .logger import logger
 
 # Create tables when in DEBUG mode
@@ -34,4 +34,6 @@ def ping():
 app.include_router(user.router)
 app.include_router(institution.router)
 app.include_router(domain.router)
+app.include_router(grad_school_activity.router)
 app.include_router(course.router)
+app.include_router(project.router)
