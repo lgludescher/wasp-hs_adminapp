@@ -194,6 +194,7 @@ class PersonRole(Base):
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
     start_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     end_date = Column(DateTime, nullable=True)
+    notes = Column(String, nullable=True)
 
     person = relationship("Person", back_populates="roles")
     role = relationship("Role", back_populates="person_roles")
@@ -379,6 +380,7 @@ class PersonProject(Base):
     person_role_id = Column(Integer, ForeignKey("people_roles.id"), nullable=False)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
     is_principal_investigator = Column(Boolean, default=False)
+    is_leader = Column(Boolean, default=False)
 
     person_role = relationship("PersonRole", back_populates="projects")
     project = relationship("Project", back_populates="person_projects")

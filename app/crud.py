@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session, selectinload
 from . import models, schemas
 from typing import Optional, List
@@ -790,6 +790,327 @@ def delete_project(db: Session, project_id: int):
         raise Exception("Cannot delete project with linked entities")
 
     db.delete(p)
+    db.commit()
+
+
+# </editor-fold>
+
+# <editor-fold desc="Person-related functions">
+# ---------- Person ----------
+
+def get_person(db: Session, person_id: int) -> Optional[models.Person]:
+    return db.query(models.Person).filter_by(id=person_id).first()
+
+
+def list_persons(db: Session, search: Optional[str] = None) -> List[models.Person]:
+    q = db.query(models.Person)
+    if search:
+        term = f"%{search}%"
+        q = q.filter(
+            or_(
+                models.Person.first_name.ilike(term),
+                models.Person.last_name.ilike(term),
+                models.Person.email.ilike(term),
+            )
+        )
+    return q.order_by(models.Person.last_name, models.Person.first_name).all()  # type: ignore
+
+
+def create_person(db: Session, p_in: schemas.PersonCreate) -> models.Person:
+    db_obj = models.Person(
+        first_name=p_in.first_name,
+        last_name=p_in.last_name,
+        email=p_in.email
+    )
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def update_person(db: Session, person_id: int, p_in: schemas.PersonUpdate) -> models.Person:
+    db_obj = get_person(db, person_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"Person #{person_id} not found")
+    if p_in.first_name is not None:
+        db_obj.first_name = p_in.first_name
+    if p_in.last_name is not None:
+        db_obj.last_name = p_in.last_name
+    if p_in.email is not None:
+        db_obj.email = p_in.email
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def delete_person(db: Session, person_id: int) -> None:
+    db_obj = get_person(db, person_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"Person #{person_id} not found")
+
+    # only if no related sub-entities
+    if db_obj.roles:
+        raise Exception("Cannot delete person with linked entities")
+
+    db.delete(db_obj)
+    db.commit()
+
+
+# </editor-fold>
+
+# <editor-fold desc="Person Role-related functions">
+# ---------- Person Role ----------
+
+def get_person_role(db: Session, person_role_id: int) -> Optional[models.PersonRole]:
+    return db.query(models.PersonRole).filter_by(id=person_role_id).first()
+
+
+def list_person_roles(
+    db: Session,
+    person_id: Optional[int] = None,
+    role_id: Optional[int] = None,
+    active: Optional[bool] = None,
+) -> List[models.PersonRole]:
+    q = db.query(models.PersonRole)
+    if person_id is not None:
+        q = q.filter_by(person_id=person_id)
+    if role_id is not None:
+        q = q.filter_by(role_id=role_id)
+    if active is not None:
+        if active:
+            q = q.filter(models.PersonRole.end_date.is_(None))
+        else:
+            q = q.filter(models.PersonRole.end_date.isnot(None))
+
+    return q.order_by(models.PersonRole.start_date.desc()).all()  # type: ignore
+
+
+def create_person_role(db: Session, pr_in: schemas.PersonRoleCreate) -> models.PersonRole:
+    db_obj = models.PersonRole(
+        person_id=pr_in.person_id,
+        role_id=pr_in.role_id,
+        start_date=pr_in.start_date or datetime.now(timezone.utc),
+        end_date=pr_in.end_date,
+        notes=pr_in.notes
+    )
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def update_person_role(db: Session, person_role_id: int, pr_in: schemas.PersonRoleUpdate) -> models.PersonRole:
+    db_obj = get_person_role(db, person_role_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"PersonRole #{person_role_id} not found")
+    if pr_in.start_date is not None:
+        db_obj.start_date = pr_in.start_date
+    if pr_in.end_date is not None:
+        db_obj.end_date = pr_in.end_date
+    if pr_in.notes is not None:
+        db_obj.notes = pr_in.notes
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def delete_person_role(db: Session, person_role_id: int) -> None:
+    db_obj = get_person_role(db, person_role_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"PersonRole #{person_role_id} not found")
+
+    # only if no related sub-entities
+    if (db_obj.researcher or db_obj.phd_student or db_obj.postdoc or
+            db_obj.projects or db_obj.supervised_students or db_obj.student_supervisors or
+            db_obj.courses_teaching or db_obj.decision_letters or
+            db_obj.institutions or db_obj.fields):
+        raise Exception("Cannot delete person role with linked entities")
+
+    db.delete(db_obj)
+    db.commit()
+
+
+# </editor-fold>
+
+# <editor-fold desc="Researcher-related functions">
+# ---------- Researcher ----------
+
+# Researcher Title
+def get_researcher_title(db: Session, rt_id: int):
+    return db.query(models.ResearcherTitle).filter_by(id=rt_id).first()
+
+
+def list_researcher_titles(db: Session) -> list[models.ResearcherTitle]:
+    q = db.query(models.ResearcherTitle)
+    return q.order_by(models.ResearcherTitle.title).all()  # type: ignore
+
+
+def create_researcher_title(db: Session, rt_in: schemas.ResearcherTitleCreate):
+    db_rt = models.ResearcherTitle(title=rt_in.title)
+    db.add(db_rt)
+    db.commit()
+    db.refresh(db_rt)
+    return db_rt
+
+
+def update_researcher_title(db: Session, rt_id: int, rt_in: schemas.ResearcherTitleUpdate):
+    db_rt = get_researcher_title(db, rt_id)
+    if not db_rt:
+        raise EntityNotFoundError(f"Researcher Title #{rt_id} not found")
+    if rt_in.title is not None:
+        db_rt.title = rt_in.title
+    db.commit()
+    db.refresh(db_rt)
+    return db_rt
+
+
+def delete_researcher_title(db: Session, rt_id: int):
+    db_rt = get_researcher_title(db, rt_id)
+    if not db_rt:
+        raise EntityNotFoundError(f"Researcher Title #{rt_id} not found")
+
+    # only if no related sub-entities
+    if db_rt.researchers or db_rt.original_researchers or db_rt.postdocs_as_current:
+        raise Exception("Cannot delete researcher title with linked entities")
+
+    db.delete(db_rt)
+    db.commit()
+
+
+# Researcher
+def get_researcher(db: Session, researcher_id: int) -> Optional[models.Researcher]:
+    return db.query(models.Researcher).filter_by(id=researcher_id).first()
+
+
+def list_researchers(db: Session, person_role_id: Optional[int] = None) -> List[models.Researcher]:
+    q = db.query(models.Researcher)
+    if person_role_id is not None:
+        q = q.filter_by(person_role_id=person_role_id)
+    return q.order_by(models.Researcher.id).all()  # type: ignore
+
+
+def create_researcher(db: Session, r_in: schemas.ResearcherCreate) -> models.Researcher:
+    db_obj = models.Researcher(
+        person_role_id=r_in.person_role_id,
+        title_id=r_in.title_id,
+        original_title_id=r_in.original_title_id,
+        link=r_in.link,
+        notes=r_in.notes
+    )
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def update_researcher(db: Session, researcher_id: int, r_in: schemas.ResearcherUpdate) -> models.Researcher:
+    db_obj = get_researcher(db, researcher_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"Researcher #{researcher_id} not found")
+    if r_in.title_id is not None:
+        db_obj.title_id = r_in.title_id
+    if r_in.original_title_id is not None:
+        db_obj.original_title_id = r_in.original_title_id
+    if r_in.link is not None:
+        db_obj.link = r_in.link
+    if r_in.notes is not None:
+        db_obj.notes = r_in.notes
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def delete_researcher(db: Session, researcher_id: int) -> None:
+    db_obj = get_researcher(db, researcher_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"Researcher #{researcher_id} not found")
+    db.delete(db_obj)
+    db.commit()
+
+
+# </editor-fold>
+
+# <editor-fold desc="Phd Student-related functions">
+# ---------- PhD Student ----------
+
+def get_phd_student(db: Session, student_id: int) -> Optional[models.PhDStudent]:
+    return db.query(models.PhDStudent).filter_by(id=student_id).first()
+
+
+def list_phd_students(db: Session, person_role_id: Optional[int] = None) -> List[models.PhDStudent]:
+    q = db.query(models.PhDStudent)
+    if person_role_id is not None:
+        q = q.filter_by(person_role_id=person_role_id)
+    return q.order_by(models.PhDStudent.id).all()  # type: ignore
+
+
+def create_phd_student(db: Session, s_in: schemas.PhDStudentCreate) -> models.PhDStudent:
+    db_obj = models.PhDStudent(**s_in.model_dump())
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def update_phd_student(db: Session, student_id: int, s_in: schemas.PhDStudentUpdate) -> models.PhDStudent:
+    db_obj = get_phd_student(db, student_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"PhDStudent #{student_id} not found")
+    for attr, val in s_in.model_dump(exclude_none=True).items():
+        setattr(db_obj, attr, val)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def delete_phd_student(db: Session, student_id: int) -> None:
+    db_obj = get_phd_student(db, student_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"PhDStudent #{student_id} not found")
+    db.delete(db_obj)
+    db.commit()
+
+
+# </editor-fold>
+
+# <editor-fold desc="Postdoc-related functions">
+# ---------- Postdoc ----------
+
+def get_postdoc(db: Session, postdoc_id: int) -> Optional[models.Postdoc]:
+    return db.query(models.Postdoc).filter_by(id=postdoc_id).first()
+
+
+def list_postdocs(db: Session, person_role_id: Optional[int] = None) -> List[models.Postdoc]:
+    q = db.query(models.Postdoc)
+    if person_role_id is not None:
+        q = q.filter_by(person_role_id=person_role_id)
+    return q.order_by(models.Postdoc.id).all()  # type: ignore
+
+
+def create_postdoc(db: Session, p_in: schemas.PostdocCreate) -> models.Postdoc:
+    db_obj = models.Postdoc(**p_in.model_dump())
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def update_postdoc(db: Session, postdoc_id: int, p_in: schemas.PostdocUpdate) -> models.Postdoc:
+    db_obj = get_postdoc(db, postdoc_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"Postdoc #{postdoc_id} not found")
+    for attr, val in p_in.model_dump(exclude_none=True).items():
+        setattr(db_obj, attr, val)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def delete_postdoc(db: Session, postdoc_id: int) -> None:
+    db_obj = get_postdoc(db, postdoc_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"Postdoc #{postdoc_id} not found")
+    db.delete(db_obj)
     db.commit()
 
 

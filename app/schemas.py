@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
 from enum import Enum as PyEnum
-from .models import GradeType, EntityType
+from .models import GradeType, EntityType, RoleType
 
 
 # <editor-fold desc="User-related entities">
@@ -299,6 +299,240 @@ class ProjectUpdate(BaseModel):
     start_date:                 Optional[datetime] = None
     end_date:                   Optional[datetime] = None
     notes:                      Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Person-related entities">
+# ---------- Person ----------
+
+# Role
+class RoleRead(BaseModel):
+    id: int
+    role: RoleType
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Person
+class PersonBase(BaseModel):
+    first_name: str
+    last_name: str
+    email: str
+
+
+class PersonCreate(PersonBase):
+    pass
+
+
+# This is just to nest a list of roles (and their respective start and end dates) in Person
+class PersonRoleReadSlim(BaseModel):
+    id:           int
+    start_date:   datetime
+    end_date:     Optional[datetime]
+    notes:        str
+    role:         RoleRead
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PersonRead(PersonBase):
+    id: int
+    roles: List[PersonRoleReadSlim]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PersonUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Person Role-related entities">
+# ---------- Person Role ----------
+
+class PersonRoleBase(BaseModel):
+    person_id: int
+    role_id:   int
+    start_date: Optional[datetime] = None
+    end_date:   Optional[datetime] = None
+    notes: str
+
+
+class PersonRoleCreate(PersonRoleBase):
+    pass
+
+
+# This includes PersonRead
+class PersonRoleReadFull(BaseModel):
+    id:           int
+    start_date:   datetime
+    end_date:     Optional[datetime]
+    notes:        str
+    role:         RoleRead
+    person:       PersonRead
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PersonRoleUpdate(BaseModel):
+    start_date: Optional[datetime] = None
+    end_date:   Optional[datetime] = None
+    notes:      Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Researcher-related entities">
+# ---------- Researcher ----------
+
+# Researcher Title
+class ResearcherTitleBase(BaseModel):
+    title: str
+
+
+class ResearcherTitleCreate(ResearcherTitleBase):
+    pass
+
+
+class ResearcherTitleRead(ResearcherTitleBase):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ResearcherTitleUpdate(BaseModel):
+    title: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Researcher
+class ResearcherBase(BaseModel):
+    person_role_id:    int
+    title_id:          int
+    original_title_id: Optional[int] = None
+    link:              Optional[str] = None
+    notes:             Optional[str] = None
+
+
+class ResearcherCreate(ResearcherBase):
+    pass
+
+
+class ResearcherRead(ResearcherBase):
+    id: int
+    person_role: PersonRoleReadFull
+
+    title:          ResearcherTitleRead
+    original_title: Optional[ResearcherTitleRead]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ResearcherUpdate(BaseModel):
+    title_id:          Optional[int] = None
+    original_title_id: Optional[int] = None
+    link:              Optional[str] = None
+    notes:             Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="PhD Student-related entities">
+# ---------- PhD Student ----------
+
+class PhDStudentBase(BaseModel):
+    person_role_id:      int
+    cohort_number:       Optional[int] = None
+    is_affiliated:       Optional[bool] = None
+    department:          Optional[str] = None
+    discipline:          Optional[str] = None
+    phd_project_title:   Optional[str] = None
+    planned_defense_date: Optional[datetime] = None
+    is_graduated:        Optional[bool] = None
+    current_title:       Optional[str] = None
+    current_organization: Optional[str] = None
+    link:                Optional[str] = None
+    notes:               Optional[str] = None
+
+
+class PhDStudentCreate(PhDStudentBase):
+    pass
+
+
+class PhDStudentRead(PhDStudentBase):
+    id:          int
+    person_role: PersonRoleReadFull
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PhDStudentUpdate(BaseModel):
+    cohort_number:        Optional[int] = None
+    is_affiliated:        Optional[bool] = None
+    department:           Optional[str] = None
+    discipline:           Optional[str] = None
+    phd_project_title:    Optional[str] = None
+    planned_defense_date: Optional[datetime] = None
+    is_graduated:         Optional[bool] = None
+    current_title:        Optional[str] = None
+    current_organization: Optional[str] = None
+    link:                 Optional[str] = None
+    notes:                Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Postdoc-related entities">
+# ---------- Postdoc ----------
+
+class PostdocBase(BaseModel):
+    person_role_id:        int
+    cohort_number:         Optional[int] = None
+    department:            Optional[str] = None
+    discipline:            Optional[str] = None
+    postdoc_project_title: Optional[str] = None
+    current_title_id:      Optional[int] = None
+    current_title_other:   Optional[str] = None
+    current_institution_id: Optional[int] = None
+    current_institution_other: Optional[str] = None
+    current_department:    Optional[str] = None
+    notes:                 Optional[str] = None
+
+
+class PostdocCreate(PostdocBase):
+    pass
+
+
+class PostdocRead(PostdocBase):
+    id:          int
+    person_role: PersonRoleReadFull
+
+    current_title: Optional[ResearcherTitleRead]
+    current_institution: Optional[InstitutionRead]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PostdocUpdate(BaseModel):
+    cohort_number:          Optional[int] = None
+    department:             Optional[str] = None
+    discipline:             Optional[str] = None
+    postdoc_project_title:  Optional[str] = None
+    current_title_id:       Optional[int] = None
+    current_title_other:    Optional[str] = None
+    current_institution_id: Optional[int] = None
+    current_institution_other: Optional[str] = None
+    current_department:     Optional[str] = None
+    notes:                  Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
