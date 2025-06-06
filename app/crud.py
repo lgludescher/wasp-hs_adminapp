@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session, selectinload
 from . import models, schemas
-from typing import Optional, List
+from typing import Optional, List, Union
 from sqlalchemy import case, desc, and_, or_, select
 from sqlalchemy import cast, String
-from .models import Season, CourseTerm, GradSchoolActivity, EntityType, GradeType
+from .models import Season, CourseTerm, GradSchoolActivity, EntityType, GradeType, ActivityType
 from sqlalchemy.exc import NoResultFound
 
 
@@ -1111,6 +1111,217 @@ def delete_postdoc(db: Session, postdoc_id: int) -> None:
     if not db_obj:
         raise EntityNotFoundError(f"Postdoc #{postdoc_id} not found")
     db.delete(db_obj)
+    db.commit()
+
+
+# </editor-fold>
+
+# <editor-fold desc="Student Activity-related functions">
+# ---------- Student Activity ----------
+
+class StudentActivityNotFound(Exception):
+    pass
+
+
+def get_student_activity(db: Session, student_activity_id: int) -> Optional[models.StudentActivity]:
+    return db.query(models.StudentActivity).filter_by(id=student_activity_id).first()
+
+
+def list_student_activities(
+    db: Session,
+    phd_student_id: int
+) -> List[models.StudentActivity]:
+    """
+    Return *all* activities (both grad‐school and abroad) for a given PhD‐student,
+    ordered by creation (id) ascending.
+    """
+
+    q = (db.query(models.StudentActivity).filter_by(phd_student_id=phd_student_id)
+         .order_by(models.StudentActivity.id))
+
+    return q.all()  # type: ignore
+
+
+def create_grad_school_student_activity(
+    db: Session,
+    stu_id: int,
+    in_data: schemas.GradSchoolStudentActivityCreate
+) -> models.GradSchoolStudentActivity:
+    """
+    1) Verify the target PhD student exists.
+    2) Verify the referenced GradSchoolActivity exists.
+    3) Enforce the unique‐together constraint on (phd_student_id, activity_type, activity_id).
+    4) Create & return.
+    """
+    # 1) PhD student must exist
+    # from .crud import get_phd_student, EntityNotFoundError
+    student = get_phd_student(db, stu_id)
+    if not student:
+        raise EntityNotFoundError(f"PhDStudent #{stu_id} not found")
+
+    # 2) Grad school activity must exist
+    gsa = db.query(models.GradSchoolActivity).filter_by(id=in_data.activity_id).first()
+    if not gsa:
+        raise EntityNotFoundError(f"GradSchoolActivity #{in_data.activity_id} not found")
+
+    # 3) Check unique constraint
+    existing = (
+        db.query(models.GradSchoolStudentActivity)
+          .filter_by(
+              phd_student_id=stu_id,
+              # activity_type=in_data.activity_type,
+              activity_type=ActivityType.GRAD_SCHOOL,
+              activity_id=in_data.activity_id
+          )
+        .first()
+    )
+    if existing:
+        raise Exception(f"StudentActivity for student {stu_id} & grad‐activity {in_data.activity_id} already exists")
+
+    # 4) Create
+    db_obj = models.GradSchoolStudentActivity(
+        phd_student_id=stu_id,
+        # activity_type=in_data.activity_type,
+        activity_type=ActivityType.GRAD_SCHOOL,
+        activity_id=in_data.activity_id,
+        is_completed=in_data.is_completed,
+        grade=in_data.grade
+    )
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def create_abroad_student_activity(
+    db: Session,
+    stu_id: int,
+    in_data: schemas.AbroadStudentActivityCreate
+) -> models.AbroadStudentActivity:
+    """
+    1) Verify the target PhD student exists.
+    2) Enforce the unique‐together constraint on (phd_student_id, activity_type, activity_id).
+       For an AbroadActivity, we do not reference another table, so we auto‐assign activity_id = id of this row.
+    3) Create & return.
+    """
+    # from .crud import get_phd_student, EntityNotFoundError
+    student = get_phd_student(db, stu_id)
+    if not student:
+        raise EntityNotFoundError(f"PhDStudent #{stu_id} not found")
+
+    # We pick activity_id = a new placeholder, but actually,
+    # with our inheritance setup, the `id` column will get filled after insert.
+    # However, to satisfy the unique constraint, we must delay commit until after id is known.
+    # A simpler workaround: assign activity_id = some sentinel (0) at first, then update.
+    db_obj = models.AbroadStudentActivity(
+        phd_student_id=stu_id,
+        # activity_type=in_data.activity_type,
+        activity_type=ActivityType.ABROAD,
+        activity_id=0,  # temporary
+        description=in_data.description,
+        start_date=in_data.start_date,
+        end_date=in_data.end_date,
+        city=in_data.city,
+        country=in_data.country,
+        host_institution=in_data.host_institution
+    )
+    db.add(db_obj)
+    db.flush()  # assign db_obj.id
+    db_obj.activity_id = db_obj.id
+
+    # Now check uniqueness manually:
+    conflict = (db.query(models.AbroadStudentActivity).filter_by(phd_student_id=stu_id,
+                                                                 # activity_type=in_data.activity_type,
+                                                                 activity_type=ActivityType.ABROAD,
+                                                                 activity_id=db_obj.activity_id)
+                .first())
+    if conflict and conflict.id != db_obj.id:
+        raise Exception(f"Duplicate AbroadActivity for student {stu_id} & activity_id {db_obj.activity_id}")
+
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def update_student_activity(
+    db: Session,
+    stu_act_id: int,
+    stu_id: int,
+    in_data: Union[schemas.GradSchoolStudentActivityCreate, schemas.AbroadStudentActivityCreate]
+) -> models.StudentActivity:
+    """
+    1) Fetch the StudentActivity by id.
+    2) If not found or `phd_student_id` mismatch, 404.
+    3) Branch on `activity_type` rather than isinstance(...).
+    4) Re‐query the proper subclass so SQLAlchemy gives us a subclass instance.
+    5) Update only the fields relevant to that subclass.
+    """
+    sa = get_student_activity(db, stu_act_id)
+    if not sa or sa.phd_student_id != stu_id:
+        raise StudentActivityNotFound(f"Student activity #{stu_act_id} for student {stu_id} not found")
+
+    # If the row’s discriminator says “GRAD_SCHOOL”, re‐load as GradSchoolStudentActivity
+    if sa.activity_type == models.ActivityType.GRAD_SCHOOL:
+        gss = db.query(models.GradSchoolStudentActivity).filter_by(id=stu_act_id).first()
+        if not gss:
+            # Shouldn’t happen if the data is consistent, but just in case:
+            raise EntityNotFoundError(f"GradSchoolStudentActivity #{stu_act_id} not found")
+
+        # Update the optional activity_id (must point to a real GradSchoolActivity)
+        if getattr(in_data, "activity_id", None) is not None and in_data.activity_id != gss.activity_id:
+            new_gsa = db.query(models.GradSchoolActivity).filter_by(id=in_data.activity_id).first()
+            if not new_gsa:
+                raise EntityNotFoundError(f"GradSchoolActivity #{in_data.activity_id} not found")
+            gss.activity_id = in_data.activity_id
+
+        # Update is_completed / grade if provided
+        if getattr(in_data, "is_completed", None) is not None:
+            gss.is_completed = in_data.is_completed
+        if getattr(in_data, "grade", None) is not None:
+            gss.grade = in_data.grade
+
+        db.commit()
+        db.refresh(gss)
+        return gss  # type: ignore
+
+    # If the row’s discriminator says “ABROAD”, re‐load as AbroadStudentActivity
+    elif sa.activity_type == models.ActivityType.ABROAD:
+        abs_row = db.query(models.AbroadStudentActivity).filter_by(id=stu_act_id).first()
+        if not abs_row:
+            raise EntityNotFoundError(f"AbroadStudentActivity #{stu_act_id} not found")
+
+        # Only update whichever fields the payload provided
+        if getattr(in_data, "description", None) is not None:
+            abs_row.description = in_data.description
+        if getattr(in_data, "start_date", None) is not None:
+            abs_row.start_date = in_data.start_date
+        if getattr(in_data, "end_date", None) is not None:
+            abs_row.end_date = in_data.end_date
+        if getattr(in_data, "city", None) is not None:
+            abs_row.city = in_data.city
+        if getattr(in_data, "country", None) is not None:
+            abs_row.country = in_data.country
+        if getattr(in_data, "host_institution", None) is not None:
+            abs_row.host_institution = in_data.host_institution
+
+        db.commit()
+        db.refresh(abs_row)
+        return abs_row  # type: ignore
+
+    else:
+        # Should never happen, but guard against unknown discriminator values
+        raise Exception(f"Unknown activity_type {sa.activity_type!r} for StudentActivity #{stu_act_id}")
+
+
+def delete_student_activity(db: Session, stu_act_id: int, stu_id: int) -> None:
+    """
+    Delete only if the row exists and belongs to that student.
+    """
+    sa = get_student_activity(db, stu_act_id)
+    if not sa or sa.phd_student_id != stu_id:
+        raise StudentActivityNotFound(f"Student activity #{stu_act_id} for student {stu_id} not found")
+
+    db.delete(sa)
     db.commit()
 
 

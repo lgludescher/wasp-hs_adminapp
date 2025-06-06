@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Union
 from pydantic import BaseModel, ConfigDict
 from enum import Enum as PyEnum
 from .models import GradeType, EntityType, RoleType
@@ -533,6 +533,71 @@ class PostdocUpdate(BaseModel):
     current_institution_other: Optional[str] = None
     current_department:     Optional[str] = None
     notes:                  Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Student Activity-related entities">
+# ---------- Student Activity ----------
+
+class StudentActivityBase(BaseModel):
+    phd_student_id: int
+    # activity_type: PyEnum  # will be either ActivityType.GRAD_SCHOOL or ActivityType.ABROAD
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GradSchoolActivityLinkBase(StudentActivityBase):
+    # activity_type: PyEnum  # ActivityType.GRAD_SCHOOL
+    activity_id: int  # FK → GradSchoolActivity.id
+    is_completed: Optional[bool] = False
+    grade: Optional[GradeType] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GradSchoolStudentActivityCreate(GradSchoolActivityLinkBase):
+    # For creation, all fields except `id` come from client
+    # activity_type: PyEnum  # must be ActivityType.GRAD_SCHOOL
+    activity_id: int
+    is_completed: Optional[bool] = False
+    grade: Optional[GradeType] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AbroadStudentActivityCreate(StudentActivityBase):
+    # activity_type: PyEnum  # must be ActivityType.ABROAD
+    description: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    host_institution: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class StudentActivityRead(BaseModel):
+    id: int
+    phd_student_id: int
+    activity_type: PyEnum  # ActivityType.GRAD_SCHOOL or ActivityType.ABROAD
+
+    # fields present only when activity_type == GRAD_SCHOOL:
+    # activity_id: Optional[int] = None
+    activity: Optional[GradSchoolActivityRead] = None
+    is_completed: Optional[bool] = None
+    grade: Optional[PyEnum] = None  # GradeType
+
+    # fields present only when activity_type == ABROAD:
+    description: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    host_institution: Optional[str] = None
+
     model_config = ConfigDict(from_attributes=True)
 
 

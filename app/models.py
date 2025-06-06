@@ -464,12 +464,12 @@ class GradSchoolStudentActivity(StudentActivity):
 class AbroadStudentActivity(StudentActivity):
     __mapper_args__ = {'polymorphic_identity': ActivityType.ABROAD}
 
-    description = Column(String, nullable=False)
-    start_date = Column(DateTime, nullable=False)
-    end_date = Column(DateTime, nullable=False)
-    city = Column(String, nullable=False)
-    country = Column(String, nullable=False)
-    host_institution = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    start_date = Column(DateTime, nullable=True)
+    end_date = Column(DateTime, nullable=True)
+    city = Column(String, nullable=True)
+    country = Column(String, nullable=True)
+    host_institution = Column(String, nullable=True)
 
 
 class GradSchoolActivityType(Base):
