@@ -236,7 +236,7 @@ class Researcher(Base):
     __tablename__ = "researchers"
     id = Column(Integer, primary_key=True)
     person_role_id = Column(Integer, ForeignKey("people_roles.id"), nullable=False)
-    title_id = Column(Integer, ForeignKey("researcher_titles.id"), nullable=False)
+    title_id = Column(Integer, ForeignKey("researcher_titles.id"), nullable=True)
     original_title_id = Column(Integer, ForeignKey("researcher_titles.id"), nullable=True)
     link = Column(String, nullable=True)
     notes = Column(String, nullable=True)

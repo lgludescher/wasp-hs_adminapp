@@ -1129,15 +1129,22 @@ def get_student_activity(db: Session, student_activity_id: int) -> Optional[mode
 
 def list_student_activities(
     db: Session,
-    phd_student_id: int
+    phd_student_id: Optional[int] = None,
+    grad_school_activity_id: Optional[int] = None
 ) -> List[models.StudentActivity]:
     """
     Return *all* activities (both grad‐school and abroad) for a given PhD‐student,
     ordered by creation (id) ascending.
     """
 
-    q = (db.query(models.StudentActivity).filter_by(phd_student_id=phd_student_id)
-         .order_by(models.StudentActivity.id))
+    q = db.query(models.StudentActivity)
+
+    if phd_student_id is not None:
+        q = q.filter_by(phd_student_id=phd_student_id)
+    if grad_school_activity_id is not None:
+        q = q.filter_by(activity_type=ActivityType.GRAD_SCHOOL, activity_id=grad_school_activity_id)
+
+    q = q.order_by(models.StudentActivity.id)
 
     return q.all()  # type: ignore
 
@@ -1369,119 +1376,121 @@ def remove_institution_from_course(db: Session, course_id: int, institution_id: 
     db.delete(link)
     db.commit()
 
-# def list_course_institutions(db: Session, course_id: int) -> list[models.Institution]:
-#     return (
-#         db.query(models.Institution)
-#         .join(models.CourseInstitution)
-#         .filter(models.CourseInstitution.course_id == course_id)
-#         .all()
-#     )
-#
-#
-# def add_course_institution(db: Session, course_id: int, inst_id: int) -> models.CourseInstitution:
-#     obj = models.CourseInstitution(course_id=course_id, institution_id=inst_id)
-#     db.add(obj)
-#     db.commit()
-#     db.refresh(obj)
-#     return obj
-#
-#
-# def remove_course_institution(db: Session, course_id: int, inst_id: int) -> None:
-#     ci = (
-#         db.query(models.CourseInstitution)
-#         .filter_by(course_id=course_id, institution_id=inst_id)
-#         .one()
-#     )
-#     db.delete(ci)
-#     db.commit()
+
+# --- teachers for a course ---
+def get_course_teachers(db: Session, course_id: int) -> list[models.PersonRole]:
+    # ensure course exists
+    course = get_course(db, course_id)
+    if not course:
+        raise EntityNotFoundError(f"Course #{course_id} not found")
+    joins = db.query(models.CourseTeacher).filter_by(course_id=course_id).all()
+    return [j.person_role for j in joins]
+
+
+def add_teacher_to_course(db: Session, course_id: int, person_role_id: int) -> models.PersonRole:
+    # look up both ends
+    course = get_course(db, course_id)
+    if not course:
+        raise EntityNotFoundError(f"Course #{course_id} not found")
+    pr = get_person_role(db, person_role_id)
+    if not pr:
+        raise EntityNotFoundError(f"Person role #{person_role_id} not found")
+    # no dupes
+    exists = db.query(models.CourseTeacher).filter_by(
+        course_id=course_id, person_role_id=person_role_id
+    ).first()
+    if exists:
+        raise Exception(f"Person role (teacher) #{person_role_id} already linked to Course #{course_id}")
+    link = models.CourseTeacher(course_id=course_id, person_role_id=person_role_id)
+    db.add(link)
+    db.commit()
+    return pr  # type: ignore
+
+
+def remove_teacher_from_course(db: Session, course_id: int, person_role_id: int):
+    link = db.query(models.CourseTeacher).filter_by(
+        course_id=course_id, person_role_id=person_role_id
+    ).first()
+    if not link:
+        raise EntityNotFoundError(
+            f"Person role #{person_role_id} not linked to Course #{course_id}"
+        )
+    db.delete(link)
+    db.commit()
 
 
 # --- students for a course ---
-# def list_course_students(db: Session, course_id: int) -> list[models.PhDStudent]:
-#     return (
-#         db.query(models.PhDStudent)
-#         .join(models.PhDStudentCourse)
-#         .filter(models.PhDStudentCourse.course_id == course_id)
-#         .all()
-#     )
-#
-#
-# def add_course_student(db: Session, course_id: int, s: schemas.CourseStudentCreate) -> models.PhDStudentCourse:
-#     obj = models.PhDStudentCourse(
-#         course_id=course_id,
-#         phd_student_id=s.phd_student_id,
-#         is_completed=s.is_completed,
-#         grade=s.grade
-#     )
-#     db.add(obj)
-#     db.commit()
-#     db.refresh(obj)
-#     return obj
-#
-#
-# def remove_course_student(db: Session, course_id: int, phd_student_id: int) -> None:
-#     sc = (
-#         db.query(models.PhDStudentCourse)
-#         .filter_by(course_id=course_id, phd_student_id=phd_student_id)
-#         .one()
-#     )
-#     db.delete(sc)
-#     db.commit()
+def get_course_students(db: Session, course_id: int) -> list[models.PhDStudentCourse]:
+    # ensure course exists
+    course = get_course(db, course_id)
+    if not course:
+        raise EntityNotFoundError(f"Course #{course_id} not found")
+    course_students = db.query(models.PhDStudentCourse).filter_by(course_id=course_id).all()
+    return course_students  # type: ignore
 
 
-# --- teachers for a course ---
-# def list_course_teachers(db: Session, course_id: int) -> list[models.PersonRole]:
-#     return (
-#         db.query(models.PersonRole)
-#         .join(models.CourseTeacher)
-#         .filter(models.CourseTeacher.course_id == course_id)
-#         .all()
-#     )
-#
-#
-# def add_course_teacher(db: Session, course_id: int, person_role_id: int) -> models.CourseTeacher:
-#     obj = models.CourseTeacher(course_id=course_id, person_role_id=person_role_id)
-#     db.add(obj)
-#     db.commit()
-#     db.refresh(obj)
-#     return obj
-#
-#
-# def remove_course_teacher(db: Session, course_id: int, person_role_id: int) -> None:
-#     ct = (
-#         db.query(models.CourseTeacher)
-#         .filter_by(course_id=course_id, person_role_id=person_role_id)
-#         .one()
-#     )
-#     db.delete(ct)
-#     db.commit()
+def add_student_to_course(db: Session, course_id: int,
+                          in_data: schemas.CourseStudentLink) -> models.PhDStudentCourse:
+    # look up both ends
+    course = get_course(db, course_id)
+    if not course:
+        raise EntityNotFoundError(f"Course #{course_id} not found")
+    student = get_phd_student(db, in_data.phd_student_id)
+    if not student:
+        raise EntityNotFoundError(f"PhD Student #{in_data.phd_student_id} not found")
+    # no dupes
+    exists = db.query(models.PhDStudentCourse).filter_by(
+        course_id=course_id, phd_student_id=in_data.phd_student_id
+    ).first()
+    if exists:
+        raise Exception(f"PhD student #{in_data.phd_student_id} already linked to Course #{course_id}")
+    link = models.PhDStudentCourse(course_id=course_id,
+                                   phd_student_id=in_data.phd_student_id,
+                                   is_completed=in_data.is_completed,
+                                   grade=in_data.grade)
+    db.add(link)
+    db.commit()
+    db.refresh(link)
+    return link  # type: ignore
 
 
-# --- helpers to seed PhDStudent in tests ---
-# def create_person(db: Session, first_name: str, last_name: str, email: str) -> models.Person:
-#     p = models.Person(first_name=first_name, last_name=last_name, email=email)
-#     db.add(p)
-#     db.commit()
-#     db.refresh(p)
-#     return p
-#
-#
-# def create_person_role(db: Session, person_id: int, role_name: schemas.PyEnum) -> models.PersonRole:
-#     # assume role already exists
-#     r = db.query(models.Role).filter_by(role=role_name).one()
-#     pr = models.PersonRole(person_id=person_id, role_id=r.id)
-#     db.add(pr)
-#     db.commit()
-#     db.refresh(pr)
-#     return pr
-#
-#
-# def create_phd_student(db: Session, person_role_id: int) -> models.PhDStudent:
-#     s = models.PhDStudent(person_role_id=person_role_id)
-#     db.add(s)
-#     db.commit()
-#     db.refresh(s)
-#     return s
+def update_student_course_link(db: Session, course_id: int, phd_student_id: int,
+                               in_data: schemas.CourseStudentLink) -> models.PhDStudentCourse:
+    # look up both ends
+    course = get_course(db, course_id)
+    if not course:
+        raise EntityNotFoundError(f"Course #{course_id} not found")
+    student = get_phd_student(db, phd_student_id)
+    if not student:
+        raise EntityNotFoundError(f"PhD Student #{phd_student_id} not found")
+
+    psc = db.query(models.PhDStudentCourse).filter_by(course_id=course_id, phd_student_id=phd_student_id).first()
+    if not psc:
+        # Shouldn’t happen if the data is consistent, but just in case:
+        raise EntityNotFoundError(f"PhDStudentCourse for course #{course_id} and "
+                                  f"phd student {phd_student_id} not found")
+
+    # Update is_completed / grade if provided
+    if getattr(in_data, "is_completed", None) is not None:
+        psc.is_completed = in_data.is_completed
+    if getattr(in_data, "grade", None) is not None:
+        psc.grade = in_data.grade
+
+    db.commit()
+    db.refresh(psc)
+    return psc  # type: ignore
+
+
+def remove_student_from_course(db: Session, course_id: int, phd_student_id: int):
+    link = db.query(models.PhDStudentCourse).filter_by(
+        course_id=course_id, phd_student_id=phd_student_id
+    ).first()
+    if not link:
+        raise EntityNotFoundError(
+            f"PhD student #{phd_student_id} not linked to Course #{course_id}"
+        )
+    db.delete(link)
+    db.commit()
 
 
 # </editor-fold>
@@ -1525,6 +1534,281 @@ def remove_field_from_project(db: Session, project_id: int, field_id: int):
         raise EntityNotFoundError(
             f"Academic field #{field_id} not linked to Project #{project_id}"
         )
+    db.delete(link)
+    db.commit()
+
+
+# --- people roles for a project ---
+def get_project_people_roles(db: Session, project_id: int) -> list[models.PersonProject]:
+    # ensure project exists
+    project = get_project(db, project_id)
+    if not project:
+        raise EntityNotFoundError(f"Project #{project_id} not found")
+    project_people_roles = db.query(models.PersonProject).filter_by(project_id=project_id).all()
+    return project_people_roles  # type: ignore
+
+
+def add_person_role_to_project(db: Session, project_id: int,
+                               in_data: schemas.ProjectPersonRoleLink) -> models.PersonProject:
+    # look up both ends
+    project = get_project(db, project_id)
+    if not project:
+        raise EntityNotFoundError(f"Project #{project_id} not found")
+    person_role = get_person_role(db, in_data.person_role_id)
+    if not person_role:
+        raise EntityNotFoundError(f"Person role #{in_data.person_role_id} not found")
+    # no dupes
+    exists = db.query(models.PersonProject).filter_by(
+        project_id=project_id, person_role_id=in_data.person_role_id
+    ).first()
+    if exists:
+        raise Exception(f"Person role #{in_data.person_role_id} already linked to Project #{project_id}")
+    link = models.PersonProject(project_id=project_id,
+                                person_role_id=in_data.person_role_id,
+                                is_principal_investigator=in_data.is_principal_investigator,
+                                is_leader=in_data.is_leader)
+    db.add(link)
+    db.commit()
+    db.refresh(link)
+    return link  # type: ignore
+
+
+def update_person_role_project_link(db: Session, project_id: int, person_role_id: int,
+                                    in_data: schemas.ProjectPersonRoleLink) -> models.PersonProject:
+    # look up both ends
+    project = get_project(db, project_id)
+    if not project:
+        raise EntityNotFoundError(f"Project #{project_id} not found")
+    person_role = get_person_role(db, person_role_id)
+    if not person_role:
+        raise EntityNotFoundError(f"Person role #{person_role_id} not found")
+
+    pp = db.query(models.PersonProject).filter_by(project_id=project_id, person_role_id=person_role_id).first()
+    if not pp:
+        # Shouldn’t happen if the data is consistent, but just in case:
+        raise EntityNotFoundError(f"PersonProject for project #{project_id} and "
+                                  f"person role {person_role_id} not found")
+
+    # Update is_principal_investigator / is_leader if provided
+    if getattr(in_data, "is_principal_investigator", None) is not None:
+        pp.is_principal_investigator = in_data.is_principal_investigator
+    if getattr(in_data, "is_leader", None) is not None:
+        pp.is_leader = in_data.is_leader
+
+    db.commit()
+    db.refresh(pp)
+    return pp  # type: ignore
+
+
+def remove_person_role_from_project(db: Session, project_id: int, person_role_id: int):
+    link = db.query(models.PersonProject).filter_by(
+        project_id=project_id, person_role_id=person_role_id
+    ).first()
+    if not link:
+        raise EntityNotFoundError(
+            f"Person role #{person_role_id} not linked to Project #{project_id}"
+        )
+    db.delete(link)
+    db.commit()
+
+
+# </editor-fold>
+
+# <editor-fold desc="Person Role relationships functions">
+# --- institutions for a person role ---
+
+def get_person_role_institutions(db: Session, person_role_id: int) -> list[models.PersonInstitution]:
+    # ensure person role exists
+    person_role = get_person_role(db, person_role_id)
+    if not person_role:
+        raise EntityNotFoundError(f"Person role #{person_role_id} not found")
+    person_role_institutions = db.query(models.PersonInstitution).filter_by(person_role_id=person_role_id).all()
+    return person_role_institutions  # type: ignore
+
+
+def add_institution_to_person_role(db: Session, person_role_id: int,
+                                   in_data: schemas.PersonRoleInstitutionLink) -> models.PersonInstitution:
+    # look up both ends
+    person_role = get_person_role(db, person_role_id)
+    if not person_role:
+        raise EntityNotFoundError(f"Person role #{person_role_id} not found")
+    institution = get_institution(db, in_data.institution_id)
+    if not institution:
+        raise EntityNotFoundError(f"Institution #{in_data.institution_id} not found")
+    # no dupes
+    exists = db.query(models.PersonInstitution).filter_by(
+        person_role_id=person_role_id, institution_id=in_data.institution_id
+    ).first()
+    if exists:
+        raise Exception(f"Institution #{in_data.institution_id} already linked to Person Role #{person_role_id}")
+    link = models.PersonInstitution(person_role_id=person_role_id,
+                                    institution_id=in_data.institution_id,
+                                    start_date=in_data.start_date,
+                                    end_date=in_data.end_date)
+    db.add(link)
+    db.commit()
+    db.refresh(link)
+    return link  # type: ignore
+
+
+def update_institution_person_role_link(db: Session, person_role_id: int, institution_id: int,
+                                        in_data: schemas.PersonRoleInstitutionLink) -> models.PersonInstitution:
+    # look up both ends
+    person_role = get_person_role(db, person_role_id)
+    if not person_role:
+        raise EntityNotFoundError(f"Person role #{person_role_id} not found")
+    institution = get_institution(db, institution_id)
+    if not institution:
+        raise EntityNotFoundError(f"Institution #{institution_id} not found")
+
+    pi_row = db.query(models.PersonInstitution).filter_by(person_role_id=person_role_id,
+                                                          institution_id=institution_id).first()
+    if not pi_row:
+        # Shouldn’t happen if the data is consistent, but just in case:
+        raise EntityNotFoundError(f"Institution for person role #{person_role_id} and "
+                                  f"institution {institution_id} not found")
+
+    # Update start_date / end_date if provided
+    if getattr(in_data, "start_date", None) is not None:
+        pi_row.start_date = in_data.start_date
+    if getattr(in_data, "end_date", None) is not None:
+        pi_row.end_date = in_data.end_date
+
+    db.commit()
+    db.refresh(pi_row)
+    return pi_row  # type: ignore
+
+
+def remove_institution_from_person_role(db: Session, person_role_id: int, institution_id: int):
+    link = db.query(models.PersonInstitution).filter_by(
+        person_role_id=person_role_id, institution_id=institution_id
+    ).first()
+    if not link:
+        raise EntityNotFoundError(
+            f"Institution #{institution_id} not linked to Person Role #{person_role_id}"
+        )
+    db.delete(link)
+    db.commit()
+
+
+# --- academic fields for a person role ---
+
+def get_person_role_fields(db: Session, person_role_id: int) -> list[models.AcademicField]:
+    # ensure person role exists
+    person_role = get_person_role(db, person_role_id)
+    if not person_role:
+        raise EntityNotFoundError(f"Person role #{person_role_id} not found")
+    joins = db.query(models.PersonField).filter_by(person_role_id=person_role_id).all()
+    return [j.field for j in joins]
+
+
+def add_field_to_person_role(db: Session, person_role_id: int, field_id: int) -> models.AcademicField:
+    # look up both ends
+    person_role = get_person_role(db, person_role_id)
+    if not person_role:
+        raise EntityNotFoundError(f"Person role #{person_role_id} not found")
+    field = get_field(db, field_id)
+    if not field:
+        raise EntityNotFoundError(f"Academic field #{field_id} not found")
+    # no dupes
+    exists = db.query(models.PersonField).filter_by(
+        person_role_id=person_role_id, field_id=field_id
+    ).first()
+    if exists:
+        raise Exception(f"Academic field #{field_id} already linked to Person Role #{person_role_id}")
+    link = models.PersonField(person_role_id=person_role_id, field_id=field_id)
+    db.add(link)
+    db.commit()
+    return field  # type: ignore
+
+
+def remove_field_from_person_role(db: Session, person_role_id: int, field_id: int):
+    link = db.query(models.PersonField).filter_by(
+        person_role_id=person_role_id, field_id=field_id
+    ).first()
+    if not link:
+        raise EntityNotFoundError(
+            f"Academic field #{field_id} not linked to Person Role #{person_role_id}"
+        )
+    db.delete(link)
+    db.commit()
+
+
+# --- supervision relationships ---
+
+def get_supervision(db: Session, supervision_id: int) -> Optional[models.SupervisorPhDStudent]:
+    return db.query(models.SupervisorPhDStudent).filter_by(id=supervision_id).first()
+
+
+def list_supervisions(
+    db: Session,
+    *,
+    student_role_id:   Optional[int] = None,
+    supervisor_role_id: Optional[int] = None
+) -> List[models.SupervisorPhDStudent]:
+    q = db.query(models.SupervisorPhDStudent)
+    if student_role_id is not None:
+        q = q.filter_by(student_role_id=student_role_id)
+    if supervisor_role_id is not None:
+        q = q.filter_by(supervisor_role_id=supervisor_role_id)
+    return q.order_by(models.SupervisorPhDStudent.id).all()  # type: ignore
+
+
+def create_supervision(
+    db: Session,
+    sup_in: schemas.SupervisionCreate
+) -> models.SupervisorPhDStudent:
+    # ensure both person‐roles exist
+    sup = get_person_role(db, sup_in.supervisor_role_id)
+    if not sup:
+        raise EntityNotFoundError(f"PersonRole #{sup_in.supervisor_role_id} not found")
+    stu = get_person_role(db, sup_in.student_role_id)
+    if not stu:
+        raise EntityNotFoundError(f"PersonRole #{sup_in.student_role_id} not found")
+
+    # prevent duplicates
+    exists = db.query(models.SupervisorPhDStudent).filter_by(
+        supervisor_role_id=sup_in.supervisor_role_id,
+        student_role_id=sup_in.student_role_id
+    ).first()
+    if exists:
+        raise Exception(
+            f"Supervision link already exists "
+            f"between supervisor {sup_in.supervisor_role_id} and student {sup_in.student_role_id}"
+        )
+
+    link = models.SupervisorPhDStudent(
+        supervisor_role_id=sup_in.supervisor_role_id,
+        student_role_id=sup_in.student_role_id,
+        is_main=sup_in.is_main
+    )
+    db.add(link)
+    db.commit()
+    db.refresh(link)
+    return link
+
+
+def update_supervision(
+    db: Session,
+    supervision_id: int,
+    sup_in: schemas.SupervisionUpdate
+) -> models.SupervisorPhDStudent:
+    link = get_supervision(db, supervision_id)
+    if not link:
+        raise EntityNotFoundError(f"Supervision #{supervision_id} not found")
+
+    if sup_in.is_main is not None:
+        link.is_main = sup_in.is_main
+
+    db.commit()
+    db.refresh(link)
+    return link
+
+
+def delete_supervision(db: Session, supervision_id: int) -> None:
+    link = get_supervision(db, supervision_id)
+    if not link:
+        raise EntityNotFoundError(f"Supervision #{supervision_id} not found")
     db.delete(link)
     db.commit()
 

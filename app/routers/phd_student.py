@@ -100,7 +100,7 @@ def list_student_activities(
         raise HTTPException(404, f"PhDStudent #{stu_id} not found")
 
     logger.info(f"{current_user.username} listing activities for phd_student #{stu_id}")
-    results = crud.list_student_activities(db, stu_id)
+    results = crud.list_student_activities(db, phd_student_id=stu_id)
     return results
 
 

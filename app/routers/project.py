@@ -188,7 +188,7 @@ def delete_project(
 # <editor-fold desc="Project-related research output reports endpoints">
 # — Research Output Reports —
 
-@router.get("/projects/{pid}/research-output-reports/", response_model=list[schemas.ResearchOutputReportRead])
+@router.get("/projects/{pid}/research-output-reports/", response_model=List[schemas.ResearchOutputReportRead])
 def project_research_output_reports(pid: int, db: Session = Depends(dependencies.get_db),
                                     current_user=Depends(dependencies.get_current_user)):
     logger.info(f"{current_user.username} listed research output reports for project {pid}")
@@ -236,7 +236,7 @@ def del_project_research_output_report(pid: int, rorid: int,
 # <editor-fold desc="Project-related fields endpoints">
 # — Academic Fields —
 
-@router.get("/projects/{project_id}/fields/", response_model=list[schemas.FieldRead])
+@router.get("/projects/{project_id}/fields/", response_model=List[schemas.FieldRead])
 def list_project_fields(
     project_id: int,
     db: Session = Depends(dependencies.get_db),
@@ -284,10 +284,81 @@ def remove_project_field(
 
 # </editor-fold>
 
+# <editor-fold desc="Project-related people roles endpoints">
+# — People Roles —
+
+@router.get("/projects/{project_id}/people-roles/", response_model=List[schemas.ProjectPersonRoleRead])
+def list_project_people_roles(
+    project_id: int,
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    logger.info(f"{current_user.username} listing people roles for project {project_id}")
+    return crud.get_project_people_roles(db, project_id)
+
+
+@router.post("/projects/{project_id}/people-roles/", response_model=schemas.ProjectPersonRoleRead)
+def add_project_person_role(
+    project_id: int,
+    link: schemas.ProjectPersonRoleLink,
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    logger.info(f"{current_user.username} linking person role "
+                f"{link.person_role_id} → project {project_id}")
+    try:
+        return crud.add_person_role_to_project(db, project_id, link)
+    except EntityNotFoundError as e:
+        logger.warning(str(e))
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        logger.warning(str(e))
+        raise HTTPException(400, str(e))
+
+
+@router.put("/projects/{project_id}/people-roles/{person_role_id}", response_model=schemas.ProjectPersonRoleRead)
+def update_project_person_role(
+    project_id: int,
+    person_role_id: int,
+    link: schemas.ProjectPersonRoleLink,
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    logger.info(f"{current_user.username} updating project‐person role link: person role "
+                f"{person_role_id} for project {project_id} → {link}")
+    try:
+        return crud.update_person_role_project_link(db, project_id, person_role_id, link)
+    except EntityNotFoundError as e:
+        logger.warning(str(e))
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        logger.warning(str(e))
+        raise HTTPException(400, str(e))
+
+
+@router.delete("/projects/{project_id}/people-roles/{person_role_id}", status_code=204)
+def remove_project_person_role(
+    project_id: int,
+    person_role_id: int,
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    logger.info(f"{current_user.username} unlinking person role "
+                f"{person_role_id} from project {project_id}")
+    try:
+        crud.remove_person_role_from_project(db, project_id, person_role_id)
+    except EntityNotFoundError as e:
+        logger.warning(str(e))
+        raise HTTPException(404, str(e))
+    return Response(status_code=204)
+
+
+# </editor-fold>
+
 # <editor-fold desc="Project-related decision letters endpoints">
 # — Decision Letters —
 
-@router.get("/projects/{pid}/decision-letters/", response_model=list[schemas.DecisionLetterRead])
+@router.get("/projects/{pid}/decision-letters/", response_model=List[schemas.DecisionLetterRead])
 def project_decision_letters(pid: int, db: Session = Depends(dependencies.get_db),
                              current_user=Depends(dependencies.get_current_user)):
     logger.info(f"{current_user.username} listed decision letters for project {pid}")
@@ -322,9 +393,9 @@ def update_project_decision_letter(
 
 
 @router.delete("/projects/{pid}/decision-letters/{dlid}", status_code=204)
-def del_course_decision_letter(pid: int, dlid: int,
-                               db: Session = Depends(dependencies.get_db),
-                               current_user=Depends(dependencies.get_current_user)):
+def del_project_decision_letter(pid: int, dlid: int,
+                                db: Session = Depends(dependencies.get_db),
+                                current_user=Depends(dependencies.get_current_user)):
     logger.info(f"{current_user.username} removing decision letter {dlid} for project {pid}")
     crud.remove_decision_letter(db, dlid)
     return Response(status_code=204)

@@ -183,7 +183,7 @@ def delete_course(
 # <editor-fold desc="Course-related institutions endpoints">
 # — Institutions —
 
-@router.get("/courses/{course_id}/institutions/", response_model=list[schemas.InstitutionRead])
+@router.get("/courses/{course_id}/institutions/", response_model=List[schemas.InstitutionRead])
 def list_course_institutions(
     course_id: int,
     db: Session = Depends(dependencies.get_db),
@@ -228,31 +228,56 @@ def remove_course_institution(
         raise HTTPException(404, str(e))
     return Response(status_code=204)
 
-# @router.get("/courses/{cid}/institutions/", response_model=List[schemas.InstitutionRead])
-# def course_institutions(cid: int, db: Session = Depends(dependencies.get_db),
-#                         current_user=Depends(dependencies.get_current_user)):
-#     logger.info(f"{current_user.username} listed institutions for course {cid}")
-#     return crud.list_course_institutions(db, cid)
-#
-#
-# @router.post("/courses/{cid}/institutions/", response_model=schemas.InstitutionRead)
-# def add_course_institution(cid: int, inst_in: schemas.CourseInstitutionCreate,
-#                            db: Session = Depends(dependencies.get_db),
-#                            current_user=Depends(dependencies.get_current_user)):
-#     if not crud.get_course(db, cid):
-#         logger.warning(f"Course #{cid} not found")
-#         raise HTTPException(404, f"Course #{cid} not found")
-#     logger.info(f"{current_user.username} adding institution {inst_in.institution_id} for course {cid}")
-#     return crud.add_course_institution(db, cid, inst_in.institution_id)
-#
-#
-# @router.delete("/courses/{cid}/institutions/{iid}", status_code=204)
-# def del_course_institution(cid: int, iid: int,
-#                            db: Session = Depends(dependencies.get_db),
-#                            current_user=Depends(dependencies.get_current_user)):
-#     logger.info(f"{current_user.username} removing institution {iid} for course {cid}")
-#     crud.remove_course_institution(db, cid, iid)
-#     return Response(status_code=204)
+
+# </editor-fold>
+
+# <editor-fold desc="Course-related teachers endpoints">
+# — Teachers —
+
+@router.get("/courses/{course_id}/teachers/", response_model=List[schemas.PersonRoleReadFull])
+def list_course_teachers(
+    course_id: int,
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    logger.info(f"{current_user.username} listing teachers for course {course_id}")
+    return crud.get_course_teachers(db, course_id)
+
+
+@router.post("/courses/{course_id}/teachers/", response_model=schemas.PersonRoleReadFull)
+def add_course_teacher(
+    course_id: int,
+    link: schemas.CourseTeacherLink,
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    logger.info(f"{current_user.username} linking person role (teacher) "
+                f"{link.person_role_id} → course {course_id}")
+    try:
+        return crud.add_teacher_to_course(db, course_id, link.person_role_id)
+    except EntityNotFoundError as e:
+        logger.warning(str(e))
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        logger.warning(str(e))
+        raise HTTPException(400, str(e))
+
+
+@router.delete("/courses/{course_id}/teachers/{person_role_id}", status_code=204)
+def remove_course_teacher(
+    course_id: int,
+    person_role_id: int,
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    logger.info(f"{current_user.username} unlinking person role (teacher) "
+                f"{person_role_id} from course {course_id}")
+    try:
+        crud.remove_teacher_from_course(db, course_id, person_role_id)
+    except EntityNotFoundError as e:
+        logger.warning(str(e))
+        raise HTTPException(404, str(e))
+    return Response(status_code=204)
 
 
 # </editor-fold>
@@ -260,63 +285,70 @@ def remove_course_institution(
 # <editor-fold desc="Course-related students endpoints">
 # — Students —
 
-# @router.get("/courses/{cid}/students/", response_model=List[schemas.CourseStudentRead])
-# def course_students(cid: int, db: Session = Depends(dependencies.get_db),
-#                     current_user=Depends(dependencies.get_current_user)):
-#     logger.info(f"{current_user.username} listed students for course {cid}")
-#     return crud.list_course_students(db, cid)
-#
-#
-# @router.post("/courses/{cid}/students/", response_model=schemas.CourseStudentRead)
-# def add_course_student(cid: int, s_in: schemas.CourseStudentCreate,
-#                        db: Session = Depends(dependencies.get_db),
-#                        current_user=Depends(dependencies.get_current_user)):
-#     if not crud.get_course(db, cid):
-#         logger.warning(f"Course #{cid} not found")
-#         raise HTTPException(404, f"Course #{cid} not found")
-#     logger.info(f"{current_user.username} adding student {s_in.phd_student_id} for course {cid}")
-#     return crud.add_course_student(db, cid, s_in)
-#
-#
-# @router.delete("/courses/{cid}/students/{sid}", status_code=204)
-# def del_course_student(cid: int, sid: int,
-#                        db: Session = Depends(dependencies.get_db),
-#                        current_user=Depends(dependencies.get_current_user)):
-#     logger.info(f"{current_user.username} removing student {sid} for course {cid}")
-#     crud.remove_course_student(db, cid, sid)
-#     return Response(status_code=204)
+@router.get("/courses/{course_id}/students/", response_model=List[schemas.CourseStudentRead])
+def list_course_students(
+    course_id: int,
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    logger.info(f"{current_user.username} listing phd students for course {course_id}")
+    return crud.get_course_students(db, course_id)
 
 
-# </editor-fold>
+@router.post("/courses/{course_id}/students/", response_model=schemas.CourseStudentRead)
+def add_course_student(
+    course_id: int,
+    link: schemas.CourseStudentLink,
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    logger.info(f"{current_user.username} linking phd student "
+                f"{link.phd_student_id} → course {course_id}")
+    try:
+        return crud.add_student_to_course(db, course_id, link)
+    except EntityNotFoundError as e:
+        logger.warning(str(e))
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        logger.warning(str(e))
+        raise HTTPException(400, str(e))
 
-# <editor-fold desc="Course-related teachers endpoints">
-# — Teachers —
 
-# @router.get("/courses/{cid}/teachers/", response_model=List[schemas.CourseTeacherRead])
-# def course_teachers(cid: int, db: Session = Depends(dependencies.get_db),
-#                     current_user=Depends(dependencies.get_current_user)):
-#     logger.info(f"{current_user.username} listed teachers for course {cid}")
-#     return crud.list_course_teachers(db, cid)
-#
-#
-# @router.post("/courses/{cid}/teachers/", response_model=schemas.CourseTeacherRead)
-# def add_course_teacher(cid: int, t_in: schemas.CourseTeacherCreate,
-#                        db: Session = Depends(dependencies.get_db),
-#                        current_user=Depends(dependencies.get_current_user)):
-#     if not crud.get_course(db, cid):
-#         logger.warning(f"Course #{cid} not found")
-#         raise HTTPException(404, f"Course #{cid} not found")
-#     logger.info(f"{current_user.username} adding teacher {t_in.person_role_id} for course {cid}")
-#     return crud.add_course_teacher(db, cid, t_in.person_role_id)
-#
-#
-# @router.delete("/courses/{cid}/teachers/{tid}", status_code=204)
-# def del_course_teacher(cid: int, tid: int,
-#                        db: Session = Depends(dependencies.get_db),
-#                        current_user=Depends(dependencies.get_current_user)):
-#     logger.info(f"{current_user.username} removing teacher {tid} for course {cid}")
-#     crud.remove_course_teacher(db, cid, tid)
-#     return Response(status_code=204)
+@router.put("/courses/{course_id}/students/{phd_student_id}", response_model=schemas.CourseStudentRead)
+def update_course_student(
+    course_id: int,
+    phd_student_id: int,
+    link: schemas.CourseStudentLink,
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    logger.info(f"{current_user.username} updating course‐student link: phd student "
+                f"{phd_student_id} for course {course_id} → {link}")
+    try:
+        return crud.update_student_course_link(db, course_id, phd_student_id, link)
+    except EntityNotFoundError as e:
+        logger.warning(str(e))
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        logger.warning(str(e))
+        raise HTTPException(400, str(e))
+
+
+@router.delete("/courses/{course_id}/students/{phd_student_id}", status_code=204)
+def remove_course_student(
+    course_id: int,
+    phd_student_id: int,
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    logger.info(f"{current_user.username} unlinking phd student "
+                f"{phd_student_id} from course {course_id}")
+    try:
+        crud.remove_student_from_course(db, course_id, phd_student_id)
+    except EntityNotFoundError as e:
+        logger.warning(str(e))
+        raise HTTPException(404, str(e))
+    return Response(status_code=204)
 
 
 # </editor-fold>
@@ -324,7 +356,7 @@ def remove_course_institution(
 # <editor-fold desc="Course-related decision letters endpoints">
 # — Decision Letters —
 
-@router.get("/courses/{cid}/decision-letters/", response_model=list[schemas.DecisionLetterRead])
+@router.get("/courses/{cid}/decision-letters/", response_model=List[schemas.DecisionLetterRead])
 def course_decision_letters(cid: int, db: Session = Depends(dependencies.get_db),
                             current_user=Depends(dependencies.get_current_user)):
     logger.info(f"{current_user.username} listed decision letters for course {cid}")

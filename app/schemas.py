@@ -415,7 +415,7 @@ class ResearcherTitleUpdate(BaseModel):
 # Researcher
 class ResearcherBase(BaseModel):
     person_role_id:    int
-    title_id:          int
+    title_id:          Optional[int] = None
     original_title_id: Optional[int] = None
     link:              Optional[str] = None
     notes:             Optional[str] = None
@@ -611,43 +611,28 @@ class CourseInstitutionLink(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# class CourseInstitutionCreate(BaseModel):
-#     institution_id: int
-#
-#
-# class CourseInstitutionRead(BaseModel):
-#     id: int
-#     institution: str
-#
-#     model_config = ConfigDict(from_attributes=True)
+# --- Course ↔ Teachers ---
+class CourseTeacherLink(BaseModel):
+    person_role_id: int
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Course ↔ Students ---
-# class CourseStudentCreate(BaseModel):
-#     phd_student_id: int
-#     is_completed: Optional[bool] = False
-#     grade: Optional[GradeType] = None
-#
-#
-# class CourseStudentRead(BaseModel):
-#     id: int
-#     phd_student_id: int
-#     is_completed: bool
-#     grade: Optional[GradeType]
-#
-#     model_config = ConfigDict(from_attributes=True)
+class CourseStudentLink(BaseModel):
+    phd_student_id: int
+    is_completed: Optional[bool] = False
+    grade: Optional[GradeType] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
-# --- Course ↔ Teachers ---
-# class CourseTeacherCreate(BaseModel):
-#     person_role_id: int
-#
-#
-# class CourseTeacherRead(BaseModel):
-#     id: int
-#     person_role_id: int
-#
-#     model_config = ConfigDict(from_attributes=True)
+class CourseStudentRead(BaseModel):
+    phd_student_id: int
+    is_completed: bool
+    grade: Optional[GradeType]
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # </editor-fold>
@@ -656,6 +641,73 @@ class CourseInstitutionLink(BaseModel):
 # --- Project ↔ Fields ---
 class ProjectFieldLink(BaseModel):
     field_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Project ↔ People Roles ---
+class ProjectPersonRoleLink(BaseModel):
+    person_role_id: int
+    is_principal_investigator: Optional[bool] = False
+    is_leader: Optional[bool] = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectPersonRoleRead(BaseModel):
+    person_role_id: int
+    is_principal_investigator: bool
+    is_leader: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Person Role relationships entities">
+# --- Person Role ↔ Institutions ---
+class PersonRoleInstitutionLink(BaseModel):
+    institution_id: int
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PersonRoleInstitutionRead(BaseModel):
+    institution_id: int
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Person Role ↔ Fields ---
+class PersonRoleFieldLink(BaseModel):
+    field_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Students ↔ Supervisors ---
+class SupervisionBase(BaseModel):
+    supervisor_role_id: int
+    student_role_id:    int
+    is_main:            bool = False
+
+
+class SupervisionCreate(SupervisionBase):
+    pass
+
+
+class SupervisionRead(SupervisionBase):
+    id: int
+    # maybe embed minimal person info?
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SupervisionUpdate(BaseModel):
+    is_main: Optional[bool] = False
 
     model_config = ConfigDict(from_attributes=True)
 
