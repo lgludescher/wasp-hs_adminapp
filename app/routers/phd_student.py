@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from .. import crud, schemas, dependencies
 from ..crud import EntityNotFoundError, StudentActivityNotFound
+from ..models import ActivityType
 
 router = APIRouter(tags=["phd_students"])
 logger = logging.getLogger(__name__)
@@ -30,12 +31,36 @@ def read_phd_student(
 
 @router.get("/phd-students/", response_model=List[schemas.PhDStudentRead])
 def list_phd_students(
-    person_role_id: Optional[int] = Query(None, ge=1),
+    person_role_id:   Optional[int] = Query(None, ge=1, description="Filter by person_role_id"),
+    is_active:        Optional[bool] = Query(None, description="Only active/inactive roles"),
+    cohort_number:    Optional[int] = Query(None, ge=0, description="Filter by cohort number"),
+    is_affiliated:    Optional[bool] = Query(None, description="Filter by affiliation status"),
+    is_graduated:     Optional[bool] = Query(None, description="Filter by graduation status"),
+    institution_id:   Optional[int] = Query(None, ge=1, description="Filter by institution"),
+    field_id:         Optional[int] = Query(None, ge=1, description="Filter by academic field"),
+    branch_id:        Optional[int] = Query(None, ge=1, description="Filter by academic branch"),
+    search:           Optional[str] = Query(None, description="Substring search on person name"),
     current_user=Depends(dependencies.get_current_user),
     db: Session = Depends(dependencies.get_db),
 ):
-    logger.info(f"{current_user.username} listed phd_students (person_role_id={person_role_id})")
-    return crud.list_phd_students(db, person_role_id=person_role_id)
+    logger.info(
+        f"{current_user.username} listed PhD students "
+        f"(person_role_id={person_role_id}, is_active={is_active}, cohort={cohort_number}, "
+        f"is_affiliated={is_affiliated}, is_graduated={is_graduated}, "
+        f"institution_id={institution_id}, field_id={field_id}, branch_id={branch_id}, search={search!r})"
+    )
+    return crud.list_phd_students(
+        db,
+        person_role_id=person_role_id,
+        is_active=is_active,
+        cohort_number=cohort_number,
+        is_affiliated=is_affiliated,
+        is_graduated=is_graduated,
+        institution_id=institution_id,
+        field_id=field_id,
+        branch_id=branch_id,
+        search=search,
+    )
 
 
 @router.post("/phd-students/", response_model=schemas.PhDStudentRead)
@@ -90,18 +115,25 @@ def delete_phd_student(
 @router.get("/phd-students/{stu_id}/activities/", response_model=List[schemas.StudentActivityRead])
 def list_student_activities(
     stu_id: int,
+    activity_type: Optional[ActivityType] = Query(
+        None,
+        description="Filter by activity type (GRAD_SCHOOL or ABROAD)"
+    ),
     current_user=Depends(dependencies.get_current_user),
     db: Session = Depends(dependencies.get_db),
 ):
-    # Verify the student exists (reuse get_phd_student)
+    # Verify the student exists
     from ..crud import get_phd_student
     if not get_phd_student(db, stu_id):
         logger.warning(f"PhDStudent #{stu_id} not found")
         raise HTTPException(404, f"PhDStudent #{stu_id} not found")
 
-    logger.info(f"{current_user.username} listing activities for phd_student #{stu_id}")
-    results = crud.list_student_activities(db, phd_student_id=stu_id)
-    return results
+    logger.info(
+        f"{current_user.username} listing activities for phd_student #{stu_id}"
+        f"{' of type ' + activity_type.value if activity_type else ''}"
+    )
+
+    return crud.list_student_activities(db, phd_student_id=stu_id, activity_type=activity_type)
 
 
 @router.post("/phd-students/{stu_id}/activities/grad-school", response_model=schemas.StudentActivityRead)
@@ -230,6 +262,21 @@ def delete_student_activity(
         logger.warning(str(e))
         raise HTTPException(404, str(e))
     return Response(status_code=204)
+
+
+# </editor-fold>
+
+# <editor-fold desc="PhD Student-related courses endpoints">
+# — Courses —
+
+@router.get("/phd-students/{stu_id}/courses/", response_model=List[schemas.CourseStudentRead])
+def list_student_courses(
+    stu_id: int,
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    logger.info(f"{current_user.username} listing courses for phd student {stu_id}")
+    return crud.get_student_courses(db, stu_id)
 
 
 # </editor-fold>

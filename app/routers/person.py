@@ -12,6 +12,34 @@ router = APIRouter(tags=["people"])
 logger = logging.getLogger(__name__)
 
 
+# <editor-fold desc="Role endpoints">
+# --- Role endpoints ---
+
+@router.get("/roles/{role_id}", response_model=schemas.RoleRead)
+def read_role(
+        role_id: int,
+        current_user=Depends(dependencies.get_current_user),
+        db: Session = Depends(dependencies.get_db)
+):
+    r = crud.get_role(db, role_id)
+    if not r:
+        logger.warning(f"Role {role_id} not found")
+        raise HTTPException(404, f"Role #{role_id} not found")
+    logger.info(f"{current_user.username} fetched role #{role_id}")
+    return r
+
+
+@router.get("/roles/", response_model=List[schemas.RoleRead])
+def list_roles(
+    current_user=Depends(dependencies.get_current_user),
+    db: Session = Depends(dependencies.get_db),
+):
+    logger.info(f"{current_user.username} listed roles")
+    return crud.list_roles(db)
+
+
+# </editor-fold>
+
 # <editor-fold desc="Person endpoints">
 # --- Person endpoints ---
 
@@ -286,6 +314,42 @@ def remove_person_role_field(
         logger.warning(str(e))
         raise HTTPException(404, str(e))
     return Response(status_code=204)
+
+
+# </editor-fold>
+
+# <editor-fold desc="PersonRole-related projects endpoints">
+# — Projects —
+
+@router.get("/person-roles/{person_role_id}/projects/", response_model=List[schemas.ProjectPersonRoleRead])
+def list_person_role_projects(
+    person_role_id: int,
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    logger.info(f"{current_user.username} listing projects for person role {person_role_id}")
+    return crud.get_person_role_projects(db, person_role_id)
+
+
+# </editor-fold>
+
+# <editor-fold desc="PersonRole-related courses teaching endpoints">
+# — Courses teaching —
+
+@router.get("/person-roles/{person_role_id}/courses_teaching/", response_model=List[schemas.CourseRead])
+def list_person_role_courses_teaching(
+        person_role_id: int,
+        is_active_term: Optional[bool] = Query(None),
+        search: Optional[str] = Query(None, description="Substring search on title"),
+        db: Session = Depends(dependencies.get_db),
+        current_user=Depends(dependencies.get_current_user)
+):
+    logger.info(
+        f"{current_user.username} listing courses taught by person role {person_role_id} "
+        f"(is_active_term={is_active_term})"
+        f"{' with search=' + search if search else ''}"
+    )
+    return crud.list_courses(db, teacher_role_id=person_role_id, is_active_term=is_active_term, search=search)
 
 
 # </editor-fold>

@@ -629,6 +629,7 @@ class CourseStudentLink(BaseModel):
 
 class CourseStudentRead(BaseModel):
     phd_student_id: int
+    course_id: int
     is_completed: bool
     grade: Optional[GradeType]
 
@@ -656,6 +657,7 @@ class ProjectPersonRoleLink(BaseModel):
 
 class ProjectPersonRoleRead(BaseModel):
     person_role_id: int
+    project_id: int
     is_principal_investigator: bool
     is_leader: bool
 

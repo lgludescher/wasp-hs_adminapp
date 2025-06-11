@@ -180,21 +180,31 @@ def delete_grad_school_activity(
 # <editor-fold desc="GradSchoolActivity-related student activities endpoints">
 # --- GradSchoolActivity-related student activities endpoints ---
 
-@router.get("/grad-school-activities/{gsa_id}/student-activities/",
-            response_model=List[schemas.StudentActivityRead])
+@router.get(
+    "/grad-school-activities/{gsa_id}/student-activities/",
+    response_model=List[schemas.StudentActivityRead]
+)
 def list_student_activities_for_grad_school_activity(
-        gsa_id: int,
-        db: Session = Depends(dependencies.get_db),
-        current_user=Depends(dependencies.get_current_user)):
-    # Verify the grad school activity exists (reuse get_grad_school_activity)
+    gsa_id: int,
+    search: Optional[str] = Query(
+        None, description="Substring search on student first or last name"
+    ),
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    # Verify the grad school activity exists
     from ..crud import get_grad_school_activity
     if not get_grad_school_activity(db, gsa_id):
         logger.warning(f"GradSchoolActivity #{gsa_id} not found")
         raise HTTPException(404, f"GradSchoolActivity #{gsa_id} not found")
 
-    logger.info(f"{current_user.username} listing student activities for grad_school_activity #{gsa_id}")
-    results = crud.list_student_activities(db, grad_school_activity_id=gsa_id)
-    return results
+    logger.info(
+        f"{current_user.username} listing student activities for "
+        f"grad_school_activity #{gsa_id}"
+        f"{' with search=' + search if search else ''}"
+    )
+
+    return crud.list_student_activities_for_grad_school(db, grad_school_activity_id=gsa_id, search=search)
 
 
 # </editor-fold>

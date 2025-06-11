@@ -30,12 +30,31 @@ def read_postdoc(
 
 @router.get("/postdocs/", response_model=List[schemas.PostdocRead])
 def list_postdocs(
-    person_role_id: Optional[int] = Query(None, ge=1),
+    person_role_id: Optional[int] = Query(None, ge=1, description="Filter by person_role_id"),
+    is_active:      Optional[bool] = Query(None, description="Only active/inactive roles"),
+    cohort_number:  Optional[int] = Query(None, ge=0, description="Filter by cohort number"),
+    institution_id: Optional[int] = Query(None, ge=1, description="Filter by institution"),
+    field_id:       Optional[int] = Query(None, ge=1, description="Filter by academic field"),
+    branch_id:      Optional[int] = Query(None, ge=1, description="Filter by academic branch"),
+    search:         Optional[str] = Query(None, description="Substring search on person name"),
     current_user=Depends(dependencies.get_current_user),
     db: Session = Depends(dependencies.get_db),
 ):
-    logger.info(f"{current_user.username} listed postdocs (person_role_id={person_role_id})")
-    return crud.list_postdocs(db, person_role_id=person_role_id)
+    logger.info(
+        f"{current_user.username} listed postdocs "
+        f"(person_role_id={person_role_id}, is_active={is_active}, cohort={cohort_number}, "
+        f"institution_id={institution_id}, field_id={field_id}, branch_id={branch_id}, search={search!r})"
+    )
+    return crud.list_postdocs(
+        db,
+        person_role_id=person_role_id,
+        is_active=is_active,
+        cohort_number=cohort_number,
+        institution_id=institution_id,
+        field_id=field_id,
+        branch_id=branch_id,
+        search=search,
+    )
 
 
 @router.post("/postdocs/", response_model=schemas.PostdocRead)

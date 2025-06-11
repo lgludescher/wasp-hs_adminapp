@@ -524,7 +524,10 @@ def get_course(db: Session, course_id: int):
 
 
 def list_courses(db: Session, title: Optional[str] = None, term_id: Optional[int] = None,
-                 activity_id: Optional[int] = None, search: Optional[str] = None):
+                 activity_id: Optional[int] = None, is_active_term: Optional[bool] = None,
+                 teacher_role_id: Optional[int] = None,
+                 search: Optional[str] = None):
+
     q = db.query(models.Course)
 
     if title is not None:
@@ -534,9 +537,38 @@ def list_courses(db: Session, title: Optional[str] = None, term_id: Optional[int
     if activity_id is not None:
         q = q.filter_by(grad_school_activity_id=activity_id)
 
+    # --- filter by teacher role ---
+    if teacher_role_id is not None:
+        q = (
+            q.join(
+                models.CourseTeacher,
+                models.Course.id == models.CourseTeacher.course_id
+            )
+            .filter_by(person_role_id=teacher_role_id)
+        )
+
     if search:
         term = f"%{search}%"
         q = q.filter(models.Course.title.ilike(term))
+
+    if is_active_term is not None:
+        # use an INNER join here so that filtering by True/False excludes the wrong rows
+        q = q.join(
+            models.CourseTerm,
+            models.Course.course_term_id == models.CourseTerm.id
+        ).filter_by(is_active=is_active_term)
+    else:
+        # keep the outer join for ordering, so courses-without-a-term still sort correctly
+        q = q.outerjoin(
+            models.CourseTerm,
+            models.Course.course_term_id == models.CourseTerm.id
+        )
+
+    # always also outer‐join the grad‐school activity for ordering
+    q = q.outerjoin(
+        models.GradSchoolActivity,
+        models.Course.grad_school_activity_id == models.GradSchoolActivity.id
+    )
 
     # build a *mapping* of condition → sort order so SQLAlchemy sees a Mapping
     season_cases = {
@@ -551,14 +583,9 @@ def list_courses(db: Session, title: Optional[str] = None, term_id: Optional[int
         models.GradSchoolActivity.year.isnot(None): models.GradSchoolActivity.year
     }
 
-    q = (
-        q.outerjoin(models.CourseTerm, models.Course.course_term_id == models.CourseTerm.id)
-        .outerjoin(models.GradSchoolActivity,
-                   models.Course.grad_school_activity_id == models.GradSchoolActivity.id)
-        .order_by(
-            desc(case(year_cases, else_=0)),
-            desc(season_ordering)
-        )
+    q = q.order_by(
+        desc(case(year_cases, else_=0)),
+        desc(season_ordering)
     )
 
     return q.all()  # type: ignore
@@ -709,6 +736,8 @@ def list_projects(db: Session, call_type_id: Optional[int] = None, title: Option
                   project_number: Optional[str] = None, is_affiliated: Optional[bool] = None,
                   is_extended: Optional[bool] = None,
                   is_active: Optional[bool] = None,
+                  field_id: Optional[int] = None,
+                  branch_id: Optional[int] = None,
                   search: Optional[str] = None):
     q = db.query(models.Project)
 
@@ -729,10 +758,33 @@ def list_projects(db: Session, call_type_id: Optional[int] = None, title: Option
         else:
             q = q.filter(models.Project.end_date.is_not(None))
 
-    # if start_date is not None:
-    #     q = q.filter(models.Project.start_date >= start_date)
-    # if end_date is not None:
-    #     q = q.filter(models.Project.end_date <= end_date)
+    # filter by exact field link
+    if field_id is not None:
+        q = (
+            q.join(
+                models.ProjectField,
+                models.Project.id == models.ProjectField.project_id
+            )
+            .filter_by(field_id=field_id)
+        )
+
+    # filter by branch via the AcademicField join
+    if branch_id is not None:
+        if field_id is None:  # not joined with ProjectField yet
+            q = (
+                q.join(
+                    models.ProjectField,
+                    models.Project.id == models.ProjectField.project_id
+                )
+            )
+
+        q = (
+            q.join(
+                models.AcademicField,
+                models.ProjectField.field_id == models.AcademicField.id
+            )
+            .filter_by(branch_id=branch_id)
+        )
 
     if search:
         term = f"%{search}%"
@@ -796,6 +848,17 @@ def delete_project(db: Session, project_id: int):
 # </editor-fold>
 
 # <editor-fold desc="Person-related functions">
+# ---------- Role ----------
+
+def get_role(db: Session, role_id: int) -> Optional[models.Role]:
+    return db.query(models.Role).filter_by(id=role_id).first()
+
+
+def list_roles(db: Session) -> List[models.Role]:
+    q = db.query(models.Role)
+    return q.order_by(models.Role.id).all()  # type: ignore
+
+
 # ---------- Person ----------
 
 def get_person(db: Session, person_id: int) -> Optional[models.Person]:
@@ -982,11 +1045,101 @@ def get_researcher(db: Session, researcher_id: int) -> Optional[models.Researche
     return db.query(models.Researcher).filter_by(id=researcher_id).first()
 
 
-def list_researchers(db: Session, person_role_id: Optional[int] = None) -> List[models.Researcher]:
+def list_researchers(
+    db: Session,
+    person_role_id:   Optional[int] = None,
+    is_active:        Optional[bool] = None,
+    title_id:         Optional[int] = None,
+    institution_id:   Optional[int] = None,
+    field_id:         Optional[int] = None,
+    branch_id:        Optional[int] = None,
+    search:           Optional[str] = None,
+) -> List[models.Researcher]:
+
     q = db.query(models.Researcher)
+    seen = set()
+
+    # 1) simple equality filters
     if person_role_id is not None:
         q = q.filter_by(person_role_id=person_role_id)
-    return q.order_by(models.Researcher.id).all()  # type: ignore
+    if title_id is not None:
+        q = q.filter_by(title_id=title_id)
+
+    # 2) active/inactive via PersonRole.end_date
+    if is_active is not None:
+        if "pr" not in seen:
+            q = q.join(models.PersonRole,
+                       models.Researcher.person_role_id == models.PersonRole.id)
+            seen.add("pr")
+        if is_active:
+            q = q.filter(models.PersonRole.end_date.is_(None))
+        else:
+            q = q.filter(models.PersonRole.end_date.isnot(None))
+
+    # 3) institution filter (only active links)
+    if institution_id is not None:
+        if "pr" not in seen:
+            q = q.join(models.PersonRole,
+                       models.Researcher.person_role_id == models.PersonRole.id)
+            seen.add("pr")
+        if "pi" not in seen:
+            q = q.join(models.PersonInstitution,
+                       models.PersonRole.id == models.PersonInstitution.person_role_id)
+            seen.add("pi")
+        q = q.filter_by(institution_id=institution_id).filter(
+            models.PersonInstitution.end_date.is_(None)
+        )
+
+    # 4) field/branch filter
+    if field_id is not None or branch_id is not None:
+        if "pr" not in seen:
+            q = q.join(models.PersonRole,
+                       models.Researcher.person_role_id == models.PersonRole.id)
+            seen.add("pr")
+        if "pf" not in seen:
+            q = q.join(models.PersonField,
+                       models.PersonRole.id == models.PersonField.person_role_id)
+            seen.add("pf")
+        if field_id is not None:
+            q = q.filter_by(field_id=field_id)
+        if branch_id is not None:
+            if "af" not in seen:
+                q = q.join(models.AcademicField,
+                           models.PersonField.field_id == models.AcademicField.id)
+                seen.add("af")
+            q = q.filter_by(branch_id=branch_id)
+
+    # 5) substring search on name
+    if search:
+        if "pr" not in seen:
+            q = q.join(models.PersonRole,
+                       models.Researcher.person_role_id == models.PersonRole.id)
+            seen.add("pr")
+        if "p" not in seen:
+            q = q.join(models.Person,
+                       models.PersonRole.person_id == models.Person.id)
+            seen.add("p")
+        term = f"%{search}%"
+        q = q.filter(
+            or_(
+                models.Person.first_name.ilike(term),
+                models.Person.last_name.ilike(term),
+            )
+        )
+
+    # 6) ordering by last_name, first_name
+    if "pr" not in seen:
+        q = q.join(models.PersonRole,
+                   models.Researcher.person_role_id == models.PersonRole.id)
+        seen.add("pr")
+    if "p" not in seen:
+        q = q.join(models.Person,
+                   models.PersonRole.person_id == models.Person.id)
+        seen.add("p")
+
+    q = q.order_by(models.Person.last_name, models.Person.first_name)
+
+    return q.all()  # type: ignore
 
 
 def create_researcher(db: Session, r_in: schemas.ResearcherCreate) -> models.Researcher:
@@ -1030,18 +1183,116 @@ def delete_researcher(db: Session, researcher_id: int) -> None:
 
 # </editor-fold>
 
-# <editor-fold desc="Phd Student-related functions">
+# <editor-fold desc="PhD Student-related functions">
 # ---------- PhD Student ----------
 
 def get_phd_student(db: Session, student_id: int) -> Optional[models.PhDStudent]:
     return db.query(models.PhDStudent).filter_by(id=student_id).first()
 
 
-def list_phd_students(db: Session, person_role_id: Optional[int] = None) -> List[models.PhDStudent]:
+def list_phd_students(
+    db: Session,
+    person_role_id:   Optional[int] = None,
+    is_active:        Optional[bool] = None,
+    cohort_number:    Optional[int] = None,
+    is_affiliated:    Optional[bool] = None,
+    is_graduated:     Optional[bool] = None,
+    institution_id:   Optional[int] = None,
+    field_id:         Optional[int] = None,
+    branch_id:        Optional[int] = None,
+    search:           Optional[str] = None,
+) -> list[models.PhDStudent]:
+
     q = db.query(models.PhDStudent)
+    seen = set()
+
+    # 1) filter by person_role_id
     if person_role_id is not None:
         q = q.filter_by(person_role_id=person_role_id)
-    return q.order_by(models.PhDStudent.id).all()  # type: ignore
+
+    # 2) active/inactive via PersonRole.end_date
+    if is_active is not None:
+        if "pr" not in seen:
+            q = q.join(models.PersonRole,
+                       models.PhDStudent.person_role_id == models.PersonRole.id)
+            seen.add("pr")
+        if is_active:
+            q = q.filter(models.PersonRole.end_date.is_(None))
+        else:
+            q = q.filter(models.PersonRole.end_date.isnot(None))
+
+    # 3) cohort_number, is_affiliated, is_graduated
+    if cohort_number is not None:
+        q = q.filter_by(cohort_number=cohort_number)
+    if is_affiliated is not None:
+        q = q.filter_by(is_affiliated=is_affiliated)
+    if is_graduated is not None:
+        q = q.filter_by(is_graduated=is_graduated)
+
+    # 4) institution filter (only active PersonInstitution)
+    if institution_id is not None:
+        if "pr" not in seen:
+            q = q.join(models.PersonRole,
+                       models.PhDStudent.person_role_id == models.PersonRole.id)
+            seen.add("pr")
+        if "pi" not in seen:
+            q = q.join(models.PersonInstitution,
+                       models.PersonRole.id == models.PersonInstitution.person_role_id)
+            seen.add("pi")
+        q = q.filter_by(institution_id=institution_id).filter(
+            models.PersonInstitution.end_date.is_(None)
+        )
+
+    # 5) field/branch filter
+    if field_id is not None or branch_id is not None:
+        if "pr" not in seen:
+            q = q.join(models.PersonRole,
+                       models.PhDStudent.person_role_id == models.PersonRole.id)
+            seen.add("pr")
+        if "pf" not in seen:
+            q = q.join(models.PersonField,
+                       models.PersonRole.id == models.PersonField.person_role_id)
+            seen.add("pf")
+        if field_id is not None:
+            q = q.filter_by(field_id=field_id)
+        if branch_id is not None:
+            if "af" not in seen:
+                q = q.join(models.AcademicField,
+                           models.PersonField.field_id == models.AcademicField.id)
+                seen.add("af")
+            q = q.filter_by(branch_id=branch_id)
+
+    # 6) substring search on name
+    if search:
+        if "pr" not in seen:
+            q = q.join(models.PersonRole,
+                       models.PhDStudent.person_role_id == models.PersonRole.id)
+            seen.add("pr")
+        if "p" not in seen:
+            q = q.join(models.Person,
+                       models.PersonRole.person_id == models.Person.id)
+            seen.add("p")
+        term = f"%{search}%"
+        q = q.filter(
+            or_(
+                models.Person.first_name.ilike(term),
+                models.Person.last_name.ilike(term),
+            )
+        )
+
+    # 7) order by person’s last_name, first_name
+    if "pr" not in seen:
+        q = q.join(models.PersonRole,
+                   models.PhDStudent.person_role_id == models.PersonRole.id)
+        seen.add("pr")
+    if "p" not in seen:
+        q = q.join(models.Person,
+                   models.PersonRole.person_id == models.Person.id)
+        seen.add("p")
+
+    q = q.order_by(models.Person.last_name, models.Person.first_name)
+
+    return q.all()  # type: ignore
 
 
 def create_phd_student(db: Session, s_in: schemas.PhDStudentCreate) -> models.PhDStudent:
@@ -1080,11 +1331,103 @@ def get_postdoc(db: Session, postdoc_id: int) -> Optional[models.Postdoc]:
     return db.query(models.Postdoc).filter_by(id=postdoc_id).first()
 
 
-def list_postdocs(db: Session, person_role_id: Optional[int] = None) -> List[models.Postdoc]:
+def list_postdocs(
+    db: Session,
+    person_role_id:   Optional[int] = None,
+    is_active:        Optional[bool] = None,
+    cohort_number:    Optional[int] = None,
+    institution_id:   Optional[int] = None,
+    field_id:         Optional[int] = None,
+    branch_id:        Optional[int] = None,
+    search:           Optional[str] = None,
+) -> List[models.Postdoc]:
+
     q = db.query(models.Postdoc)
+    seen = set()
+
+    # 1) person_role filter
     if person_role_id is not None:
         q = q.filter_by(person_role_id=person_role_id)
-    return q.order_by(models.Postdoc.id).all()  # type: ignore
+
+    # 2) active/inactive via PersonRole.end_date
+    if is_active is not None:
+        if "pr" not in seen:
+            q = q.join(models.PersonRole,
+                       models.Postdoc.person_role_id == models.PersonRole.id)
+            seen.add("pr")
+        if is_active:
+            q = q.filter(models.PersonRole.end_date.is_(None))
+        else:
+            q = q.filter(models.PersonRole.end_date.isnot(None))
+
+    # 3) cohort_number
+    if cohort_number is not None:
+        q = q.filter_by(cohort_number=cohort_number)
+
+    # 4) institution (active assignments only)
+    if institution_id is not None:
+        if "pr" not in seen:
+            q = q.join(models.PersonRole,
+                       models.Postdoc.person_role_id == models.PersonRole.id)
+            seen.add("pr")
+        if "pi" not in seen:
+            q = q.join(models.PersonInstitution,
+                       models.PersonRole.id == models.PersonInstitution.person_role_id)
+            seen.add("pi")
+        q = q.filter_by(institution_id=institution_id).filter(
+            models.PersonInstitution.end_date.is_(None)
+        )
+
+    # 5) field and branch
+    if field_id is not None or branch_id is not None:
+        if "pr" not in seen:
+            q = q.join(models.PersonRole,
+                       models.Postdoc.person_role_id == models.PersonRole.id)
+            seen.add("pr")
+        if "pf" not in seen:
+            q = q.join(models.PersonField,
+                       models.PersonRole.id == models.PersonField.person_role_id)
+            seen.add("pf")
+        if field_id is not None:
+            q = q.filter_by(field_id=field_id)
+        if branch_id is not None:
+            if "af" not in seen:
+                q = q.join(models.AcademicField,
+                           models.PersonField.field_id == models.AcademicField.id)
+                seen.add("af")
+            q = q.filter_by(branch_id=branch_id)
+
+    # 6) name‐search on Person
+    if search:
+        term = f"%{search}%"
+        if "pr" not in seen:
+            q = q.join(models.PersonRole,
+                       models.Postdoc.person_role_id == models.PersonRole.id)
+            seen.add("pr")
+        if "p" not in seen:
+            q = q.join(models.Person,
+                       models.PersonRole.person_id == models.Person.id)
+            seen.add("p")
+        q = q.filter(
+            or_(
+                models.Person.first_name.ilike(term),
+                models.Person.last_name.ilike(term),
+            )
+        )
+
+    # 7) ordering by last_name, first_name
+    if "pr" not in seen:
+        q = q.join(models.PersonRole,
+                   models.Postdoc.person_role_id == models.PersonRole.id)
+        seen.add("pr")
+    if "p" not in seen:
+        q = q.join(models.Person,
+                   models.PersonRole.person_id == models.Person.id)
+        seen.add("p")
+
+    q = q.order_by(models.Person.last_name, models.Person.first_name)
+
+    return q.all()  # type: ignore
 
 
 def create_postdoc(db: Session, p_in: schemas.PostdocCreate) -> models.Postdoc:
@@ -1129,23 +1472,57 @@ def get_student_activity(db: Session, student_activity_id: int) -> Optional[mode
 
 def list_student_activities(
     db: Session,
-    phd_student_id: Optional[int] = None,
-    grad_school_activity_id: Optional[int] = None
+    phd_student_id: int,
+    activity_type:  Optional[ActivityType] = None
 ) -> List[models.StudentActivity]:
-    """
-    Return *all* activities (both grad‐school and abroad) for a given PhD‐student,
-    ordered by creation (id) ascending.
-    """
+    # 1) ensure the student exists
+    student = get_phd_student(db, phd_student_id)
+    if not student:
+        raise EntityNotFoundError(f"PhD student #{phd_student_id} not found")
 
-    q = db.query(models.StudentActivity)
+    # 2) start base query and optional filter by type
+    q = db.query(models.StudentActivity).filter_by(phd_student_id=phd_student_id)
+    if activity_type is not None:
+        q = q.filter_by(activity_type=activity_type)
 
-    if phd_student_id is not None:
-        q = q.filter_by(phd_student_id=phd_student_id)
-    if grad_school_activity_id is not None:
-        q = q.filter_by(activity_type=ActivityType.GRAD_SCHOOL, activity_id=grad_school_activity_id)
+    # 3) join to the two subclass tables so we can sort by their columns
+    q = (
+        q
+        # grad‐school years
+        .outerjoin(
+            models.GradSchoolActivity,
+            and_(
+                models.StudentActivity.activity_type == ActivityType.GRAD_SCHOOL,
+                models.StudentActivity.activity_id == models.GradSchoolActivity.id
+            )
+        )
+        # abroad start dates
+        .outerjoin(
+            models.AbroadStudentActivity,
+            and_(
+                models.StudentActivity.activity_type == ActivityType.ABROAD,
+                models.StudentActivity.activity_id == models.AbroadStudentActivity.id
+            )
+        )
+    )
 
-    q = q.order_by(models.StudentActivity.id)
+    # 4) build a discriminator to put grad‐school first, abroad next
+    type_order = case(
+        {
+            models.StudentActivity.activity_type == ActivityType.GRAD_SCHOOL: 0,
+            models.StudentActivity.activity_type == ActivityType.ABROAD: 1,
+        },
+        else_=2
+    )
 
+    # 5) order by: grad‐school year desc, abroad start_date desc
+    q = q.order_by(
+        type_order,
+        desc(models.GradSchoolActivity.year),
+        desc(models.AbroadStudentActivity.start_date),
+    )
+
+    # 6) execute
     return q.all()  # type: ignore
 
 
@@ -1334,6 +1711,60 @@ def delete_student_activity(db: Session, stu_act_id: int, stu_id: int) -> None:
 
 # </editor-fold>
 
+# <editor-fold desc="Grad School Activity relationships functions">
+# --- student activities for a grad school activity ---
+def list_student_activities_for_grad_school(
+    db: Session,
+    grad_school_activity_id: int,
+    search: Optional[str] = None
+) -> List[models.StudentActivity]:
+    # ensure grad school activity exists
+    gsa = get_grad_school_activity(db, grad_school_activity_id)
+    if not gsa:
+        raise EntityNotFoundError(f"GradSchoolActivity #{grad_school_activity_id} not found")
+
+    # base query: only GRAD_SCHOOL entries for this activity_id
+    q = (
+        db.query(models.StudentActivity)
+        .filter_by(
+              activity_type=ActivityType.GRAD_SCHOOL,
+              activity_id=grad_school_activity_id
+        )
+        .join(
+              models.PhDStudent,
+              models.StudentActivity.phd_student_id == models.PhDStudent.id
+        )
+        .join(
+              models.PersonRole,
+              models.PhDStudent.person_role_id == models.PersonRole.id
+        )
+        .join(
+              models.Person,
+              models.PersonRole.person_id == models.Person.id
+        )
+    )
+
+    # optional substring search on student name
+    if search:
+        term = f"%{search}%"
+        q = q.filter(
+            or_(
+                models.Person.first_name.ilike(term),
+                models.Person.last_name.ilike(term),
+            )
+        )
+
+    # final ordering by last_name then first_name
+    q = q.order_by(
+        models.Person.last_name,
+        models.Person.first_name
+    )
+
+    return q.all()  # type: ignore
+
+
+# </editor-fold>
+
 # <editor-fold desc="Course relationships functions">
 # --- institutions for a course ---
 def get_course_institutions(db: Session, course_id: int) -> list[models.Institution]:
@@ -1420,13 +1851,48 @@ def remove_teacher_from_course(db: Session, course_id: int, person_role_id: int)
 
 
 # --- students for a course ---
-def get_course_students(db: Session, course_id: int) -> list[models.PhDStudentCourse]:
-    # ensure course exists
+def get_course_students(db: Session, course_id: int, search: Optional[str] = None) -> List[models.PhDStudentCourse]:
+    # 1) verify course exists
     course = get_course(db, course_id)
     if not course:
         raise EntityNotFoundError(f"Course #{course_id} not found")
-    course_students = db.query(models.PhDStudentCourse).filter_by(course_id=course_id).all()
-    return course_students  # type: ignore
+
+    # 2) start the query on the join‐table
+    q = (
+        db.query(models.PhDStudentCourse)
+        .filter_by(course_id=course_id)
+        .join(
+              models.PhDStudent,
+              models.PhDStudentCourse.phd_student_id == models.PhDStudent.id
+        )
+        .join(
+              models.PersonRole,
+              models.PhDStudent.person_role_id == models.PersonRole.id
+        )
+        .join(
+              models.Person,
+              models.PersonRole.person_id == models.Person.id
+        )
+    )
+
+    # 3) optional substring filter on the person’s name
+    if search:
+        term = f"%{search}%"
+        q = q.filter(
+            or_(
+                models.Person.first_name.ilike(term),
+                models.Person.last_name.ilike(term),
+            )
+        )
+
+    # 4) order alphabetically by last name, then first name
+    q = q.order_by(
+        models.Person.last_name,
+        models.Person.first_name
+    )
+
+    # 5) return the list of link‐rows
+    return q.all()  # type: ignore
 
 
 def add_student_to_course(db: Session, course_id: int,
@@ -1544,8 +2010,29 @@ def get_project_people_roles(db: Session, project_id: int) -> list[models.Person
     project = get_project(db, project_id)
     if not project:
         raise EntityNotFoundError(f"Project #{project_id} not found")
-    project_people_roles = db.query(models.PersonProject).filter_by(project_id=project_id).all()
-    return project_people_roles  # type: ignore
+
+    q = (
+        db.query(models.PersonProject)
+        .filter_by(project_id=project_id)
+        .join(
+              models.PersonRole,
+              models.PersonProject.person_role_id == models.PersonRole.id
+        )
+        .join(
+              models.Person,
+              models.PersonRole.person_id == models.Person.id
+        )
+        .order_by(
+              # principal investigators first
+              models.PersonProject.is_principal_investigator.desc(),
+              # then leaders
+              models.PersonProject.is_leader.desc(),
+              # then alphabetical by person name
+              models.Person.last_name,
+              models.Person.first_name,
+        )
+    )
+    return q.all()  # type: ignore
 
 
 def add_person_role_to_project(db: Session, project_id: int,
@@ -1734,6 +2221,37 @@ def remove_field_from_person_role(db: Session, person_role_id: int, field_id: in
     db.commit()
 
 
+# --- projects for a person role ---
+
+def get_person_role_projects(db: Session, person_role_id: int) -> List[models.PersonProject]:
+    # 1) verify the person_role exists
+    pr = get_person_role(db, person_role_id)
+    if not pr:
+        raise EntityNotFoundError(f"Person role #{person_role_id} not found")
+
+    # 2) build the query with a join to Project for end_date and start_date
+    q = (
+        db.query(models.PersonProject)
+          .filter_by(person_role_id=person_role_id)
+          .join(models.Project, models.PersonProject.project_id == models.Project.id)
+    )
+
+    # 3) order by:
+    #    a) active (end_date IS NULL) first
+    #    b) then principal investigators
+    #    c) then leaders
+    #    d) then project.start_date descending
+    q = q.order_by(
+        # Boolean IS NULL becomes 1 for True, 0 for False, so desc() puts True first
+        models.Project.end_date.is_(None).desc(),
+        models.PersonProject.is_principal_investigator.desc(),
+        models.PersonProject.is_leader.desc(),
+        desc(models.Project.start_date),
+    )
+
+    return q.all()  # type: ignore
+
+
 # --- supervision relationships ---
 
 def get_supervision(db: Session, supervision_id: int) -> Optional[models.SupervisorPhDStudent]:
@@ -1811,6 +2329,50 @@ def delete_supervision(db: Session, supervision_id: int) -> None:
         raise EntityNotFoundError(f"Supervision #{supervision_id} not found")
     db.delete(link)
     db.commit()
+
+
+# </editor-fold>
+
+# <editor-fold desc="PhD Student relationships functions">
+# --- courses for a phd student ---
+def get_student_courses(db: Session, phd_student_id: int) -> List[models.PhDStudentCourse]:
+    # ensure PhDStudent exists
+    student = get_phd_student(db, phd_student_id)
+    if not student:
+        raise EntityNotFoundError(f"PhD student #{phd_student_id} not found")
+
+    # start query on the join‐table
+    q = (
+        db.query(models.PhDStudentCourse)
+          .filter_by(phd_student_id=phd_student_id)
+          .join(models.Course, models.PhDStudentCourse.course)
+          .outerjoin(models.Course.course_term)
+          .outerjoin(models.Course.grad_school_activity)
+    )
+
+    # build our CASE expressions for year and season
+    season_cases = {
+        models.CourseTerm.season == s: order
+        for s, order in SEASON_ORDER.items()
+    }
+    season_ordering = case(season_cases, else_=0)
+
+    year_cases = {
+        models.CourseTerm.year.isnot(None):        models.CourseTerm.year,
+        models.GradSchoolActivity.year.isnot(None): models.GradSchoolActivity.year,
+    }
+
+    # now apply the multi‐criteria ordering:
+    # 1) not yet completed first → is_completed False (0) before True (1)
+    # 2) descending by year (from term or activity)
+    # 3) descending by season order
+    q = q.order_by(
+        models.PhDStudentCourse.is_completed,            # False first
+        desc(case(year_cases, else_=0)),                  # newest year first
+        desc(season_ordering)                             # season order
+    )
+
+    return q.all()  # type: ignore
 
 
 # </editor-fold>

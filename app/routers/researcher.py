@@ -105,12 +105,31 @@ def read_researcher(
 
 @router.get("/researchers/", response_model=List[schemas.ResearcherRead])
 def list_researchers(
-    person_role_id: Optional[int] = Query(None, ge=1),
+    person_role_id:   Optional[int] = Query(None, ge=1, description="Filter by person_role_id"),
+    is_active:        Optional[bool] = Query(None, description="Only active/inactive roles"),
+    title_id:         Optional[int] = Query(None, ge=1, description="Filter by researcher title"),
+    institution_id:   Optional[int] = Query(None, ge=1, description="Filter by institution"),
+    field_id:         Optional[int] = Query(None, ge=1, description="Filter by academic field"),
+    branch_id:        Optional[int] = Query(None, ge=1, description="Filter by academic branch"),
+    search:           Optional[str] = Query(None, description="Substring search on person name"),
     current_user=Depends(dependencies.get_current_user),
     db: Session = Depends(dependencies.get_db),
 ):
-    logger.info(f"{current_user.username} listed researchers (person_role_id={person_role_id})")
-    return crud.list_researchers(db, person_role_id=person_role_id)
+    logger.info(
+        f"{current_user.username} listed researchers "
+        f"(person_role_id={person_role_id}, is_active={is_active}, title_id={title_id}, "
+        f"institution_id={institution_id}, field_id={field_id}, branch_id={branch_id}, search={search!r})"
+    )
+    return crud.list_researchers(
+        db,
+        person_role_id=person_role_id,
+        is_active=is_active,
+        title_id=title_id,
+        institution_id=institution_id,
+        field_id=field_id,
+        branch_id=branch_id,
+        search=search,
+    )
 
 
 @router.post("/researchers/", response_model=schemas.ResearcherRead)

@@ -114,17 +114,19 @@ def list_courses(
     title:     Optional[str] = Query(None),
     term_id:   Optional[int] = Query(None, ge=1),
     activity_id: Optional[int] = Query(None, ge=1),
+    is_active_term: Optional[bool] = Query(None),
     search:    Optional[str] = Query(None),
     db:         Session = Depends(dependencies.get_db),
     current_user=Depends(dependencies.get_current_user)
 ):
     logger.info(f"{current_user.username} listed courses (title={title}, term_id={term_id}, "
-                f"activity_id={activity_id}, search={search!r})")
+                f"activity_id={activity_id}, is_active_term={is_active_term}, search={search!r})")
     return crud.list_courses(
         db,
         title=title,
         term_id=term_id,
         activity_id=activity_id,
+        is_active_term=is_active_term,
         search=search
     )
 
@@ -288,11 +290,12 @@ def remove_course_teacher(
 @router.get("/courses/{course_id}/students/", response_model=List[schemas.CourseStudentRead])
 def list_course_students(
     course_id: int,
+    search: Optional[str] = Query(None),
     db: Session = Depends(dependencies.get_db),
     current_user=Depends(dependencies.get_current_user)
 ):
     logger.info(f"{current_user.username} listing phd students for course {course_id}")
-    return crud.get_course_students(db, course_id)
+    return crud.get_course_students(db, course_id=course_id, search=search)
 
 
 @router.post("/courses/{course_id}/students/", response_model=schemas.CourseStudentRead)
