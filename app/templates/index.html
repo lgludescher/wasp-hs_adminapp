@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block body %}
+  <section class="home-welcome">
+    <h1>Welcome to WASP-HS Admin</h1>
+    <p>Hello, <strong><span id="welcome-user">…</span></strong>!</p>
+  </section>
+
+  <script type="module" src="{{ url_for('static', path='js/index.js') }}"></script>
+{% endblock %}
