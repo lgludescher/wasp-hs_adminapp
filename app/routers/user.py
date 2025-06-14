@@ -112,6 +112,13 @@ async def delete_user(
         logger.warning(f"Unauthorized delete_user attempt by {current_user.username}")
         raise HTTPException(403, "Only admins can delete users")
 
+    if username == current_user.username:
+        logger.warning(f"Attempt by {current_user.username} to delete their own account denied")
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete your own account"
+        )
+
     logger.info(f"{current_user.username} deleting user {username}")
 
     try:

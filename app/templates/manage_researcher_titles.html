@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', path='css/manage_researcher_titles.css') }}"
+  />
+  <script
+    type="module"
+    src="{{ url_for('static', path='js/manage_researcher_titles.js') }}"
+  ></script>
+{% endblock %}
+
+{% block body %}
+<section class="manage-researcher-titles">
+  <h1>Manage Researcher Titles</h1>
+
+  <div class="actions-bar">
+    <div class="subsection">
+      <div class="section-subtitle">Titles</div>
+      <div class="filter-bar">
+        <input
+          id="title-search"
+          type="text"
+          placeholder="Search titles…"
+        />
+      </div>
+    </div>
+    <button id="btn-show-create" class="btn">Add New Title</button>
+  </div>
+
+  <form id="form-create" class="title-form hidden">
+    <h2>Create New Title</h2>
+    <label>
+      Title
+      <input name="title" required />
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn">Create</button>
+      <button type="button" id="btn-cancel" class="btn">Cancel</button>
+    </div>
+  </form>
+
+  <table class="titles-table">
+    <tbody id="titles-tbody"></tbody>
+  </table>
+</section>
+
+<!-- Confirmation / Info Modal -->
+<div id="modal-confirm" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-content">
+    <p id="modal-text"></p>
+    <div class="modal-actions">
+      <button id="modal-confirm-btn" class="btn">Confirm</button>
+      <button id="modal-cancel-btn" class="btn">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

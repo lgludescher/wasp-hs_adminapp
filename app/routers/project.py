@@ -36,11 +36,12 @@ def read_project_call_type(
 
 @router.get("/project-call-types/", response_model=List[schemas.ProjectCallTypeRead])
 def list_project_call_types(
+    search: Optional[str] = Query(None, description="Substring search on type"),
     db: Session = Depends(dependencies.get_db),
     current_user=Depends(dependencies.get_current_user),
 ):
     logger.info(f"{current_user.username} listed project call types")
-    return crud.list_project_call_types(db)
+    return crud.list_project_call_types(db, search=search)
 
 
 @router.post("/project-call-types/", response_model=schemas.ProjectCallTypeRead)

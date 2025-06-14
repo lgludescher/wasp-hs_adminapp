@@ -1,0 +1,87 @@
+.manage-course-terms {
+  max-width: 900px;
+  margin: 0 auto;
+}
+.manage-course-terms h1 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Actions bar now right-aligned */
+.actions-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.actions-bar .btn {
+  height: 32px;
+  padding: 0.25rem 0.75rem;
+}
+
+/* Terms table */
+.terms-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-bg);
+}
+.terms-table th,
+.terms-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+  vertical-align: middle;
+}
+.terms-table th {
+  background: var(--color-surface);
+  font-weight: 600;
+}
+
+/* Inline-edit checkbox */
+.terms-table input[type="checkbox"] {
+  transform: scale(1.2);
+}
+
+/* Row action buttons */
+.cell-actions .btn {
+  margin-right: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  height: 32px;
+}
+
+/* Modal (reused) */
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+.modal.active {
+  display: flex;
+}
+.modal-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+}
+.modal-content {
+  position: relative;
+  background: var(--color-bg);
+  padding: 1rem;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  max-width: 400px;
+  width: 90%;
+  z-index: 2001;
+}
+.modal-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}

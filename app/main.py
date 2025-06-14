@@ -93,6 +93,122 @@ async def read_home(
     )
 
 
+@app.get("/manage-users", response_class=HTMLResponse, summary="Manage Users (Admin only)")
+async def manage_users_page(
+    request: Request,
+    current_user=Depends(get_current_user)
+):
+    # Only admins may access
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="User not provisioned")
+    return templates.TemplateResponse(
+        "manage_users.html",
+        {"request": request}
+    )
+
+
+@app.get("/manage-academic-domains", response_class=HTMLResponse, summary="Manage Academic Domains")
+async def manage_academic_domains_page(
+    request: Request,
+    current_user=Depends(get_current_user),
+):
+    # All authenticated users may view
+    return templates.TemplateResponse(
+        "manage_academic_domains.html",
+        {"request": request}
+    )
+
+
+@app.get("/manage-institutions", response_class=HTMLResponse, summary="Manage Institutions")
+async def manage_institutions_page(
+    request: Request,
+    current_user=Depends(get_current_user),
+):
+    return templates.TemplateResponse(
+        "manage_institutions.html",
+        {"request": request}
+    )
+
+
+@app.get("/manage-grad-school-activities/types", response_class=HTMLResponse,
+         summary="Manage Grad School Activity Types")
+async def manage_grad_school_activity_types_page(
+    request: Request,
+    current_user=Depends(get_current_user),
+):
+    return templates.TemplateResponse(
+        "manage_grad_school_activity_types.html",
+        {"request": request}
+    )
+
+
+@app.get("/manage-courses/terms", response_class=HTMLResponse, summary="Manage Course Terms")
+async def manage_course_terms_page(
+    request: Request,
+    current_user=Depends(get_current_user),
+):
+    return templates.TemplateResponse(
+        "manage_course_terms.html",
+        {"request": request}
+    )
+
+
+@app.get("/manage-projects/call-types", response_class=HTMLResponse, summary="Manage Project Call Types")
+async def manage_project_call_types_page(
+    request: Request,
+    current_user=Depends(get_current_user),
+):
+    return templates.TemplateResponse(
+        "manage_project_call_types.html",
+        {"request": request}
+    )
+
+
+@app.get("/manage-researchers/titles", response_class=HTMLResponse, summary="Manage Researcher Titles")
+async def manage_researcher_titles_page(
+    request: Request,
+    current_user=Depends(get_current_user),
+):
+    return templates.TemplateResponse(
+        "manage_researcher_titles.html",
+        {"request": request}
+    )
+
+
+@app.get("/manage-grad-school-activities", response_class=HTMLResponse,
+         summary="Manage Grad School Activities")
+async def manage_grad_school_activities_page(
+    request: Request,
+    current_user=Depends(get_current_user),
+):
+    return templates.TemplateResponse(
+        "manage_grad_school_activities.html",
+        {"request": request}
+    )
+
+
+@app.get("/manage-courses", response_class=HTMLResponse)
+async def manage_courses_page(
+    request: Request,
+    current_user=Depends(get_current_user),
+):
+    return templates.TemplateResponse(
+        "manage_courses.html",
+        {"request": request}
+    )
+
+
+@app.get("/manage-projects", response_class=HTMLResponse)
+async def manage_projects_page(
+    request: Request,
+    current_user=Depends(get_current_user)
+):
+    return templates.TemplateResponse(
+        "manage_projects.html",
+        {"request": request}
+    )
+
+
 app.include_router(user.router)
 app.include_router(institution.router)
 app.include_router(domain.router)

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', path='css/manage_grad_school_activities.css') }}"
+  />
+  <script
+    type="module"
+    src="{{ url_for('static', path='js/manage_grad_school_activities.js') }}"
+  ></script>
+{% endblock %}
+
+{% block body %}
+<section class="manage-grad-school-activities">
+  <h1>Manage Grad School Activities</h1>
+
+  <div class="actions-bar">
+    <div class="subsection">
+      <div class="section-subtitle">Filters</div>
+      <div class="filter-bar">
+        <select id="filter-activity-type">
+          <option value="">All Types</option>
+        </select>
+        <input
+          id="filter-year"
+          type="number"
+          placeholder="All Years"
+          min="2020"
+          max="2100"
+        />
+      </div>
+    </div>
+    <button id="btn-show-create" class="btn">Add New Activity</button>
+  </div>
+
+  <form id="form-create" class="activity-form hidden">
+    <h2>Create New Activity</h2>
+    <label>
+      Activity Type
+      <select name="activity_type_id" required>
+        <option value="">Select type</option>
+      </select>
+    </label>
+    <label>
+      Year
+      <input
+        name="year"
+        type="number"
+        placeholder="e.g. 2025"
+        required
+        min="2020"
+        max="2100"
+      />
+    </label>
+    <label>
+      Description
+      <input name="description" placeholder="Description…"/>
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn">Create</button>
+      <button type="button" id="btn-cancel" class="btn">Cancel</button>
+    </div>
+  </form>
+
+  <table class="activities-table">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Activity Type</th>
+        <th>Year</th>
+        <th>Description</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="activities-tbody"></tbody>
+  </table>
+</section>
+
+<!-- Confirmation / Info Modal -->
+<div id="modal-confirm" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-content">
+    <p id="modal-text"></p>
+    <div class="modal-actions">
+      <button id="modal-confirm-btn" class="btn">Confirm</button>
+      <button id="modal-cancel-btn" class="btn">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

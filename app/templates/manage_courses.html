@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', path='css/manage_courses.css') }}"
+  />
+  <script
+    type="module"
+    src="{{ url_for('static', path='js/manage_courses.js') }}"
+  ></script>
+{% endblock %}
+
+{% block body %}
+<section class="manage-courses">
+  <h1>Manage Courses</h1>
+
+  <div class="actions-bar">
+    <div class="subsection">
+      <div class="section-subtitle">Filters</div>
+      <div class="filter-bar">
+        <input
+          id="filter-search"
+          type="text"
+          placeholder="Search…"
+        />
+        <select id="filter-term">
+          <option value="">All Terms</option>
+        </select>
+        <select id="filter-activity">
+          <option value="">All Grad School</option>
+        </select>
+        <select id="filter-active-term">
+          <option value="">All Terms</option>
+          <option value="true" selected>Active Terms</option>
+          <option value="false">Inactive Terms</option>
+        </select>
+      </div>
+    </div>
+    <button id="btn-show-create" class="btn">Create New Course</button>
+  </div>
+
+  <form id="form-create" class="course-form hidden">
+    <h2>Create Course</h2>
+    <label>
+      Title
+      <input name="title" type="text" required placeholder="Course title…" />
+    </label>
+    <label>
+      Course Term
+      <select name="course_term_id">
+        <option value="">None</option>
+      </select>
+    </label>
+    <label>
+      Grad School Activity
+      <select name="grad_school_activity_id">
+        <option value="">None</option>
+      </select>
+    </label>
+    <label>
+      Credit Points
+      <input
+        name="credit_points"
+        type="number"
+        min="0"
+        placeholder="0"
+      />
+    </label>
+    <label>
+      Notes
+      <input name="notes" type="text" placeholder="Optional notes…" />
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn">Create</button>
+      <button type="button" id="btn-cancel" class="btn">Cancel</button>
+    </div>
+  </form>
+
+  <table class="courses-table">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Title</th>
+        <th>Term</th>
+        <th>Credits</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="courses-tbody"></tbody>
+  </table>
+</section>
+
+<div id="modal-confirm" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-content">
+    <p id="modal-text"></p>
+    <div class="modal-actions">
+      <button id="modal-confirm-btn" class="btn">Confirm</button>
+      <button id="modal-cancel-btn" class="btn">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

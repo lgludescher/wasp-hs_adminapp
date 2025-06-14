@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', path='css/manage_project_call_types.css') }}"
+  />
+  <script
+    type="module"
+    src="{{ url_for('static', path='js/manage_project_call_types.js') }}"
+  ></script>
+{% endblock %}
+
+{% block body %}
+<section class="manage-project-call-types">
+  <h1>Manage Project Call Types</h1>
+
+  <div class="actions-bar">
+    <div class="subsection">
+      <div class="section-subtitle">Call Types</div>
+      <div class="filter-bar">
+        <input
+          id="calltype-search"
+          type="text"
+          placeholder="Search call types…"
+        />
+      </div>
+    </div>
+    <button id="btn-show-create" class="btn">Add New Call Type</button>
+  </div>
+
+  <form id="form-create" class="calltype-form hidden">
+    <h2>Create New Call Type</h2>
+    <label>
+      Type
+      <input name="type" required />
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn">Create</button>
+      <button type="button" id="btn-cancel" class="btn">Cancel</button>
+    </div>
+  </form>
+
+  <table class="calltypes-table">
+    <tbody id="calltypes-tbody"></tbody>
+  </table>
+</section>
+
+<!-- Confirmation / Info Modal -->
+<div id="modal-confirm" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-content">
+    <p id="modal-text"></p>
+    <div class="modal-actions">
+      <button id="modal-confirm-btn" class="btn">Confirm</button>
+      <button id="modal-cancel-btn" class="btn">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

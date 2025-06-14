@@ -30,11 +30,12 @@ def read_researcher_title(
 
 @router.get("/researcher-titles/", response_model=List[schemas.ResearcherTitleRead])
 def list_researcher_titles(
+    search: Optional[str] = Query(None, description="Substring search on title"),
     current_user=Depends(dependencies.get_current_user),
     db: Session = Depends(dependencies.get_db),
 ):
     logger.info(f"{current_user.username} listed researcher titles")
-    return crud.list_researcher_titles(db)
+    return crud.list_researcher_titles(db, search=search)
 
 
 @router.post("/researcher-titles/", response_model=schemas.ResearcherTitleRead)

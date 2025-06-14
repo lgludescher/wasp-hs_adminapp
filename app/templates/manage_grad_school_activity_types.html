@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', path='css/manage_grad_school_activity_types.css') }}"
+  />
+  <script
+    type="module"
+    src="{{ url_for('static', path='js/manage_grad_school_activity_types.js') }}"
+  ></script>
+{% endblock %}
+
+{% block body %}
+<section class="manage-grad-school-activity-types">
+  <h1>Manage Grad School Activity Types</h1>
+
+  <div class="actions-bar">
+    <button id="btn-show-create" class="btn">Add New Type</button>
+  </div>
+
+  <form id="form-create" class="type-form hidden">
+    <h2>Create New Type</h2>
+    <label>
+      Type
+      <input name="type" required />
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn">Create</button>
+      <button type="button" id="btn-cancel" class="btn">Cancel</button>
+    </div>
+  </form>
+
+  <table class="types-table">
+    <tbody id="types-tbody"></tbody>
+  </table>
+</section>
+
+<!-- Confirmation / Info Modal -->
+<div id="modal-confirm" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-content">
+    <p id="modal-text"></p>
+    <div class="modal-actions">
+      <button id="modal-confirm-btn" class="btn">Confirm</button>
+      <button id="modal-cancel-btn" class="btn">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

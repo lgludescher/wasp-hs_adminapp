@@ -552,16 +552,26 @@ def list_courses(db: Session, title: Optional[str] = None, term_id: Optional[int
         q = q.filter(models.Course.title.ilike(term))
 
     if is_active_term is not None:
-        # use an INNER join here so that filtering by True/False excludes the wrong rows
-        q = q.join(
-            models.CourseTerm,
-            models.Course.course_term_id == models.CourseTerm.id
-        ).filter_by(is_active=is_active_term)
+        # outer-join so term-less (i.e. grad-school) courses remain in the result,
+        # then keep either “has a grad_school_activity” OR “term matches active flag”
+        q = (
+            q.outerjoin(
+                models.CourseTerm,
+                models.Course.course_term_id == models.CourseTerm.id
+            )
+            .filter(
+                or_(
+                    models.Course.grad_school_activity_id.isnot(None),
+                    models.CourseTerm.is_active == is_active_term
+                )
+            )
+        )
     else:
-        # keep the outer join for ordering, so courses-without-a-term still sort correctly
-        q = q.outerjoin(
-            models.CourseTerm,
-            models.Course.course_term_id == models.CourseTerm.id
+        q = (
+            q.outerjoin(
+                models.CourseTerm,
+                models.Course.course_term_id == models.CourseTerm.id
+            )
         )
 
     # always also outer‐join the grad‐school activity for ordering
@@ -650,8 +660,13 @@ def get_project_call_type(db: Session, pct_id: int):
     return db.query(models.ProjectCallType).filter_by(id=pct_id).first()
 
 
-def list_project_call_types(db: Session) -> list[models.ProjectCallType]:
+def list_project_call_types(db: Session, search: Optional[str] = None) -> list[models.ProjectCallType]:
     q = db.query(models.ProjectCallType)
+
+    if search:
+        term = f"%{search}%"
+        q = q.filter(models.ProjectCallType.type.ilike(term))
+
     return q.order_by(models.ProjectCallType.type).all()  # type: ignore
 
 
@@ -1003,8 +1018,13 @@ def get_researcher_title(db: Session, rt_id: int):
     return db.query(models.ResearcherTitle).filter_by(id=rt_id).first()
 
 
-def list_researcher_titles(db: Session) -> list[models.ResearcherTitle]:
+def list_researcher_titles(db: Session, search: Optional[str] = None) -> list[models.ResearcherTitle]:
     q = db.query(models.ResearcherTitle)
+
+    if search:
+        term = f"%{search}%"
+        q = q.filter(models.ResearcherTitle.title.ilike(term))
+
     return q.order_by(models.ResearcherTitle.title).all()  # type: ignore
 
 

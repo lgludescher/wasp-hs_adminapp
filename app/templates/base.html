@@ -21,7 +21,6 @@
     <div id="user-badge" class="user-badge"></div>
   </header>
 
-  {# Only render the nav when there’s no error_message in the template context #}
   {% block nav %}
     {% if not error_message %}
       <nav class="site-nav">

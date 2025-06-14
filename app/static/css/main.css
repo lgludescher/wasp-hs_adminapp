@@ -23,8 +23,12 @@ body {
   flex-direction: column;
 }
 
-/* Header */
+/* Header (now sticky) */
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
   display: flex;
   align-items: center;
   background: var(--color-primary);
@@ -53,8 +57,12 @@ body {
   opacity: 0.9;
 }
 
-/* Navigation */
+/* Navigation (now sticky below header) */
 .site-nav {
+  position: sticky;
+  top: 60px;
+  z-index: 999;
+
   background: var(--color-surface);
   border-bottom: 1px solid #ddd;
 }
@@ -80,8 +88,6 @@ body {
   font-size: 0.7rem;
   margin-left: 0.25rem;
 }
-
-/* First-level submenu */
 .submenu {
   list-style: none;
   position: absolute;
@@ -93,13 +99,11 @@ body {
   display: none;
   z-index: 1000;
 }
-/* Nested submenu (second level) */
 .submenu-item.has-submenu:hover > .submenu {
   display: block;
   top: 0;
   left: 100%;
 }
-
 .submenu-item > a {
   display: block;
   padding: 0.5rem 1rem;
@@ -110,7 +114,6 @@ body {
 .submenu-item > a:hover {
   background: var(--color-surface);
 }
-/* Show first-level submenu */
 .menu-item:hover > .submenu {
   display: block;
 }

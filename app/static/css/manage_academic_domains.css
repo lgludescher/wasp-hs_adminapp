@@ -1,0 +1,236 @@
+:root {
+  --color-secondary: #6c757d;
+}
+
+.manage-domains {
+  max-width: 900px;
+  margin: 0 auto;
+}
+.manage-domains h1 {
+  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+}
+
+/* Section wrapper with subtitle */
+.subsection {
+  display: flex;
+  flex-direction: column;
+}
+.section-subtitle {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+/* Branch actions bar */
+.actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+.filter-bar {
+  display: flex;
+}
+.filter-bar input {
+  padding: 0.25rem 0.5rem;
+  height: 32px;
+  width: 200px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.actions-bar .btn {
+  height: 32px;
+  padding: 0.25rem 0.75rem;
+}
+
+/* Create Branch form */
+.branch-form.hidden {
+  display: none;
+}
+.branch-form {
+  background: var(--color-bg);
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.branch-form h2 {
+  grid-column: 1 / -1;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+.branch-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+}
+.branch-form input {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  height: 32px;
+  box-sizing: border-box;
+}
+.branch-form .form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Branches table */
+.branches-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-bg);
+}
+.branches-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+.toggle-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 1rem;
+}
+.cell-actions .btn {
+  margin-right: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  height: 32px;
+}
+
+/* Hide details row */
+.branch-details-row.hidden {
+  display: none;
+}
+
+/* Branch details */
+.branch-details {
+  padding: 0.75rem;
+  background: var(--color-surface);
+  border-radius: 4px;
+  margin-top: 0.5rem;
+}
+
+/* Field subsection */
+.field-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.field-actions-bar .field-search {
+  padding: 0.25rem 0.5rem;
+  height: 28px;
+  width: 150px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.field-actions-bar .btn {
+  background: var(--color-secondary);
+  height: 28px;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Create Field form */
+.field-form.hidden {
+  display: none;
+}
+.field-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.field-form h3 {
+  grid-column: 1 / -1;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+.field-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+}
+.field-form input {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  height: 28px;
+  box-sizing: border-box;
+}
+.field-form .form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Fields table */
+.fields-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-bg);
+}
+.fields-table td {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+.fields-table .cell-actions .btn {
+  background: var(--color-secondary);
+  margin-right: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+  height: 28px;
+}
+
+/* Inline-edit inputs */
+.branches-table input,
+.fields-table input {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  height: 32px;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+.modal.active {
+  display: flex;
+}
+.modal-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+}
+.modal-content {
+  position: relative;
+  background: var(--color-bg);
+  padding: 1rem;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  max-width: 400px;
+  width: 90%;
+  z-index: 2001;
+}
+.modal-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}

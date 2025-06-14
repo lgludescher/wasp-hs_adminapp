@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <!-- Page-specific styles -->
+  <link rel="stylesheet" href="{{ url_for('static', path='css/manage_users.css') }}" />
+  <!-- Page-specific behavior -->
+  <script type="module" src="{{ url_for('static', path='js/manage_users.js') }}"></script>
+{% endblock %}
+
+{% block body %}
+<section class="manage-users">
+  <h1>Manage Users</h1>
+
+  <div class="actions-bar">
+    <div class="filter-bar">
+      <input
+        id="user-search"
+        type="text"
+        placeholder="Search by username, name, or email…"
+      />
+      <select id="filter-admin">
+        <option value="">All users</option>
+        <option value="true">Admins only</option>
+        <option value="false">Non-admins only</option>
+      </select>
+    </div>
+    <button id="btn-show-create" class="btn">Add New User</button>
+  </div>
+
+  <form id="form-create-user" class="user-form hidden">
+    <h2>Create New User</h2>
+    <label>
+      Username
+      <input name="username" required />
+    </label>
+    <label>
+      Name
+      <input name="name" required />
+    </label>
+    <label>
+      Email
+      <input name="email" type="email" required />
+    </label>
+    <label class="checkbox-label">
+      <input name="is_admin" type="checkbox" />
+      <span>Admin?</span>
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn">Create</button>
+      <button type="button" id="btn-cancel-create" class="btn">Cancel</button>
+    </div>
+  </form>
+
+  <table class="manage-users-table">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Admin?</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="users-tbody">
+      <!-- Populated by JS -->
+    </tbody>
+  </table>
+</section>
+
+<!-- Confirmation / Info Modal -->
+<div id="modal-confirm" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-content">
+    <p id="modal-text"></p>
+    <div class="modal-actions">
+      <button id="modal-confirm-btn" class="btn">Confirm</button>
+      <button id="modal-cancel-btn" class="btn">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

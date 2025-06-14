@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/manage_projects.css') }}" />
+  <script type="module" src="{{ url_for('static', path='js/manage_projects.js') }}"></script>
+{% endblock %}
+
+{% block body %}
+  <h1 class="page-title">Manage Projects</h1>
+
+  <div class="actions-bar">
+    <div class="filters">
+      <label>Search:
+        <input id="filter-search" type="text" placeholder="Search projects…" />
+      </label>
+      <label>Call Type:
+        <select id="filter-call-type">
+          <option value="">All call types</option>
+        </select>
+      </label>
+      <label>Status:
+        <select id="filter-active">
+          <option value="">All projects</option>
+          <option value="true">Ongoing projects</option>
+          <option value="false">Finished projects</option>
+        </select>
+      </label>
+      <label>Branch:
+        <select id="filter-branch">
+          <option value="">All branches</option>
+        </select>
+      </label>
+      <label>Field:
+        <select id="filter-field">
+          <option value="">All fields</option>
+        </select>
+      </label>
+    </div>
+    <button id="btn-show-create" class="btn">Create New Project</button>
+  </div>
+
+  <form id="form-create" class="form-create hidden">
+    <fieldset>
+      <legend><strong>New Project</strong></legend>
+      <label>Project Number:
+        <input name="project_number" type="text" />
+      </label>
+      <label>Call Type:
+        <select name="call_type_id">
+          <option value="">Select call type…</option>
+        </select>
+      </label>
+      <label>Title:
+        <input name="title" type="text" />
+      </label>
+      <label>Affiliated:
+        <input name="is_affiliated" type="checkbox" />
+      </label>
+      <label>Extended:
+        <input name="is_extended" type="checkbox" />
+      </label>
+      <label>Start Date:
+        <input name="start_date" type="date" min="2020-01-01" />
+      </label>
+      <label>End Date:
+        <input name="end_date" type="date" min="2020-01-01" />
+      </label>
+      <label>Notes:
+        <input name="notes" type="text" />
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn save-btn">Create</button>
+        <button type="button" id="btn-cancel-create" class="btn cancel-btn">Cancel</button>
+      </div>
+    </fieldset>
+  </form>
+
+  <div class="list-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Project #</th>
+          <th>Call Type</th>
+          <th>Title</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="projects-tbody"></tbody>
+    </table>
+  </div>
+
+  <div id="modal-confirm" class="modal hidden">
+    <div class="modal-content">
+      <p id="modal-text"></p>
+      <div class="modal-actions">
+        <button id="modal-confirm-btn" class="btn">Confirm</button>
+        <button id="modal-cancel-btn" class="btn cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}

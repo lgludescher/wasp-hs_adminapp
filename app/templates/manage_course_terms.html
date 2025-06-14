@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', path='css/manage_course_terms.css') }}"
+  />
+  <script
+    type="module"
+    src="{{ url_for('static', path='js/manage_course_terms.js') }}"
+  ></script>
+{% endblock %}
+
+{% block body %}
+<section class="manage-course-terms">
+  <h1>Manage Course Terms</h1>
+
+  <div class="actions-bar">
+    <button id="btn-add-next" class="btn">Add Next Term</button>
+    <button id="btn-remove-most-recent" class="btn">Remove Most Recent Term</button>
+  </div>
+
+  <table class="terms-table">
+    <thead>
+      <tr>
+        <th>Term</th>
+        <th>Active?</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="terms-tbody"></tbody>
+  </table>
+</section>
+
+<!-- Confirmation / Info Modal -->
+<div id="modal-confirm" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-content">
+    <p id="modal-text"></p>
+    <div class="modal-actions">
+      <button id="modal-confirm-btn" class="btn">Confirm</button>
+      <button id="modal-cancel-btn" class="btn">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
