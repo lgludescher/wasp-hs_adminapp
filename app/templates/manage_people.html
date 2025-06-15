@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/manage_people.css') }}" />
+  <script type="module" src="{{ url_for('static', path='js/manage_people.js') }}"></script>
+{% endblock %}
+
+{% block body %}
+  <h1 class="page-title">People</h1>
+
+  <div class="actions-bar">
+    <div class="filters">
+      <label>Search:
+        <input id="filter-search" type="text" placeholder="Search people…" />
+      </label>
+    </div>
+    <button id="btn-show-create" class="btn">Create New Person</button>
+  </div>
+
+  <form id="form-create" class="form-create hidden">
+    <fieldset>
+      <legend><strong>New Person</strong></legend>
+      <label>First Name:
+        <input name="first_name" type="text" required />
+      </label>
+      <label>Last Name:
+        <input name="last_name" type="text" required />
+      </label>
+      <label>Email:
+        <input name="email" type="email" required />
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn save-btn">Save</button>
+        <button type="button" id="btn-cancel-create" class="btn cancel-btn">Cancel</button>
+      </div>
+    </fieldset>
+  </form>
+
+  <div class="list-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Email</th>
+          <th class="cell-actions"></th>
+        </tr>
+      </thead>
+      <tbody id="people-tbody"></tbody>
+    </table>
+  </div>
+
+  <div id="modal-confirm" class="modal hidden">
+    <div class="modal-content">
+      <p id="modal-text"></p>
+      <div class="modal-actions">
+        <button id="modal-confirm-btn" class="btn">Confirm</button>
+        <button id="modal-cancel-btn" class="btn cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -209,6 +209,50 @@ async def manage_projects_page(
     )
 
 
+@app.get("/manage-people/", response_class=HTMLResponse)
+async def manage_people_page(
+    request: Request,
+    current_user=Depends(get_current_user),
+):
+    return templates.TemplateResponse(
+        "manage_people.html",
+        {"request": request}
+    )
+
+
+@app.get("/manage-researchers", response_class=HTMLResponse)
+async def manage_researchers_page(
+    request: Request,
+    current_user=Depends(get_current_user)
+):
+    return templates.TemplateResponse(
+        "manage_researchers.html",
+        {"request": request}
+    )
+
+
+@app.get("/manage-phd-students", response_class=HTMLResponse)
+async def manage_phd_students_page(
+    request: Request,
+    current_user=Depends(get_current_user)
+):
+    return templates.TemplateResponse(
+        "manage_phd_students.html",
+        {"request": request}
+    )
+
+
+@app.get("/manage-postdocs", response_class=HTMLResponse)
+async def manage_postdocs_page(
+    request: Request,
+    current_user=Depends(get_current_user)
+):
+    return templates.TemplateResponse(
+        "manage_postdocs.html",
+        {"request": request}
+    )
+
+
 app.include_router(user.router)
 app.include_router(institution.router)
 app.include_router(domain.router)

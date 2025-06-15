@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/manage_postdocs.css') }}" />
+  <script type="module" src="{{ url_for('static', path='js/manage_postdocs.js') }}"></script>
+{% endblock %}
+
+{% block body %}
+  <h1 class="page-title">Manage Postdocs</h1>
+
+  <div class="actions-bar">
+    <div class="filters">
+      <label>Search:
+        <input id="filter-search" type="text" placeholder="Search postdocs…" />
+      </label>
+      <label>Status:
+        <select id="filter-active">
+          <option value="true" selected>Active Postdocs</option>
+          <option value="">All Postdocs</option>
+          <option value="false">Inactive Postdocs</option>
+        </select>
+      </label>
+      <label>Cohort:
+        <select id="filter-cohort">
+          <option value="">All cohorts</option>
+        </select>
+      </label>
+      <label>Institution:
+        <select id="filter-institution">
+          <option value="">All institutions</option>
+        </select>
+      </label>
+      <label>Branch:
+        <select id="filter-branch">
+          <option value="">All branches</option>
+        </select>
+      </label>
+      <label>Field:
+        <select id="filter-field">
+          <option value="">All fields</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="list-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Cohort</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th class="cell-actions"></th>
+        </tr>
+      </thead>
+      <tbody id="postdocs-tbody"></tbody>
+    </table>
+  </div>
+
+  <div id="modal-confirm" class="modal hidden">
+    <div class="modal-content">
+      <p id="modal-text"></p>
+      <div class="modal-actions">
+        <button id="modal-confirm-btn" class="btn">Confirm</button>
+        <button id="modal-cancel-btn" class="btn cancel-btn">OK</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -331,7 +331,7 @@ class PersonRoleReadSlim(BaseModel):
     id:           int
     start_date:   datetime
     end_date:     Optional[datetime]
-    notes:        str
+    notes:        Optional[str]
     role:         RoleRead
     model_config = ConfigDict(from_attributes=True)
 
@@ -361,7 +361,7 @@ class PersonRoleBase(BaseModel):
     role_id:   int
     start_date: Optional[datetime] = None
     end_date:   Optional[datetime] = None
-    notes: str
+    notes: Optional[str] = None
 
 
 class PersonRoleCreate(PersonRoleBase):
@@ -373,7 +373,7 @@ class PersonRoleReadFull(BaseModel):
     id:           int
     start_date:   datetime
     end_date:     Optional[datetime]
-    notes:        str
+    notes:        Optional[str]
     role:         RoleRead
     person:       PersonRead
     model_config = ConfigDict(from_attributes=True)
@@ -429,7 +429,7 @@ class ResearcherRead(ResearcherBase):
     id: int
     person_role: PersonRoleReadFull
 
-    title:          ResearcherTitleRead
+    title:          Optional[ResearcherTitleRead]
     original_title: Optional[ResearcherTitleRead]
 
     model_config = ConfigDict(from_attributes=True)

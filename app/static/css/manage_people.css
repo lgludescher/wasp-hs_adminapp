@@ -1,0 +1,210 @@
+/* Page title */
+.page-title {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+/* Actions bar */
+.actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.filters label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.filters input {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  min-width: 12ch;
+}
+
+/* Create form */
+.form-create {
+  background: var(--color-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  max-width: 400px;
+}
+.form-create fieldset {
+  border: none;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+.form-create label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+}
+.form-create input[type="text"],
+.form-create input[type="email"] {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* List container */
+.list-container {
+  background: var(--color-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+/* Table */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.data-table th,
+.data-table td {
+  padding: 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+.data-table th {
+  background: var(--color-surface);
+}
+.cell-actions {
+  white-space: nowrap;
+}
+
+/* Expand toggle: now uses primary .btn style */
+.expand-btn {
+  width: 2rem;
+  text-align: center;
+  padding: 0.25rem;
+}
+
+/* Secondary buttons (inside expanded panel) */
+:root {
+  --color-secondary: #6c757d;
+}
+.btn-secondary {
+  background: var(--color-secondary);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.btn-secondary:hover {
+  opacity: 0.9;
+}
+
+/* “Go to Role” link as button, but shorter */
+.go-role-btn {
+  display: inline-block;
+  background: var(--color-secondary);
+  color: #fff;
+  text-decoration: underline;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  border-radius: 4px;
+}
+
+/* Expanded panel */
+.expanded-row .expanded-content {
+  padding: 0.75rem;
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* Inline add-role form — adjusted width, padding, and spacing */
+.role-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  padding: 0.75rem;             /* give breathing room inside */
+  background: var(--color-bg);
+  border-radius: 4px;
+  max-width: 600px;             /* slightly narrower than full */
+}
+.role-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+}
+.form-actions-inline {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;    /* align to right, but not extreme */
+  gap: 0.5rem;
+  margin-top: 0.5rem;           /* space above buttons */
+}
+
+/* Roles sub-table */
+.role-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+.role-table th,
+.role-table td {
+  padding: 0.4rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+.role-table th {
+  background: var(--color-surface);
+}
+
+/* Inline‐edit inputs */
+.data-table input,
+.data-table select,
+.role-table input,
+.role-table select {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hidden {
+  display: none;
+}
+.modal-content {
+  background: var(--color-bg);
+  padding: 1rem;
+  border-radius: 4px;
+  max-width: 90%;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}

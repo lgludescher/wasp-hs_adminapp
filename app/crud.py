@@ -837,10 +837,13 @@ def update_project(db: Session, project_id: int, p_in: schemas.ProjectUpdate):
         raise EntityNotFoundError(f"Project #{project_id} not found")
 
     for field in ("call_type_id", "title", "project_number", "is_affiliated",
-                  "is_extended", "start_date", "end_date", "notes"):
+                  "is_extended", "start_date", "notes"):
         val = getattr(p_in, field)
         if val is not None:
             setattr(p, field, val)
+
+    # allows for resetting end_date, in case end_date is None
+    p.end_date = p_in.end_date
 
     db.commit()
     db.refresh(p)
@@ -891,7 +894,7 @@ def list_persons(db: Session, search: Optional[str] = None) -> List[models.Perso
                 models.Person.email.ilike(term),
             )
         )
-    return q.order_by(models.Person.last_name, models.Person.first_name).all()  # type: ignore
+    return q.order_by(models.Person.first_name, models.Person.last_name).all()  # type: ignore
 
 
 def create_person(db: Session, p_in: schemas.PersonCreate) -> models.Person:
@@ -983,10 +986,14 @@ def update_person_role(db: Session, person_role_id: int, pr_in: schemas.PersonRo
         raise EntityNotFoundError(f"PersonRole #{person_role_id} not found")
     if pr_in.start_date is not None:
         db_obj.start_date = pr_in.start_date
-    if pr_in.end_date is not None:
-        db_obj.end_date = pr_in.end_date
+    # if pr_in.end_date is not None:
+    #     db_obj.end_date = pr_in.end_date
     if pr_in.notes is not None:
         db_obj.notes = pr_in.notes
+
+    # allows for resetting end_date, in case end_date is None
+    db_obj.end_date = pr_in.end_date
+
     db.commit()
     db.refresh(db_obj)
     return db_obj
@@ -1157,7 +1164,7 @@ def list_researchers(
                    models.PersonRole.person_id == models.Person.id)
         seen.add("p")
 
-    q = q.order_by(models.Person.last_name, models.Person.first_name)
+    q = q.order_by(models.Person.first_name, models.Person.last_name)
 
     return q.all()  # type: ignore
 
@@ -1310,7 +1317,7 @@ def list_phd_students(
                    models.PersonRole.person_id == models.Person.id)
         seen.add("p")
 
-    q = q.order_by(models.Person.last_name, models.Person.first_name)
+    q = q.order_by(models.Person.first_name, models.Person.last_name)
 
     return q.all()  # type: ignore
 
@@ -1445,7 +1452,7 @@ def list_postdocs(
                    models.PersonRole.person_id == models.Person.id)
         seen.add("p")
 
-    q = q.order_by(models.Person.last_name, models.Person.first_name)
+    q = q.order_by(models.Person.first_name, models.Person.last_name)
 
     return q.all()  # type: ignore
 
