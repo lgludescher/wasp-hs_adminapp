@@ -145,10 +145,10 @@ async function toggleExpand(tr, person) {
             </select>
           </label>
           <label>Start Date:
-            <input name="start_date" type="date" min="2020-01-01" required />
+            <input name="start_date" type="date" min="2019-01-01" required />
           </label>
           <label>End Date:
-            <input name="end_date" type="date" min="2020-01-01" />
+            <input name="end_date" type="date" min="2019-01-01" />
           </label>
           <label>Notes:
             <input name="notes" type="text" />

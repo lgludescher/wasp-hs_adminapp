@@ -282,6 +282,7 @@ class Postdoc(Base):
     discipline = Column(String, nullable=True)
     postdoc_project_title = Column(String, nullable=True)
     # is_repatriated = Column(Boolean, default=False)
+    is_outgoing = Column(Boolean, default=False)
 
     # Either point to a known title, or fill in free-text if the title is “Other”
     current_title_id = Column(Integer, ForeignKey("researcher_titles.id"), nullable=True)
@@ -291,7 +292,7 @@ class Postdoc(Base):
     current_institution_id = Column(Integer, ForeignKey("institutions.id"), nullable=True)
     current_institution_other = Column(String, nullable=True)
 
-    current_department = Column(String, nullable=True)
+    # current_department = Column(String, nullable=True)
     notes = Column(String, nullable=True)
 
     person_role = relationship("PersonRole", back_populates="postdoc")
@@ -307,7 +308,8 @@ class Project(Base):
     call_type_id = Column(Integer, ForeignKey("project_call_types.id"), nullable=False)
     title = Column(String, nullable=False)
     project_number = Column(String, nullable=False)
-    is_affiliated = Column(Boolean, default=False)
+    # is_affiliated = Column(Boolean, default=False)
+    final_report_submitted = Column(Boolean, default=False)
     is_extended = Column(Boolean, default=False)
     start_date = Column(DateTime, nullable=True)
     end_date = Column(DateTime, nullable=True)

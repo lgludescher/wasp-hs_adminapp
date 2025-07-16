@@ -273,7 +273,8 @@ class ProjectBase(BaseModel):
     call_type_id:   int
     title:          str
     project_number: str
-    is_affiliated:  Optional[bool] = False
+    # is_affiliated:  Optional[bool] = False
+    final_report_submitted: Optional[bool] = False
     is_extended:    Optional[bool] = False
     start_date:     Optional[datetime] = None
     end_date:       Optional[datetime] = None
@@ -294,7 +295,8 @@ class ProjectUpdate(BaseModel):
     call_type_id:               Optional[int] = None
     title:                      Optional[str] = None
     project_number:             Optional[str] = None
-    is_affiliated:              Optional[bool] = None
+    # is_affiliated:              Optional[bool] = None
+    final_report_submitted:     Optional[bool] = None
     is_extended:                Optional[bool] = None
     start_date:                 Optional[datetime] = None
     end_date:                   Optional[datetime] = None
@@ -500,11 +502,12 @@ class PostdocBase(BaseModel):
     department:            Optional[str] = None
     discipline:            Optional[str] = None
     postdoc_project_title: Optional[str] = None
+    is_outgoing:           Optional[bool] = False
     current_title_id:      Optional[int] = None
     current_title_other:   Optional[str] = None
     current_institution_id: Optional[int] = None
     current_institution_other: Optional[str] = None
-    current_department:    Optional[str] = None
+    # current_department:    Optional[str] = None
     notes:                 Optional[str] = None
 
 
@@ -527,11 +530,12 @@ class PostdocUpdate(BaseModel):
     department:             Optional[str] = None
     discipline:             Optional[str] = None
     postdoc_project_title:  Optional[str] = None
+    is_outgoing:            Optional[bool] = None
     current_title_id:       Optional[int] = None
     current_title_other:    Optional[str] = None
     current_institution_id: Optional[int] = None
     current_institution_other: Optional[str] = None
-    current_department:     Optional[str] = None
+    # current_department:     Optional[str] = None
     notes:                  Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 

@@ -113,7 +113,8 @@ def list_projects(
     call_type_id:   Optional[int] = Query(None, ge=1),
     title:          Optional[str] = Query(None),
     project_number: Optional[str] = Query(None),
-    is_affiliated:  Optional[bool] = Query(None),
+    # is_affiliated:  Optional[bool] = Query(None),
+    final_report_submitted:  Optional[bool] = Query(None),
     is_extended:    Optional[bool] = Query(None),
     is_active:      Optional[bool] = Query(None),
     field_id:       Optional[int] = Query(None, ge=1),
@@ -123,7 +124,7 @@ def list_projects(
     current_user=Depends(dependencies.get_current_user)
 ):
     logger.info(f"{current_user.username} listed projects (call_type_id={call_type_id}), (title={title}, "
-                f"project_number={project_number}, is_affiliated={is_affiliated}, "
+                f"project_number={project_number}, final_report_submitted={final_report_submitted}, "
                 f"is_extended={is_extended}, is_active={is_active}, "
                 f"field_id={field_id}, branch_id={branch_id}, search={search!r})")
     return crud.list_projects(
@@ -131,7 +132,8 @@ def list_projects(
         call_type_id=call_type_id,
         title=title,
         project_number=project_number,
-        is_affiliated=is_affiliated,
+        # is_affiliated=is_affiliated,
+        final_report_submitted=final_report_submitted,
         is_extended=is_extended,
         is_active=is_active,
         field_id=field_id,

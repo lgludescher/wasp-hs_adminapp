@@ -748,7 +748,8 @@ def get_project(db: Session, project_id: int):
 
 
 def list_projects(db: Session, call_type_id: Optional[int] = None, title: Optional[str] = None,
-                  project_number: Optional[str] = None, is_affiliated: Optional[bool] = None,
+                  project_number: Optional[str] = None, final_report_submitted: Optional[bool] = None,
+                  # is_affiliated: Optional[bool] = None,
                   is_extended: Optional[bool] = None,
                   is_active: Optional[bool] = None,
                   field_id: Optional[int] = None,
@@ -762,8 +763,10 @@ def list_projects(db: Session, call_type_id: Optional[int] = None, title: Option
         q = q.filter_by(title=title)
     if project_number is not None:
         q = q.filter_by(project_number=project_number)
-    if is_affiliated is not None:
-        q = q.filter_by(is_affiliated=is_affiliated)
+    # if is_affiliated is not None:
+    #     q = q.filter_by(is_affiliated=is_affiliated)
+    if final_report_submitted is not None:
+        q = q.filter_by(final_report_submitted=final_report_submitted)
     if is_extended is not None:
         q = q.filter_by(is_extended=is_extended)
 
@@ -836,7 +839,9 @@ def update_project(db: Session, project_id: int, p_in: schemas.ProjectUpdate):
     if not p:
         raise EntityNotFoundError(f"Project #{project_id} not found")
 
-    for field in ("call_type_id", "title", "project_number", "is_affiliated",
+    # for field in ("call_type_id", "title", "project_number", "is_affiliated",
+    #               "is_extended", "start_date", "notes"):
+    for field in ("call_type_id", "title", "project_number", "final_report_submitted",
                   "is_extended", "start_date", "notes"):
         val = getattr(p_in, field)
         if val is not None:
@@ -1363,6 +1368,7 @@ def list_postdocs(
     person_role_id:   Optional[int] = None,
     is_active:        Optional[bool] = None,
     cohort_number:    Optional[int] = None,
+    is_outgoing:      Optional[bool] = None,
     institution_id:   Optional[int] = None,
     field_id:         Optional[int] = None,
     branch_id:        Optional[int] = None,
@@ -1391,7 +1397,11 @@ def list_postdocs(
     if cohort_number is not None:
         q = q.filter_by(cohort_number=cohort_number)
 
-    # 4) institution (active assignments only)
+    # 4) is_outgoing
+    if is_outgoing is not None:
+        q = q.filter_by(is_outgoing=is_outgoing)
+
+    # 5) institution (active assignments only)
     if institution_id is not None:
         if "pr" not in seen:
             q = q.join(models.PersonRole,
@@ -1405,7 +1415,7 @@ def list_postdocs(
             models.PersonInstitution.end_date.is_(None)
         )
 
-    # 5) field and branch
+    # 6) field and branch
     if field_id is not None or branch_id is not None:
         if "pr" not in seen:
             q = q.join(models.PersonRole,
@@ -1424,7 +1434,7 @@ def list_postdocs(
                 seen.add("af")
             q = q.filter_by(branch_id=branch_id)
 
-    # 6) name‐search on Person
+    # 7) name‐search on Person
     if search:
         term = f"%{search}%"
         if "pr" not in seen:
@@ -1442,7 +1452,7 @@ def list_postdocs(
             )
         )
 
-    # 7) ordering by last_name, first_name
+    # 8) ordering by last_name, first_name
     if "pr" not in seen:
         q = q.join(models.PersonRole,
                    models.Postdoc.person_role_id == models.PersonRole.id)

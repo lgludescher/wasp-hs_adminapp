@@ -180,7 +180,7 @@ formCreate.onsubmit = async e => {
     project_number: formCreate.project_number.value.trim(),
     call_type_id:   parseInt(formCreate.call_type_id.value),
     title:          formCreate.title.value.trim(),
-    is_affiliated:  formCreate.is_affiliated.checked,
+    final_report_submitted:  formCreate.final_report_submitted.checked,
     is_extended:    formCreate.is_extended.checked,
     start_date:     formCreate.start_date.value || null,
     end_date:       formCreate.end_date.value   || null,
