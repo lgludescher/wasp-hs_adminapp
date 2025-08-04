@@ -6,7 +6,13 @@
 {% endblock %}
 
 {% block body %}
-  <h1 class="page-title">Manage Postdocs</h1>
+  <div class="header-bar">
+    <h1 class="page-title">Manage Postdocs</h1>
+    <div class="view-toggle">
+      <button id="btn-default" class="active">Default View</button>
+      <button id="btn-activity">Current Activity</button>
+    </div>
+  </div>
 
   <div class="actions-bar">
     <div class="filters">
@@ -15,7 +21,7 @@
       </label>
       <label>Status:
         <select id="filter-active">
-          <option value="true" selected>Active Postdocs</option>
+          <option value="true">Active Postdocs</option>
           <option value="">All Postdocs</option>
           <option value="false">Inactive Postdocs</option>
         </select>
@@ -23,6 +29,13 @@
       <label>Cohort:
         <select id="filter-cohort">
           <option value="">All cohorts</option>
+        </select>
+      </label>
+      <label>Mobility Status:
+        <select id="filter-mobility-status">
+          <option value="">All</option>
+          <option value="false">Incoming</option>
+          <option value="true">Outgoing</option>
         </select>
       </label>
       <label>Institution:
@@ -46,15 +59,7 @@
   <div class="list-container">
     <table class="data-table">
       <thead>
-        <tr>
-          <th></th>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Cohort</th>
-          <th>Start Date</th>
-          <th>End Date</th>
-          <th class="cell-actions"></th>
-        </tr>
+        <tr id="postdocs-thead"><!-- dynamic header --></tr>
       </thead>
       <tbody id="postdocs-tbody"></tbody>
     </table>

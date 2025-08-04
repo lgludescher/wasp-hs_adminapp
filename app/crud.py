@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session, selectinload
 from . import models, schemas
 from typing import Optional, List, Union
@@ -751,7 +751,8 @@ def list_projects(db: Session, call_type_id: Optional[int] = None, title: Option
                   project_number: Optional[str] = None, final_report_submitted: Optional[bool] = None,
                   # is_affiliated: Optional[bool] = None,
                   is_extended: Optional[bool] = None,
-                  is_active: Optional[bool] = None,
+                  # is_active: Optional[bool] = None,
+                  project_status: Optional[str] = None,
                   field_id: Optional[int] = None,
                   branch_id: Optional[int] = None,
                   search: Optional[str] = None):
@@ -770,11 +771,39 @@ def list_projects(db: Session, call_type_id: Optional[int] = None, title: Option
     if is_extended is not None:
         q = q.filter_by(is_extended=is_extended)
 
-    if is_active is not None:
-        if is_active:
-            q = q.filter(models.Project.end_date.is_(None))
-        else:
-            q = q.filter(models.Project.end_date.is_not(None))
+    # if is_active is not None:
+    #     if is_active:
+    #         q = q.filter(models.Project.end_date.is_(None))
+    #     else:
+    #         q = q.filter(models.Project.end_date.is_not(None))
+
+    # project status
+    start_of_today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    if project_status is not None:
+        if project_status.lower() == 'ongoing':
+            q = q.filter(
+                or_(
+                    models.Project.end_date.is_(None),
+                    models.Project.end_date >= start_of_today
+                )
+            )
+        elif project_status.lower() == 'awaiting_report':
+            q = q.filter(
+                and_(
+                    models.Project.end_date.is_not(None),
+                    models.Project.end_date < start_of_today,
+                    models.Project.final_report_submitted.is_(False)
+                )
+            )
+        elif project_status.lower() == 'completed':
+            q = q.filter(
+                and_(
+                    models.Project.end_date.is_not(None),
+                    models.Project.end_date < start_of_today,
+                    models.Project.final_report_submitted.is_(True)
+                )
+            )
 
     # filter by exact field link
     if field_id is not None:
@@ -1255,11 +1284,11 @@ def list_phd_students(
 
     # 3) cohort_number, is_affiliated, is_graduated
     if cohort_number is not None:
-        q = q.filter_by(cohort_number=cohort_number)
+        q = q.filter(models.PhDStudent.cohort_number == cohort_number)
     if is_affiliated is not None:
-        q = q.filter_by(is_affiliated=is_affiliated)
+        q = q.filter(models.PhDStudent.is_affiliated == is_affiliated)
     if is_graduated is not None:
-        q = q.filter_by(is_graduated=is_graduated)
+        q = q.filter(models.PhDStudent.is_graduated == is_graduated)
 
     # 4) institution filter (only active PersonInstitution)
     if institution_id is not None:
@@ -1395,11 +1424,13 @@ def list_postdocs(
 
     # 3) cohort_number
     if cohort_number is not None:
-        q = q.filter_by(cohort_number=cohort_number)
+        # q = q.filter_by(cohort_number=cohort_number)
+        q = q.filter(models.Postdoc.cohort_number == cohort_number)
 
     # 4) is_outgoing
     if is_outgoing is not None:
-        q = q.filter_by(is_outgoing=is_outgoing)
+        # q = q.filter_by(is_outgoing=is_outgoing)
+        q = q.filter(models.Postdoc.is_outgoing == is_outgoing)
 
     # 5) institution (active assignments only)
     if institution_id is not None:
@@ -1479,7 +1510,11 @@ def update_postdoc(db: Session, postdoc_id: int, p_in: schemas.PostdocUpdate) ->
     db_obj = get_postdoc(db, postdoc_id)
     if not db_obj:
         raise EntityNotFoundError(f"Postdoc #{postdoc_id} not found")
-    for attr, val in p_in.model_dump(exclude_none=True).items():
+    # for attr, val in p_in.model_dump(exclude_none=True).items():
+    # "exclude_unset" includes the fields that were actually sent even if they are null
+    # this allows the fields "current_title_id", "current_title_other", "current_institution_id"
+    # and "current_institution_other" to be set back to null
+    for attr, val in p_in.model_dump(exclude_unset=True).items():
         setattr(db_obj, attr, val)
     db.commit()
     db.refresh(db_obj)

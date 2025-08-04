@@ -1,116 +1,151 @@
-/* Page title */
+/* Page title moved into header-bar */
 .page-title {
-  margin-bottom: 1rem;
-  font-size: 1.5rem;
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+/* Header bar for title + toggle */
+.header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.view-toggle {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.view-toggle button {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.9rem;
+    background: var(--color-surface);
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.view-toggle button.active {
+    background: var(--color-accent);
+    color: var(--color-text-inverse);
+    border-color: var(--color-accent-dark);
 }
 
 /* Actions bar */
 .actions-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
 }
 
-/* Filters */
 .filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
 }
+
 .filters label {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
 }
-.filters input,
-.filters select {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.9rem;
-  min-width: 8ch;
+
+.filters input, .filters select {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9rem;
+    min-width: 8ch;
 }
 
 /* List container */
 .list-container {
-  background: var(--color-bg);
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 1rem;
-  overflow-x: auto;
+    background: var(--color-bg);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 1rem;
+    overflow-x: auto;
 }
 
 /* Table */
 .data-table {
-  width: 100%;
-  border-collapse: collapse;
+    width: 100%;
+    border-collapse: collapse;
 }
-.data-table th,
-.data-table td {
-  padding: 0.5rem;
-  border-bottom: 1px solid #eee;
-  text-align: left;
+
+.data-table th, .data-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+    text-align: left;
 }
-/* Center only Cohort column (4th) */
-.data-table th:nth-child(4),
-.data-table td:nth-child(4) {
-  text-align: center;
+
+.data-table th:nth-child(4), .data-table td:nth-child(4) {
+    text-align: center;
 }
+
 .data-table th {
-  background: var(--color-surface);
+    background: var(--color-surface);
 }
+
 .cell-actions {
-  white-space: nowrap;
+    white-space: nowrap;
 }
 
-/* “Go to postdoc” link as orange button */
+/* “Go to postdoc” button */
 .go-btn {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
-  text-decoration: underline;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-.go-btn:hover {
-  opacity: 0.9;
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: var(--color-accent);
+    color: var(--color-text-inverse);
+    text-decoration: underline;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
 }
 
-/* Inline‐edit inputs */
-.data-table input,
-.data-table select {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.9rem;
-  box-sizing: border-box;
+.go-btn:hover {
+    opacity: 0.9;
 }
-/* Slightly wider cohort input */
+
+/* Inline-edit inputs */
+.data-table input, .data-table select {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+}
+
 .data-table td input[name="cohort_number"] {
-  width: 4em;
+    width: 4em;
 }
 
 /* Modal */
 .modal {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+
 .hidden {
-  display: none;
+    display: none;
 }
+
 .modal-content {
-  background: var(--color-bg);
-  padding: 1rem;
-  border-radius: 4px;
-  max-width: 90%;
+    background: var(--color-bg);
+    padding: 1rem;
+    border-radius: 4px;
+    max-width: 90%;
 }
+
 .modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
 }

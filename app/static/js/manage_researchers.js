@@ -109,7 +109,7 @@ function renderTable(list) {
       <td>
         <a class="go-btn" href="/manage-researchers/${item.id}/">Go to researcher</a>
       </td>
-      <td>${item.title.title}</td>
+      <td>${item.title?.title ?? ''}</td>
       <td>${name}</td>
       <td>${email}</td>
       <td>${start}</td>

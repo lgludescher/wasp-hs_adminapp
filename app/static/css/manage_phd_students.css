@@ -1,7 +1,15 @@
-/* Page title */
+/* Page title (used now inside header-bar) */
 .page-title {
-  margin-bottom: 1rem;
   font-size: 1.5rem;
+  margin: 0;
+}
+
+/* Header bar: title on left, toggle on right */
+.header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
 }
 
 /* Actions bar */
@@ -83,7 +91,7 @@
   opacity: 0.9;
 }
 
-/* Inline‐edit inputs */
+/* Inline‑edit inputs */
 .data-table input,
 .data-table select {
   padding: 0.25rem 0.5rem;
@@ -125,4 +133,24 @@
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 1rem;
+}
+
+/* View toggle styling (placed in header-bar) */
+.view-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.view-toggle button {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.9rem;
+  background: var(--color-surface);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.view-toggle button.active {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  border-color: var(--color-accent-dark, #888);
 }

@@ -116,7 +116,8 @@ def list_projects(
     # is_affiliated:  Optional[bool] = Query(None),
     final_report_submitted:  Optional[bool] = Query(None),
     is_extended:    Optional[bool] = Query(None),
-    is_active:      Optional[bool] = Query(None),
+    # is_active:      Optional[bool] = Query(None),
+    project_status: Optional[str] = Query(None),
     field_id:       Optional[int] = Query(None, ge=1),
     branch_id:      Optional[int] = Query(None, ge=1),
     search:         Optional[str] = Query(None),
@@ -125,7 +126,7 @@ def list_projects(
 ):
     logger.info(f"{current_user.username} listed projects (call_type_id={call_type_id}), (title={title}, "
                 f"project_number={project_number}, final_report_submitted={final_report_submitted}, "
-                f"is_extended={is_extended}, is_active={is_active}, "
+                f"is_extended={is_extended}, project_status={project_status}, "
                 f"field_id={field_id}, branch_id={branch_id}, search={search!r})")
     return crud.list_projects(
         db,
@@ -135,7 +136,8 @@ def list_projects(
         # is_affiliated=is_affiliated,
         final_report_submitted=final_report_submitted,
         is_extended=is_extended,
-        is_active=is_active,
+        # is_active=is_active,
+        project_status=project_status,
         field_id=field_id,
         branch_id=branch_id,
         search=search

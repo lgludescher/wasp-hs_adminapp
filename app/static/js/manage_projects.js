@@ -2,7 +2,7 @@ import { apiFetch } from './main.js';
 
 const filterSearch      = document.getElementById('filter-search');
 const filterCallType    = document.getElementById('filter-call-type');
-const filterActive      = document.getElementById('filter-active');
+const filterStatus      = document.getElementById('filter-status');
 const filterBranch      = document.getElementById('filter-branch');
 const filterField       = document.getElementById('filter-field');
 
@@ -66,7 +66,7 @@ filterBranch.onchange = async () => {
 /** Other filters → projects */
 filterSearch.oninput    = debounce(loadProjects, 300);
 filterCallType.onchange  = loadProjects;
-filterActive.onchange    = loadProjects;
+filterStatus.onchange    = loadProjects;
 filterField.onchange     = loadProjects;
 
 function debounce(fn, delay) {
@@ -83,7 +83,7 @@ async function loadProjects() {
     const p = new URLSearchParams();
     if (filterSearch.value.trim())   p.set('search', filterSearch.value.trim());
     if (filterCallType.value)        p.set('call_type_id', filterCallType.value);
-    if (filterActive.value)          p.set('is_active', filterActive.value);
+    if (filterStatus.value)          p.set('project_status', filterStatus.value);
     if (filterBranch.value)          p.set('branch_id', filterBranch.value);
     if (filterField.value)           p.set('field_id', filterField.value);
 

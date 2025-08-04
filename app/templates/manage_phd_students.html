@@ -6,7 +6,13 @@
 {% endblock %}
 
 {% block body %}
-  <h1 class="page-title">Manage PhD Students</h1>
+  <div class="header-bar">
+    <h1 class="page-title">Manage PhD Students</h1>
+    <div class="view-toggle">
+      <button id="btn-default" class="active">Default View</button>
+      <button id="btn-activity">Current Activity</button>
+    </div>
+  </div>
 
   <div class="actions-bar">
     <div class="filters">
@@ -15,7 +21,7 @@
       </label>
       <label>Status:
         <select id="filter-active">
-          <option value="true" selected>Active Students</option>
+          <option value="true">Active Students</option>
           <option value="">All Students</option>
           <option value="false">Inactive Students</option>
         </select>
@@ -60,16 +66,8 @@
   <div class="list-container">
     <table class="data-table">
       <thead>
-        <tr>
-          <th></th>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Cohort</th>
-          <th>Affiliated</th>
-          <th>Graduated</th>
-          <th>Start Date</th>
-          <th>End Date</th>
-          <th class="cell-actions"></th>
+        <tr id="students-thead">
+          <!-- Populated dynamically by JS -->
         </tr>
       </thead>
       <tbody id="students-tbody"></tbody>
