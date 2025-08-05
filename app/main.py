@@ -253,6 +253,17 @@ async def manage_postdocs_page(
     )
 
 
+@app.get("/manage-researchers/{researcher_id}", response_class=HTMLResponse)
+async def manage_researcher_page(
+    request: Request,
+    current_user=Depends(get_current_user)
+):
+    return templates.TemplateResponse(
+        "manage_researcher.html",
+        {"request": request}
+    )
+
+
 app.include_router(user.router)
 app.include_router(institution.router)
 app.include_router(domain.router)
