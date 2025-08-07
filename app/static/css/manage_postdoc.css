@@ -33,24 +33,17 @@
 .detail-column {
   display: flex;
   flex-direction: column;
-}
-.detail-item-group {
-  display: flex;
-  flex-direction: column;
   gap: 1rem;
 }
-.detail-item + .detail-item-group,
-.detail-item-group + .detail-item {
-  margin-top: 1rem;
-}
 
-/* Master grid for the bottom section to ensure column alignment */
+/* Master grid for the bottom section */
 .detail-bottom-section {
     display: grid;
-    grid-template-columns: 1.85fr 1.25fr 3.25fr 3.25fr;
+    grid-template-columns: 1.75fr 1.25fr 3.25fr 3.25fr;
     gap: 1.25rem 1.5rem;
     border-top: 1px solid #eee;
     padding-top: 1.25rem;
+    align-items: start;
 }
 
 .detail-item {
@@ -63,12 +56,10 @@
   color: #555;
   margin-right: 0.5rem;
 }
-/* In edit mode, labels are blocks */
 label.detail-item > strong {
     display: block;
     margin-bottom: 0.2rem;
 }
-/* Revert view mode labels to be inline */
 div.detail-item > strong {
     display: inline;
     margin-bottom: 0;
@@ -131,6 +122,11 @@ div.detail-item > strong {
     cursor: default;
 }
 
+/* Conditional text input for "Other" options */
+.other-input-container {
+    margin-top: 0.5rem;
+}
+
 
 /* Panels */
 .panel {
@@ -152,21 +148,6 @@ div.detail-item > strong {
 .panel-header .expand-btn { order: -1; }
 .panel-header h2 { margin: 0; font-size: 1.2rem; }
 .panel-content { padding: 1rem; background: #fdfdfd; border-top: 1px solid #eee; }
-
-/* New Subsection styles */
-.subsection h3 {
-    margin-top: 0;
-    margin-bottom: 0.75rem;
-    font-size: 1.1rem;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 0.5rem;
-}
-.subsection + .subsection {
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #ddd;
-}
-
 
 /* Add form inside panels */
 .item-add-form {
@@ -195,6 +176,15 @@ div.detail-item > strong {
 .data-table th { background: var(--color-surface); }
 .cell-actions { white-space: nowrap; text-align: right; }
 .cell-center { text-align: center; }
+
+/* This specific rule overrides browser defaults for inputs
+   inside tables, making them taller and consistent. */
+.data-table input[type="text"],
+.data-table input[type="url"],
+.data-table input[type="date"],
+.data-table select {
+    height: 2.4rem;
+}
 
 /* Scoped Button & Link Styles (Secondary Style) */
 .panel-content .btn,
@@ -231,11 +221,3 @@ a.go-to-btn:hover {
 .hidden { display: none !important; }
 .modal-content { background: var(--color-bg); padding: 1.5rem; border-radius: 4px; max-width: 500px; width: 90%; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
-
-/* Give specific columns in the Activities Abroad table a minimum width */
-/* This ensures the inline edit fields are always a usable size.     */
-/* The .list-container will provide a scrollbar if needed.           */
-.abroad-table .col-description { min-width: 250px; }
-.abroad-table .col-dates { min-width: 140px; }
-.abroad-table .col-location { min-width: 130px; }
-.abroad-table .col-host { min-width: 200px; }
