@@ -1568,14 +1568,14 @@ def list_student_activities(
                 models.StudentActivity.activity_id == models.GradSchoolActivity.id
             )
         )
-        # abroad start dates
-        .outerjoin(
-            models.AbroadStudentActivity,
-            and_(
-                models.StudentActivity.activity_type == ActivityType.ABROAD,
-                models.StudentActivity.activity_id == models.AbroadStudentActivity.id
-            )
-        )
+        # # abroad start dates
+        # .outerjoin(
+        #     models.AbroadStudentActivity,
+        #     and_(
+        #         models.StudentActivity.activity_type == ActivityType.ABROAD,
+        #         models.StudentActivity.activity_id == models.AbroadStudentActivity.id
+        #     )
+        # )
     )
 
     # 4) build a discriminator to put grad‐school first, abroad next

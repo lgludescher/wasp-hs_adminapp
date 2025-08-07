@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Literal
 from pydantic import BaseModel, ConfigDict
 from enum import Enum as PyEnum
-from .models import GradeType, EntityType, RoleType
+from .models import GradeType, EntityType, RoleType, ActivityType
 
 
 # <editor-fold desc="User-related entities">
@@ -564,6 +564,7 @@ class GradSchoolActivityLinkBase(StudentActivityBase):
 class GradSchoolStudentActivityCreate(GradSchoolActivityLinkBase):
     # For creation, all fields except `id` come from client
     # activity_type: PyEnum  # must be ActivityType.GRAD_SCHOOL
+    activity_type: Literal[ActivityType.GRAD_SCHOOL] = ActivityType.GRAD_SCHOOL
     activity_id: int
     is_completed: Optional[bool] = False
     grade: Optional[GradeType] = None
@@ -573,6 +574,7 @@ class GradSchoolStudentActivityCreate(GradSchoolActivityLinkBase):
 
 class AbroadStudentActivityCreate(StudentActivityBase):
     # activity_type: PyEnum  # must be ActivityType.ABROAD
+    activity_type: Literal[ActivityType.ABROAD] = ActivityType.ABROAD
     description: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
