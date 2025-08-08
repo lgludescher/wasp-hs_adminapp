@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/manage_grad_school_activity.css') }}" />
+  <script type="module" src="{{ url_for('static', path='js/manage_grad_school_activity.js') }}"></script>
+{% endblock %}
+
+{% block body %}
+  <h1 class="page-title">Grad School Activity Details</h1>
+
+  <section id="grad-school-activity-details-section" class="details-box">
+    <!-- Activity details will be populated by JS -->
+  </section>
+
+  <!-- Panels -->
+  <div class="panel">
+    <div class="panel-header">
+      <button class="expand-btn btn" data-panel="courses">+</button>
+      <h2>Courses</h2>
+    </div>
+    <div id="panel-content-courses" class="panel-content hidden">
+        <button class="btn btn-secondary btn-show-add-form">Create Course</button>
+        <!-- Reverted to the general item-add-form class -->
+        <form class="item-add-form hidden">
+            <fieldset>
+                <label>Title:
+                    <input name="title" type="text" required>
+                </label>
+                <label>Credits:
+                    <input name="credit_points" type="number" min="0">
+                </label>
+                <!-- Kept Notes as a single-line input -->
+                <label>Notes:
+                    <input name="notes" type="text">
+                </label>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-secondary save-btn">Save</button>
+                    <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
+                </div>
+            </fieldset>
+        </form>
+        <div class="list-container">
+            <table class="data-table"><thead></thead><tbody></tbody></table>
+        </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <button class="expand-btn btn" data-panel="students">+</button>
+      <h2>Students</h2>
+    </div>
+    <div id="panel-content-students" class="panel-content hidden">
+        <button class="btn btn-secondary btn-show-add-form">Add Student</button>
+        <form class="item-add-form hidden">
+            <fieldset>
+                <label>PhD Student:
+                    <select name="phd_student_id" required></select>
+                </label>
+                <label class="checkbox-label">
+                    <input name="is_completed" type="checkbox"> Completed?
+                </label>
+                <label>Grade:
+                    <select name="grade">
+                        <option value="">N/A</option>
+                        <option value="pass">PASS</option>
+                        <option value="fail">FAIL</option>
+                    </select>
+                </label>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-secondary save-btn">Save</button>
+                    <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
+                </div>
+            </fieldset>
+        </form>
+        <div class="list-container">
+            <table class="data-table"><thead></thead><tbody></tbody></table>
+        </div>
+    </div>
+  </div>
+
+
+  <!-- Reusable Modal -->
+  <div id="modal-confirm" class="modal hidden">
+    <div class="modal-content">
+      <p id="modal-text"></p>
+      <div class="modal-actions">
+        <button id="modal-confirm-btn" class="btn">Confirm</button>
+        <button id="modal-cancel-btn" class="btn cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}

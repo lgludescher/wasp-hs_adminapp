@@ -308,6 +308,17 @@ async def manage_course_page(
     )
 
 
+@app.get("/manage-grad-school-activities/{grad_school_activity_id}", response_class=HTMLResponse)
+async def manage_grad_school_activity_page(
+    request: Request,
+    current_user=Depends(get_current_user)
+):
+    return templates.TemplateResponse(
+        "manage_grad_school_activity.html",
+        {"request": request}
+    )
+
+
 app.include_router(user.router)
 app.include_router(institution.router)
 app.include_router(domain.router)
