@@ -202,13 +202,35 @@ function setupPanelAddForm(panel, config) {
   const showFormBtn = panel.querySelector('.btn-show-add-form');
   const addForm = panel.querySelector('.item-add-form');
   const cancelBtn = addForm.querySelector('.cancel-btn');
+
   showFormBtn.onclick = () => { addForm.classList.toggle('hidden'); };
-  cancelBtn.onclick = () => { addForm.reset(); addForm.classList.add('hidden'); };
+
+  cancelBtn.onclick = () => {
+    addForm.reset();
+    addForm.classList.add('hidden');
+    showFormBtn.classList.remove('hidden');
+
+    // THE FIX: Find the first select element (the filter) and trigger its change event.
+    const firstSelect = addForm.querySelector('select');
+    if (firstSelect) {
+      firstSelect.dispatchEvent(new Event('change'));
+    }
+  };
+
   addForm.onsubmit = async (e) => {
     e.preventDefault();
     try {
       await addCallback(new FormData(addForm));
-      addForm.reset(); addForm.classList.add('hidden');
+      addForm.reset();
+      addForm.classList.add('hidden');
+      showFormBtn.classList.remove('hidden');
+
+      // Also trigger the event after a successful save for good measure.
+      const firstSelect = addForm.querySelector('select');
+      if (firstSelect) {
+        firstSelect.dispatchEvent(new Event('change'));
+      }
+
       await loadFn(panel);
     } catch (err) { showError(err); }
   };
