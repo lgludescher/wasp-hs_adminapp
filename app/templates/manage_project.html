@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/manage_project.css') }}" />
+  <script type="module" src="{{ url_for('static', path='js/manage_project.js') }}"></script>
+{% endblock %}
+
+{% block body %}
+  <h1 class="page-title">Project Details</h1>
+
+  <section id="project-details-section" class="details-box">
+    <!-- Project details will be populated by JS -->
+  </section>
+
+  <!-- Panel Stubs -->
+  <div class="panel">
+    <div class="panel-header">
+      <button class="expand-btn btn" data-panel="members">+</button>
+      <h2>Members</h2>
+    </div>
+    <div id="panel-content-members" class="panel-content hidden">
+      <button class="btn btn-secondary btn-show-add-form">Add Member</button>
+      <form class="item-add-form hidden">
+        <fieldset>
+          <label>Role:
+            <select name="member_role_filter">
+              <option value="researchers" selected>Researcher</option>
+              <option value="phd-students">PhD Student</option>
+              <option value="postdocs">Postdoc</option>
+            </select>
+          </label>
+          <label>Person:
+            <select name="person_role_id" required></select>
+          </label>
+          <div class="detail-item"><label class="checkbox-label"><input name="is_pi" type="checkbox"> Principal Investigator?</label></div>
+          <div class="detail-item"><label class="checkbox-label"><input name="is_leader" type="checkbox"> Leader?</label></div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-secondary save-btn">Save</button>
+            <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
+          </div>
+        </fieldset>
+      </form>
+      <div class="list-container">
+        <table class="data-table"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <button class="expand-btn btn" data-panel="fields">+</button>
+      <h2>Academic Fields</h2>
+    </div>
+    <div id="panel-content-fields" class="panel-content hidden">
+      <button class="btn btn-secondary btn-show-add-form">Add Academic Field</button>
+      <form class="item-add-form hidden">
+        <fieldset>
+          <label>Filter by Branch:
+            <select name="field_branch_filter"></select>
+          </label>
+          <label>Field:
+            <select name="field_id" required></select>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-secondary save-btn">Save</button>
+            <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
+          </div>
+        </fieldset>
+      </form>
+      <div class="list-container">
+        <table class="data-table"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <button class="expand-btn btn" data-panel="outputs">+</button>
+      <h2>Research Output Reports</h2>
+    </div>
+    <div id="panel-content-outputs" class="panel-content hidden">
+      <button class="btn btn-secondary btn-show-add-form">Add Research Output Report</button>
+      <form class="item-add-form hidden">
+        <fieldset>
+          <label>Link:
+            <input name="link" type="text" required placeholder="https://...">
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-secondary save-btn">Save</button>
+            <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
+          </div>
+        </fieldset>
+      </form>
+      <div class="list-container">
+        <table class="data-table"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <button class="expand-btn btn" data-panel="letters">+</button>
+      <h2>Decision Letters</h2>
+    </div>
+    <div id="panel-content-letters" class="panel-content hidden">
+      <button class="btn btn-secondary btn-show-add-form">Add Decision Letter</button>
+      <form class="item-add-form hidden">
+        <fieldset>
+          <label>Link:
+            <input name="link" type="text" required placeholder="https://...">
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-secondary save-btn">Save</button>
+            <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
+          </div>
+        </fieldset>
+      </form>
+      <div class="list-container">
+        <table class="data-table"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Reusable Modal -->
+  <div id="modal-confirm" class="modal hidden">
+    <div class="modal-content">
+      <p id="modal-text"></p>
+      <div class="modal-actions">
+        <button id="modal-confirm-btn" class="btn">Confirm</button>
+        <button id="modal-cancel-btn" class="btn cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}

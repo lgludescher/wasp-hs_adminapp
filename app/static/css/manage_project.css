@@ -1,0 +1,195 @@
+/* Page title */
+.page-title {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+/* Main Details Box */
+.details-box {
+  position: relative;
+  background: var(--color-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.details-box .btn-edit-main {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+/* --- Layout Styles for Details Box --- */
+.details-box-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 2fr; /* 4 columns for the grid */
+  gap: 1.25rem 1.5rem;
+  align-items: start;
+}
+
+.detail-item {
+  font-size: 1rem;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+.detail-item strong {
+  font-size: 0.95rem;
+  color: #555;
+  margin-right: 0.5rem;
+}
+label.detail-item > strong {
+    display: block;
+    margin-bottom: 0.2rem;
+}
+div.detail-item > strong {
+    display: inline;
+    margin-bottom: 0;
+}
+
+.details-box-actions {
+  grid-column: 1 / -1; /* Make actions span all columns */
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #eee;
+}
+/* Unified input style */
+.details-box input[type="text"],
+.details-box input[type="url"],
+.details-box input[type="date"],
+.details-box input[type="number"],
+.details-box select,
+.details-box textarea,
+.item-add-form input[type="text"],
+.item-add-form input[type="url"],
+.item-add-form input[type="date"],
+.item-add-form select,
+.data-table input[type="text"],
+.data-table input[type="url"],
+.data-table input[type="date"],
+.data-table select {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.details-box textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.detail-item .checkbox-label,
+.item-add-form .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+}
+.detail-item input[type="checkbox"],
+.item-add-form input[type="checkbox"] {
+    width: 1.2rem;
+    height: 1.2rem;
+    flex-shrink: 0;
+}
+.details-box input[type="checkbox"]:disabled {
+    opacity: 0.7;
+    cursor: default;
+}
+
+/* Panels */
+.panel {
+  background: var(--color-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
+}
+.panel-header:hover { background-color: #f0f0f0; }
+.panel-header .expand-btn { order: -1; }
+.panel-header h2 { margin: 0; font-size: 1.2rem; }
+.panel-content { padding: 1rem; background: #fdfdfd; border-top: 1px solid #eee; }
+
+/* Add form inside panels */
+.item-add-form {
+  background: var(--color-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  max-width: 900px;
+}
+.item-add-form fieldset {
+  border: none; padding: 0; margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+.item-add-form label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; }
+.item-add-form .form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; }
+
+/* List container and Data Table */
+.list-container { overflow-x: auto; margin-top: 1rem; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th, .data-table td { padding: 0.6rem 0.5rem; text-align: left; border-bottom: 1px solid #eee; font-size: 0.9rem; vertical-align: middle; }
+.data-table th { background: var(--color-surface); }
+.cell-actions { white-space: nowrap; text-align: right; }
+.cell-center { text-align: center; }
+
+/* This specific rule overrides browser defaults for inputs
+   inside tables, making them taller and consistent. */
+.data-table input[type="text"],
+.data-table input[type="url"],
+.data-table input[type="date"],
+.data-table select {
+    height: 2.4rem;
+}
+
+/* Scoped Button & Link Styles (Secondary Style) */
+.panel-content .btn,
+.data-table .btn {
+    background: var(--color-secondary, #6c757d);
+    color: #fff;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+.panel-content .btn:hover,
+.data-table .btn:hover {
+    opacity: 0.9;
+}
+a.go-to-btn {
+  display: inline-block;
+  background: var(--color-secondary, #6c757d);
+  color: #fff;
+  text-decoration: underline;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+a.go-to-btn:hover {
+    opacity: 0.9;
+}
+
+
+/* Modal */
+.modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.hidden { display: none !important; }
+.modal-content { background: var(--color-bg); padding: 1.5rem; border-radius: 4px; max-width: 500px; width: 90%; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
