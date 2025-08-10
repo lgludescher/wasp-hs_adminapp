@@ -251,8 +251,13 @@ function startEdit(tr, item) {
   tr.querySelector('.save-btn').onclick = async () => {
     const newCoh = parseInt(cohortInput.value) || null;
     const payload = { cohort_number: newCoh };
+
+    let newStart, newEnd;
+
     if (viewMode === 'default') {
       payload.is_outgoing = tr.querySelector('[name="is_outgoing"]').value === 'true';
+      newStart = tr.querySelector('[name="start_date"]').value || null;
+      newEnd   = tr.querySelector('[name="end_date"]').value   || null;
     } else {
       const selT = tr.querySelector('#sel-title');
       const inpT = tr.querySelector('#inp-title-other');
@@ -262,10 +267,16 @@ function startEdit(tr, item) {
       const inpI = tr.querySelector('#inp-inst-other');
       if (selI.value === 'other') { payload.current_institution_id = null; payload.current_institution_other = inpI.value || null; }
       else { payload.current_institution_id = selI.value || null; payload.current_institution_other = null; }
+
+      // <<< FIX START
+      // In activity view, keep original dates, ensuring empty strings become null
+      newStart = start || null;
+      newEnd   = end || null;
+      // <<< FIX END
     }
     try {
       await apiFetch(`/postdocs/${item.id}/`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      await apiFetch(`/person-roles/${item.person_role_id}/`,{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ start_date: start, end_date: end }) });
+      await apiFetch(`/person-roles/${item.person_role_id}/`,{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ start_date: newStart, end_date: newEnd }) });
       await loadCohorts(); loadPostdocs();
     } catch (err) { showError(err); }
   };

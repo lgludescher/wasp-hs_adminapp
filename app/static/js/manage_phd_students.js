@@ -240,8 +240,11 @@ function startEdit(tr, item) {
       newStart = tr.querySelector('[name="start_date"]').value || null;
       newEnd   = tr.querySelector('[name="end_date"]').value   || null;
     } else {
-      newStart = start;
-      newEnd   = end;
+      // <<< FIX START
+      // In activity view, keep original dates, ensuring empty strings become null
+      newStart = start || null;
+      newEnd   = end || null;
+      // <<< FIX END
     }
     let newTitle = null, newOrg = null;
     if (viewMode === 'activity') {
