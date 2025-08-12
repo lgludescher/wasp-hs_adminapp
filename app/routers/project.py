@@ -3,6 +3,7 @@ from fastapi import (
     APIRouter, Depends, HTTPException,
     Response, Query
 )
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session
 from .. import crud, schemas, dependencies
 from ..crud import EntityNotFoundError
 from ..models import EntityType
+from ..excel_utils import generate_excel_response
 
 router = APIRouter(tags=["projects"])
 logger = logging.getLogger(__name__)
@@ -409,6 +411,71 @@ def del_project_decision_letter(pid: int, dlid: int,
     logger.info(f"{current_user.username} removing decision letter {dlid} for project {pid}")
     crud.remove_decision_letter(db, dlid)
     return Response(status_code=204)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Project Export endpoints">
+
+@router.get("/projects/export/projects.xlsx")
+def export_projects_to_excel(
+    call_type_id:   Optional[int] = Query(None, ge=1),
+    title:          Optional[str] = Query(None),
+    project_number: Optional[str] = Query(None),
+    final_report_submitted:  Optional[bool] = Query(None),
+    is_extended:    Optional[bool] = Query(None),
+    project_status: Optional[str] = Query(None),
+    field_id:       Optional[int] = Query(None, ge=1),
+    branch_id:      Optional[int] = Query(None, ge=1),
+    search:         Optional[str] = Query(None),
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    """
+    Export a list of projects to an Excel file, applying the same
+    filters as the main list view.
+    """
+    logger.info(f"{current_user.username} exporting projects")
+
+    # 1. Reuse the exact same CRUD function to get the filtered data
+    projects = crud.list_projects(
+        db,
+        call_type_id=call_type_id,
+        title=title,
+        project_number=project_number,
+        final_report_submitted=final_report_submitted,
+        is_extended=is_extended,
+        project_status=project_status,
+        field_id=field_id,
+        branch_id=branch_id,
+        search=search
+    )
+
+    # 2. Prepare the data in the desired format
+    data_to_export = [
+        {
+            "Project #": p.project_number,
+            "Call Type": p.call_type.type,
+            "Title": p.title,
+            "Start Date": p.start_date.strftime("%Y-%m-%d") if p.start_date else "",
+            "End Date": p.end_date.strftime("%Y-%m-%d") if p.end_date else "",
+            "Final Report Submitted": "Yes" if p.final_report_submitted else "No",
+            "Extended": "Yes" if p.is_extended else "No"
+        } for p in projects
+    ]
+    headers = ["Project #", "Call Type", "Title", "Start Date", "End Date", "Final Report Submitted", "Extended"]
+
+    # 3. Generate the Excel file in memory
+    excel_buffer = generate_excel_response(data_to_export, headers, "Projects")
+
+    # 4. Return the file as a downloadable response
+    return StreamingResponse(
+        excel_buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": "attachment; filename=projects.xlsx"
+        }
+    )
 
 
 # </editor-fold>

@@ -15,6 +15,7 @@ const filterBranch      = document.getElementById('filter-branch');
 const filterField       = document.getElementById('filter-field');
 const btnDefault        = document.getElementById('btn-default');
 const btnActivity       = document.getElementById('btn-activity');
+const btnExportExcel    = document.getElementById('btn-export-excel');
 const theadRow          = document.getElementById('students-thead');
 const tbody             = document.getElementById('students-tbody');
 
@@ -34,6 +35,25 @@ let viewMode = 'default';
   await loadFields();
   setupViewToggle();
   setupFilters();
+
+  btnExportExcel.onclick = () => {
+    const p = new URLSearchParams();
+    // Add all the same filters as the loadStudents function
+    if (filterSearch.value.trim()) p.set('search', filterSearch.value.trim());
+    if (filterActive.value)        p.set('is_active', filterActive.value);
+    if (filterCohort.value)        p.set('cohort_number', filterCohort.value);
+    if (filterAffiliated.value)    p.set('is_affiliated', filterAffiliated.value);
+    if (filterGraduated.value)     p.set('is_graduated', filterGraduated.value);
+    if (filterInstitution.value)   p.set('institution_id', filterInstitution.value);
+    if (filterBranch.value)        p.set('branch_id', filterBranch.value);
+    if (filterField.value)         p.set('field_id', filterField.value);
+
+    // Crucially, add the current view mode
+    p.set('view_mode', viewMode);
+
+    const exportUrl = `/phd-students/export/phd-students.xlsx?${p.toString()}`;
+    window.location.href = exportUrl;
+  };
 
   modalCancelBtn.onclick = () => modal.classList.add('hidden');
   renderHeader();

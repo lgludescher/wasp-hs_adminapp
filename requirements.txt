@@ -8,3 +8,4 @@ python-dotenv
 alembic
 pytest
 httpx
+openpyxl

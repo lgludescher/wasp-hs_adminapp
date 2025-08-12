@@ -2,11 +2,13 @@ import logging
 from typing import List, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Response, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from .. import crud, schemas, dependencies
 from ..crud import EntityNotFoundError, StudentActivityNotFound
 from ..models import ActivityType
+from ..excel_utils import generate_excel_response
 
 router = APIRouter(tags=["phd_students"])
 logger = logging.getLogger(__name__)
@@ -277,6 +279,77 @@ def list_student_courses(
 ):
     logger.info(f"{current_user.username} listing courses for phd student {stu_id}")
     return crud.get_student_courses(db, stu_id)
+
+
+# </editor-fold>
+
+# <editor-fold desc="PhdStudent Export endpoints">
+
+@router.get("/phd-students/export/phd-students.xlsx")
+def export_phd_students_to_excel(
+        view_mode: str = Query("default", description="The view mode ('default' or 'activity')"),
+        person_role_id: Optional[int] = Query(None, ge=1),
+        is_active: Optional[bool] = Query(None),
+        cohort_number: Optional[int] = Query(None, ge=0),
+        is_affiliated: Optional[bool] = Query(None),
+        is_graduated: Optional[bool] = Query(None),
+        institution_id: Optional[int] = Query(None, ge=1),
+        field_id: Optional[int] = Query(None, ge=1),
+        branch_id: Optional[int] = Query(None, ge=1),
+        search: Optional[str] = Query(None),
+        current_user=Depends(dependencies.get_current_user),
+        db: Session = Depends(dependencies.get_db),
+):
+    """
+    Export a list of PhD students to an Excel file, applying the same
+    filters as the main list view and respecting the view mode.
+    """
+    logger.info(f"{current_user.username} exporting PhD students (view_mode={view_mode})")
+
+    # 1. Reuse the exact same CRUD function to get the filtered data
+    students = crud.list_phd_students(
+        db, person_role_id=person_role_id, is_active=is_active, cohort_number=cohort_number,
+        is_affiliated=is_affiliated, is_graduated=is_graduated, institution_id=institution_id,
+        field_id=field_id, branch_id=branch_id, search=search,
+    )
+
+    # 2. Prepare headers and data based on the view mode
+    headers = []
+    data_to_export = []
+
+    if view_mode == 'activity':
+        headers = ["Name", "Cohort", "Affiliated", "Graduated", "Current Title", "Current Organization"]
+        for s in students:
+            data_to_export.append({
+                "Name": f"{s.person_role.person.first_name} {s.person_role.person.last_name}",
+                "Cohort": s.cohort_number,
+                "Affiliated": "Yes" if s.is_affiliated else "No",
+                "Graduated": "Yes" if s.is_graduated else "No",
+                "Current Title": s.current_title,
+                "Current Organization": s.current_organization
+            })
+    else:  # Default view
+        headers = ["Name", "Email", "Cohort", "Affiliated", "Graduated", "Start Date", "End Date"]
+        for s in students:
+            data_to_export.append({
+                "Name": f"{s.person_role.person.first_name} {s.person_role.person.last_name}",
+                "Email": s.person_role.person.email,
+                "Cohort": s.cohort_number,
+                "Affiliated": "Yes" if s.is_affiliated else "No",
+                "Graduated": "Yes" if s.is_graduated else "No",
+                "Start Date": s.person_role.start_date.strftime("%Y-%m-%d") if s.person_role.start_date else "",
+                "End Date": s.person_role.end_date.strftime("%Y-%m-%d") if s.person_role.end_date else ""
+            })
+
+    # 3. Generate the Excel file in memory
+    excel_buffer = generate_excel_response(data_to_export, headers, "PhD Students")
+
+    # 4. Return the file as a downloadable response
+    return StreamingResponse(
+        excel_buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=phd_students.xlsx"}
+    )
 
 
 # </editor-fold>

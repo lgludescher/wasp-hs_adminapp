@@ -5,6 +5,7 @@ const filterTerm        = document.getElementById('filter-term');
 const filterActivity    = document.getElementById('filter-activity');
 const filterActiveTerm  = document.getElementById('filter-active-term');
 const btnShowCreate     = document.getElementById('btn-show-create');
+const btnExportExcel    = document.getElementById('btn-export-excel');
 const formCreate        = document.getElementById('form-create');
 const btnCancel         = document.getElementById('btn-cancel');
 const tbody             = document.getElementById('courses-tbody');
@@ -231,6 +232,17 @@ formCreate.onsubmit = async e => {
   } catch (err) {
     showError(err);
   }
+};
+
+btnExportExcel.onclick = () => {
+  const params = new URLSearchParams();
+  if (searchFilter)     params.set('search', searchFilter);
+  if (termFilter)       params.set('term_id', termFilter);
+  if (activityFilter)   params.set('activity_id', activityFilter);
+  if (activeTermFilter) params.set('is_active_term', activeTermFilter);
+
+  const exportUrl = `/courses/export/courses.xlsx?${params.toString()}`;
+  window.location.href = exportUrl;
 };
 
 filterSearch.oninput = () => {

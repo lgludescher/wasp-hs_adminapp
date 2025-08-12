@@ -2,10 +2,12 @@ import logging
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from .. import crud, schemas, dependencies
 from ..crud import EntityNotFoundError
+from ..excel_utils import generate_excel_response
 
 router = APIRouter(tags=["postdocs"])
 logger = logging.getLogger(__name__)
@@ -101,6 +103,75 @@ def delete_postdoc(
         logger.warning(str(e))
         raise HTTPException(404, str(e))
     return Response(status_code=204)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Postdoc Export endpoints">
+
+@router.get("/postdocs/export/postdocs.xlsx")
+def export_postdocs_to_excel(
+    view_mode:      str = Query("default", description="The view mode ('default' or 'activity')"),
+    person_role_id: Optional[int] = Query(None, ge=1),
+    is_active:      Optional[bool] = Query(None),
+    cohort_number:  Optional[int] = Query(None, ge=0),
+    is_outgoing:    Optional[bool] = Query(None),
+    institution_id: Optional[int] = Query(None, ge=1),
+    field_id:       Optional[int] = Query(None, ge=1),
+    branch_id:      Optional[int] = Query(None, ge=1),
+    search:         Optional[str] = Query(None),
+    current_user=Depends(dependencies.get_current_user),
+    db: Session = Depends(dependencies.get_db),
+):
+    """
+    Export a list of postdocs to an Excel file, applying the same
+    filters as the main list view and respecting the view mode.
+    """
+    logger.info(f"{current_user.username} exporting postdocs (view_mode={view_mode})")
+
+    # 1. Reuse the exact same CRUD function to get the filtered data
+    postdocs = crud.list_postdocs(
+        db, person_role_id=person_role_id, is_active=is_active, cohort_number=cohort_number,
+        is_outgoing=is_outgoing, institution_id=institution_id, field_id=field_id,
+        branch_id=branch_id, search=search,
+    )
+
+    # 2. Prepare headers and data based on the view mode
+    headers = []
+    data_to_export = []
+
+    if view_mode == 'activity':
+        headers = ["Name", "Cohort", "Current Title", "Current Institution"]
+        for p in postdocs:
+            title = p.current_title.title if p.current_title else p.current_title_other
+            institution = p.current_institution.institution if p.current_institution else p.current_institution_other
+            data_to_export.append({
+                "Name": f"{p.person_role.person.first_name} {p.person_role.person.last_name}",
+                "Cohort": p.cohort_number,
+                "Current Title": title,
+                "Current Institution": institution
+            })
+    else:  # Default view
+        headers = ["Name", "Email", "Cohort", "Mobility Status", "Start Date", "End Date"]
+        for p in postdocs:
+            data_to_export.append({
+                "Name": f"{p.person_role.person.first_name} {p.person_role.person.last_name}",
+                "Email": p.person_role.person.email,
+                "Cohort": p.cohort_number,
+                "Mobility Status": "Outgoing" if p.is_outgoing else "Incoming",
+                "Start Date": p.person_role.start_date.strftime("%Y-%m-%d") if p.person_role.start_date else "",
+                "End Date": p.person_role.end_date.strftime("%Y-%m-%d") if p.person_role.end_date else ""
+            })
+
+    # 3. Generate the Excel file in memory
+    excel_buffer = generate_excel_response(data_to_export, headers, "Postdocs")
+
+    # 4. Return the file as a downloadable response
+    return StreamingResponse(
+        excel_buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=postdocs.xlsx"}
+    )
 
 
 # </editor-fold>

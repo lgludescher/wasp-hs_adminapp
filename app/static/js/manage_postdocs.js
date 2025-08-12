@@ -16,6 +16,7 @@ const filterBranch      = document.getElementById('filter-branch');
 const filterField       = document.getElementById('filter-field');
 const btnDefault        = document.getElementById('btn-default');
 const btnActivity       = document.getElementById('btn-activity');
+const btnExportExcel    = document.getElementById('btn-export-excel');
 const theadRow          = document.getElementById('postdocs-thead');
 const tbody             = document.getElementById('postdocs-tbody');
 
@@ -43,6 +44,24 @@ let institutionsList = [];
 
   setupViewToggle();
   setupFilters();
+
+  btnExportExcel.onclick = () => {
+    const p = new URLSearchParams();
+    // Add all the same filters as the loadPostdocs function
+    if (filterSearch.value.trim()) p.set('search', filterSearch.value.trim());
+    if (filterActive.value) p.set('is_active', filterActive.value);
+    if (filterCohort.value) p.set('cohort_number', filterCohort.value);
+    if (filterMobility.value) p.set('is_outgoing', filterMobility.value);
+    if (filterInstitution.value) p.set('institution_id', filterInstitution.value);
+    if (filterBranch.value) p.set('branch_id', filterBranch.value);
+    if (filterField.value) p.set('field_id', filterField.value);
+
+    // Crucially, add the current view mode
+    p.set('view_mode', viewMode);
+
+    const exportUrl = `/postdocs/export/postdocs.xlsx?${p.toString()}`;
+    window.location.href = exportUrl;
+  };
 
   modalCancelBtn.onclick = () => modal.classList.add('hidden');
 

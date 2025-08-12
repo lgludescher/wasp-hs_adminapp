@@ -5,6 +5,7 @@ const filterCallType    = document.getElementById('filter-call-type');
 const filterStatus      = document.getElementById('filter-status');
 const filterBranch      = document.getElementById('filter-branch');
 const filterField       = document.getElementById('filter-field');
+const btnExportExcel    = document.getElementById('btn-export-excel');
 
 const btnShowCreate     = document.getElementById('btn-show-create');
 const formCreate        = document.getElementById('form-create');
@@ -197,6 +198,18 @@ formCreate.onsubmit = async e => {
     btnShowCreate.disabled = false;
     loadProjects();
   } catch (err) { showError(err) }
+};
+
+btnExportExcel.onclick = () => {
+  const p = new URLSearchParams();
+  if (filterSearch.value.trim())   p.set('search', filterSearch.value.trim());
+  if (filterCallType.value)        p.set('call_type_id', filterCallType.value);
+  if (filterStatus.value)          p.set('project_status', filterStatus.value);
+  if (filterBranch.value)          p.set('branch_id', filterBranch.value);
+  if (filterField.value)           p.set('field_id', filterField.value);
+
+  const exportUrl = `/projects/export/projects.xlsx?${p.toString()}`;
+  window.location.href = exportUrl;
 };
 
 /** Confirmation modal */

@@ -2,6 +2,7 @@ import { apiFetch } from './main.js';
 
 const searchInput    = document.getElementById('institution-search');
 const btnShowCreate  = document.getElementById('btn-show-create');
+const btnExportExcel = document.getElementById('btn-export-excel');
 const formCreate     = document.getElementById('form-create');
 const btnCancel      = document.getElementById('btn-cancel');
 const tbody          = document.getElementById('institutions-tbody');
@@ -102,6 +103,17 @@ formCreate.onsubmit = async e => {
 searchInput.oninput = () => {
   currentFilter = searchInput.value.trim();
   loadInstitutions();
+};
+
+// Export button
+btnExportExcel.onclick = () => {
+  const params = new URLSearchParams();
+  if (currentFilter) {
+    params.set('search', currentFilter);
+  }
+  // Construct the URL with the current filter and trigger the download
+  const exportUrl = `/institutions/export/institutions.xlsx?${params.toString()}`;
+  window.location.href = exportUrl;
 };
 
 // Modal logic

@@ -3,12 +3,14 @@ from fastapi import (
     APIRouter, Depends, HTTPException,
     Response, Query
 )
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
 from .. import crud, schemas, dependencies
 from ..crud import EntityNotFoundError
+from ..excel_utils import generate_excel_response
 
 router = APIRouter(tags=["grad_school_activities"])
 logger = logging.getLogger(__name__)
@@ -227,6 +229,57 @@ def list_courses_for_grad_school_activity(
     logger.info(f"{current_user.username} listing courses for grad_school_activity #{gsa_id}")
     results = crud.list_courses(db, activity_id=gsa_id)
     return results
+
+
+# </editor-fold>
+
+# <editor-fold desc="GradSchoolActivity Export endpoints">
+
+@router.get("/grad-school-activities/export/grad-school-activities.xlsx")
+def export_grad_school_activities_to_excel(
+    activity_type_id:   Optional[int] = Query(None, ge=1),
+    description:        Optional[str] = Query(None),
+    year:               Optional[int] = Query(None),
+    search:             Optional[str] = Query(None),
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    """
+    Export a list of grad school activities to an Excel file, applying the same
+    filters as the main list view.
+    """
+    logger.info(f"{current_user.username} exporting grad school activities")
+
+    # 1. Reuse the exact same CRUD function to get the filtered data
+    activities = crud.list_grad_school_activities(
+        db,
+        activity_type_id=activity_type_id,
+        description=description,
+        year=year,
+        search=search
+    )
+
+    # 2. Prepare the data in the desired format
+    data_to_export = [
+        {
+            "Activity Type": act.activity_type.type,
+            "Year": act.year,
+            "Description": act.description
+        } for act in activities
+    ]
+    headers = ["Activity Type", "Year", "Description"]
+
+    # 3. Generate the Excel file in memory
+    excel_buffer = generate_excel_response(data_to_export, headers, "Grad School Activities")
+
+    # 4. Return the file as a downloadable response
+    return StreamingResponse(
+        excel_buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": "attachment; filename=grad_school_activities.xlsx"
+        }
+    )
 
 
 # </editor-fold>

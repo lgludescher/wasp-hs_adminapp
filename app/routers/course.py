@@ -3,6 +3,7 @@ from fastapi import (
     APIRouter, Depends, HTTPException,
     Response, Query
 )
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session
 from .. import crud, schemas, dependencies
 from ..crud import EntityNotFoundError
 from ..models import EntityType
+from ..excel_utils import generate_excel_response
 
 router = APIRouter(tags=["courses"])
 logger = logging.getLogger(__name__)
@@ -400,6 +402,66 @@ def del_course_decision_letter(cid: int, dlid: int,
     logger.info(f"{current_user.username} removing decision letter {dlid} for course {cid}")
     crud.remove_decision_letter(db, dlid)
     return Response(status_code=204)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Course Export endpoints">
+
+@router.get("/courses/export/courses.xlsx")
+def export_courses_to_excel(
+        title: Optional[str] = Query(None),
+        term_id: Optional[int] = Query(None, ge=1),
+        activity_id: Optional[int] = Query(None, ge=1),
+        is_active_term: Optional[bool] = Query(None),
+        search: Optional[str] = Query(None),
+        db: Session = Depends(dependencies.get_db),
+        current_user=Depends(dependencies.get_current_user)
+):
+    """
+    Export a list of courses to an Excel file, applying the same
+    filters as the main list view.
+    """
+    logger.info(f"{current_user.username} exporting courses")
+
+    # 1. Reuse the exact same CRUD function to get the filtered data
+    courses = crud.list_courses(
+        db,
+        title=title,
+        term_id=term_id,
+        activity_id=activity_id,
+        is_active_term=is_active_term,
+        search=search
+    )
+
+    # 2. Prepare the data in the desired format
+    data_to_export = []
+    for course in courses:
+        term_label = ""
+        if course.course_term:
+            term_label = f"{course.course_term.season.value} {course.course_term.year}"
+        elif course.grad_school_activity:
+            term_label = f"{course.grad_school_activity.activity_type.type} {course.grad_school_activity.year}"
+
+        data_to_export.append({
+            "Title": course.title,
+            "Term": term_label,
+            "Credits": course.credit_points
+        })
+
+    headers = ["Title", "Term", "Credits"]
+
+    # 3. Generate the Excel file in memory
+    excel_buffer = generate_excel_response(data_to_export, headers, "Courses")
+
+    # 4. Return the file as a downloadable response
+    return StreamingResponse(
+        excel_buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": "attachment; filename=courses.xlsx"
+        }
+    )
 
 
 # </editor-fold>

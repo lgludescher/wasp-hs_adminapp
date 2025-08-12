@@ -1,10 +1,12 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Response, Query
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from .. import crud, schemas, dependencies
 from ..crud import EntityNotFoundError
+from ..excel_utils import generate_excel_response
 
 router = APIRouter(prefix="/institutions", tags=["institutions"])
 
@@ -86,6 +88,44 @@ def delete_institution(
         logger.warning(str(e))
         raise HTTPException(404, str(e))
     return Response(status_code=204)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Institution Export endpoints">
+
+@router.get("/export/institutions.xlsx")
+def export_institutions_to_excel(
+    search: Optional[str] = Query(None, description="Substring search on name"),
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user),
+):
+    """
+    Export a list of institutions to an Excel file, applying the same
+    search filter as the main list view.
+    """
+    logger.info(f"{current_user.username} exporting institutions (search={search!r})")
+
+    # Reuse the same CRUD function to get the filtered data
+    institutions = crud.get_institutions(db, search=search)
+
+    # Prepare the data in the desired format (list of dicts)
+    data_to_export = [
+        {"Institution Name": inst.institution} for inst in institutions
+    ]
+    headers = ["Institution Name"]
+
+    # Generate the Excel file in memory
+    excel_buffer = generate_excel_response(data_to_export, headers, "Institutions")
+
+    # Return the file as a downloadable response
+    return StreamingResponse(
+        excel_buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": "attachment; filename=institutions.xlsx"
+        }
+    )
 
 
 # </editor-fold>

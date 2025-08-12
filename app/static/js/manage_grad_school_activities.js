@@ -3,6 +3,7 @@ import { apiFetch } from './main.js';
 const filterTypeSelect  = document.getElementById('filter-activity-type');
 const filterYearInput   = document.getElementById('filter-year');
 const btnShowCreate     = document.getElementById('btn-show-create');
+const btnExportExcel    = document.getElementById('btn-export-excel');
 const formCreate        = document.getElementById('form-create');
 const btnCancel         = document.getElementById('btn-cancel');
 const tbody             = document.getElementById('activities-tbody');
@@ -155,6 +156,15 @@ formCreate.onsubmit = async e => {
     btnShowCreate.disabled = false;
     loadActivities();
   } catch (err) { showError(err); }
+};
+
+btnExportExcel.onclick = () => {
+  const params = new URLSearchParams();
+  if (typeFilter) params.set('activity_type_id', typeFilter);
+  if (yearFilter) params.set('year', yearFilter);
+
+  const exportUrl = `/grad-school-activities/export/grad-school-activities.xlsx?${params.toString()}`;
+  window.location.href = exportUrl;
 };
 
 filterTypeSelect.onchange = () => {
