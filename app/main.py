@@ -21,8 +21,6 @@ app = FastAPI(debug=settings.debug)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
-templates.env.globals["url_for"] = app.url_path_for
-
 
 def seed_roles(db: Session):
     """Ensure the roles table contains exactly the members of RoleType."""
