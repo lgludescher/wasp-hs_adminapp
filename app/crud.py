@@ -2227,10 +2227,20 @@ def update_institution_person_role_link(db: Session, person_role_id: int, instit
         raise EntityNotFoundError(f"Institution for person role #{person_role_id} and "
                                   f"institution {institution_id} not found")
 
-    # Update start_date / end_date if provided
-    if getattr(in_data, "start_date", None) is not None:
+    # # Update start_date / end_date if provided
+    # if getattr(in_data, "start_date", None) is not None:
+    #     pi_row.start_date = in_data.start_date
+    # if getattr(in_data, "end_date", None) is not None:
+    #     pi_row.end_date = in_data.end_date
+
+    # Allows for resetting the dates to null
+    # Check if the 'start_date' field was included in the incoming data
+    if hasattr(in_data, "start_date"):
+        # If it was, update the row's value, even if it's None
         pi_row.start_date = in_data.start_date
-    if getattr(in_data, "end_date", None) is not None:
+
+    # Do the same for the 'end_date' field
+    if hasattr(in_data, "end_date"):
         pi_row.end_date = in_data.end_date
 
     db.commit()

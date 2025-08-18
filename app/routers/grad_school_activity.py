@@ -250,7 +250,7 @@ def export_grad_school_activities_to_excel(
     """
     logger.info(f"{current_user.username} exporting grad school activities")
 
-    # 1. Reuse the exact same CRUD function to get the filtered data
+    # Reuse the same CRUD function to get the filtered data
     activities = crud.list_grad_school_activities(
         db,
         activity_type_id=activity_type_id,
@@ -259,7 +259,19 @@ def export_grad_school_activities_to_excel(
         search=search
     )
 
-    # 2. Prepare the data in the desired format
+    # --- 1. BUILD THE FILTER INFO LIST ---
+    filter_info = []
+    if search:
+        filter_info.append(f"Search: {search}")
+    if year:
+        filter_info.append(f"Year: {year}")
+    if activity_type_id:
+        # Fetch the activity type name for a more descriptive filter line
+        activity_type = crud.get_grad_school_activity_type(db, activity_type_id)
+        if activity_type:
+            filter_info.append(f"Activity Type: {activity_type.type}")
+
+    # Prepare the data in the desired format
     data_to_export = [
         {
             "Activity Type": act.activity_type.type,
@@ -269,10 +281,15 @@ def export_grad_school_activities_to_excel(
     ]
     headers = ["Activity Type", "Year", "Description"]
 
-    # 3. Generate the Excel file in memory
-    excel_buffer = generate_excel_response(data_to_export, headers, "Grad School Activities")
+    # --- 2. PASS THE FILTERS TO THE GENERATOR ---
+    excel_buffer = generate_excel_response(
+        data_to_export,
+        headers,
+        "Grad School Activities",
+        filter_info=filter_info  # Pass the list here
+    )
 
-    # 4. Return the file as a downloadable response
+    # Return the file as a downloadable response
     return StreamingResponse(
         excel_buffer,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

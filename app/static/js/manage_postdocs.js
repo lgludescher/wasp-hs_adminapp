@@ -39,6 +39,7 @@ let institutionsList = [];
   ]);
 
   await loadCohorts();
+  await loadInstitutions();
   await loadBranches();
   await loadFields();
 
@@ -89,6 +90,14 @@ async function loadCohorts() {
   const distinct = Array.from(new Set(list.map(p => p.cohort_number).filter(n => n != null))).sort((a, b) => a - b);
   filterCohort.innerHTML = '<option value="">All cohorts</option>';
   distinct.forEach(n => filterCohort.append(new Option(n, n)));
+}
+
+async function loadInstitutions() {
+  try {
+    const list = await apiFetch(INSTITUTIONS_ENDPOINT);
+    filterInstitution.innerHTML = '<option value="">All institutions</option>';
+    list.forEach(i => filterInstitution.append(new Option(i.institution, i.id)));
+  } catch (err) { showError(err) }
 }
 
 async function loadBranches() {

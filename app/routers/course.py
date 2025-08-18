@@ -410,13 +410,13 @@ def del_course_decision_letter(cid: int, dlid: int,
 
 @router.get("/courses/export/courses.xlsx")
 def export_courses_to_excel(
-        title: Optional[str] = Query(None),
-        term_id: Optional[int] = Query(None, ge=1),
-        activity_id: Optional[int] = Query(None, ge=1),
-        is_active_term: Optional[bool] = Query(None),
-        search: Optional[str] = Query(None),
-        db: Session = Depends(dependencies.get_db),
-        current_user=Depends(dependencies.get_current_user)
+    title: Optional[str] = Query(None),
+    term_id: Optional[int] = Query(None, ge=1),
+    activity_id: Optional[int] = Query(None, ge=1),
+    is_active_term: Optional[bool] = Query(None),
+    search: Optional[str] = Query(None),
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
 ):
     """
     Export a list of courses to an Excel file, applying the same
@@ -434,7 +434,23 @@ def export_courses_to_excel(
         search=search
     )
 
-    # 2. Prepare the data in the desired format
+    # --- 2. BUILD THE FILTER INFO LIST ---
+    filter_info = []
+    if search:
+        filter_info.append(f"Search: {search}")
+    if is_active_term is not None:
+        status = "Active Terms Only" if is_active_term else "Inactive Terms Only"
+        filter_info.append(f"Term Status: {status}")
+    if term_id:
+        term = crud.get_course_term(db, term_id)
+        if term:
+            filter_info.append(f"Term: {term.season.value} {term.year}")
+    if activity_id:
+        activity = crud.get_grad_school_activity(db, activity_id)
+        if activity:
+            filter_info.append(f"Activity: {activity.activity_type.type} {activity.year}")
+
+    # 3. Prepare the data in the desired format
     data_to_export = []
     for course in courses:
         term_label = ""
@@ -451,10 +467,15 @@ def export_courses_to_excel(
 
     headers = ["Title", "Term", "Credits"]
 
-    # 3. Generate the Excel file in memory
-    excel_buffer = generate_excel_response(data_to_export, headers, "Courses")
+    # --- 4. PASS THE FILTERS TO THE GENERATOR ---
+    excel_buffer = generate_excel_response(
+        data_to_export,
+        headers,
+        "Courses",
+        filter_info=filter_info  # Pass the list here
+    )
 
-    # 4. Return the file as a downloadable response
+    # 5. Return the file as a downloadable response
     return StreamingResponse(
         excel_buffer,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

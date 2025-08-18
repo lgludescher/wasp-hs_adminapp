@@ -451,7 +451,27 @@ def export_projects_to_excel(
         search=search
     )
 
-    # 2. Prepare the data in the desired format
+    # --- 2. BUILD THE FILTER INFO LIST ---
+    filter_info = []
+    if search:
+        filter_info.append(f"Search: {search}")
+    if project_status:
+        # Capitalize the status for better display (e.g., "ongoing" -> "Ongoing")
+        filter_info.append(f"Status: {project_status.replace('_', ' ').title()}")
+    if call_type_id:
+        call_type = crud.get_project_call_type(db, call_type_id)
+        if call_type:
+            filter_info.append(f"Call Type: {call_type.type}")
+    if branch_id:
+        branch = crud.get_branch(db, branch_id)
+        if branch:
+            filter_info.append(f"Branch: {branch.branch}")
+    if field_id:
+        field = crud.get_field(db, field_id)
+        if field:
+            filter_info.append(f"Field: {field.field}")
+
+    # 3. Prepare the data in the desired format
     data_to_export = [
         {
             "Project #": p.project_number,
@@ -465,10 +485,15 @@ def export_projects_to_excel(
     ]
     headers = ["Project #", "Call Type", "Title", "Start Date", "End Date", "Final Report Submitted", "Extended"]
 
-    # 3. Generate the Excel file in memory
-    excel_buffer = generate_excel_response(data_to_export, headers, "Projects")
+    # --- 4. PASS THE FILTERS TO THE GENERATOR ---
+    excel_buffer = generate_excel_response(
+        data_to_export,
+        headers,
+        "Projects",
+        filter_info=filter_info  # Pass the list here
+    )
 
-    # 4. Return the file as a downloadable response
+    # 5. Return the file as a downloadable response
     return StreamingResponse(
         excel_buffer,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

@@ -109,14 +109,24 @@ def export_institutions_to_excel(
     # Reuse the same CRUD function to get the filtered data
     institutions = crud.get_institutions(db, search=search)
 
+    # --- 1. BUILD THE FILTER INFO LIST ---
+    filter_info = []
+    if search:
+        filter_info.append(f"Search: {search}")
+
     # Prepare the data in the desired format (list of dicts)
     data_to_export = [
         {"Institution Name": inst.institution} for inst in institutions
     ]
     headers = ["Institution Name"]
 
-    # Generate the Excel file in memory
-    excel_buffer = generate_excel_response(data_to_export, headers, "Institutions")
+    # --- 2. PASS THE FILTERS TO THE GENERATOR ---
+    excel_buffer = generate_excel_response(
+        data_to_export,
+        headers,
+        "Institutions",
+        filter_info=filter_info  # Pass the list here
+    )
 
     # Return the file as a downloadable response
     return StreamingResponse(

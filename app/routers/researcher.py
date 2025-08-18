@@ -213,7 +213,31 @@ def export_researchers_to_excel(
         search=search,
     )
 
-    # 2. Prepare the data in the desired format
+    # --- 2. BUILD THE FILTER INFO LIST ---
+    filter_info = []
+    if search:
+        filter_info.append(f"Search: {search}")
+    if is_active is not None:
+        status = "Active" if is_active else "Inactive"
+        filter_info.append(f"Status: {status}")
+    if title_id:
+        title = crud.get_researcher_title(db, title_id)
+        if title:
+            filter_info.append(f"Title: {title.title}")
+    if institution_id:
+        institution = crud.get_institution(db, institution_id)
+        if institution:
+            filter_info.append(f"Institution: {institution.institution}")
+    if branch_id:
+        branch = crud.get_branch(db, branch_id)
+        if branch:
+            filter_info.append(f"Branch: {branch.branch}")
+    if field_id:
+        field = crud.get_field(db, field_id)
+        if field:
+            filter_info.append(f"Field: {field.field}")
+
+    # 3. Prepare the data in the desired format
     data_to_export = [
         {
             "Title": r.title.title if r.title else "",
@@ -225,10 +249,15 @@ def export_researchers_to_excel(
     ]
     headers = ["Title", "Name", "Email", "Start Date", "End Date"]
 
-    # 3. Generate the Excel file in memory
-    excel_buffer = generate_excel_response(data_to_export, headers, "Researchers")
+    # --- 4. PASS THE FILTERS TO THE GENERATOR ---
+    excel_buffer = generate_excel_response(
+        data_to_export,
+        headers,
+        "Researchers",
+        filter_info=filter_info  # Pass the list here
+    )
 
-    # 4. Return the file as a downloadable response
+    # 5. Return the file as a downloadable response
     return StreamingResponse(
         excel_buffer,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

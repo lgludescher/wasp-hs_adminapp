@@ -578,7 +578,7 @@ async function loadAbroadActivities(panel) {
         const activities = await apiFetch(`/phd-students/${phdStudentId}/activities/?activity_type=abroad`);
         tbody.innerHTML = '';
         if (!activities.length) {
-            tbody.innerHTML = `<tr><td colspan="7">No Activities Abroad associated.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7">No Semester Abroad associated.</td></tr>`;
         } else {
             activities.forEach(item => {
                 const tr = document.createElement('tr');
@@ -606,7 +606,7 @@ function renderAbroadRow(tr, item) {
         </td>`;
     tr.querySelector('.edit-btn').onclick = () => startEditAbroadRow(tr, item);
     tr.querySelector('.remove-btn').onclick = () => {
-        pendingRemove = { type: 'student_activity', item, name: `Activity Abroad "${(item.description || '').substring(0, 30)}..."` };
+        pendingRemove = { type: 'student_activity', item, name: `Semester Abroad "${(item.description || '').substring(0, 30)}..."` };
         showModal(`Remove ${pendingRemove.name}?`);
     };
 }

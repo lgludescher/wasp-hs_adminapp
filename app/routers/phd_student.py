@@ -313,7 +313,33 @@ def export_phd_students_to_excel(
         field_id=field_id, branch_id=branch_id, search=search,
     )
 
-    # 2. Prepare headers and data based on the view mode
+    # --- 2. BUILD THE FILTER INFO LIST ---
+    filter_info = [f"View Mode: {view_mode.title()}"]
+    if search:
+        filter_info.append(f"Search: {search}")
+    if is_active is not None:
+        status = "Active" if is_active else "Inactive"
+        filter_info.append(f"Status: {status}")
+    if cohort_number is not None:
+        filter_info.append(f"Cohort: {cohort_number}")
+    if is_affiliated is not None:
+        filter_info.append(f"Affiliated: {'Yes' if is_affiliated else 'No'}")
+    if is_graduated is not None:
+        filter_info.append(f"Graduated: {'Yes' if is_graduated else 'No'}")
+    if institution_id:
+        institution = crud.get_institution(db, institution_id)
+        if institution:
+            filter_info.append(f"Institution: {institution.institution}")
+    if branch_id:
+        branch = crud.get_branch(db, branch_id)
+        if branch:
+            filter_info.append(f"Branch: {branch.branch}")
+    if field_id:
+        field = crud.get_field(db, field_id)
+        if field:
+            filter_info.append(f"Field: {field.field}")
+
+    # 3. Prepare headers and data based on the view mode
     headers = []
     data_to_export = []
 
@@ -341,10 +367,15 @@ def export_phd_students_to_excel(
                 "End Date": s.person_role.end_date.strftime("%Y-%m-%d") if s.person_role.end_date else ""
             })
 
-    # 3. Generate the Excel file in memory
-    excel_buffer = generate_excel_response(data_to_export, headers, "PhD Students")
+    # --- 4. PASS THE FILTERS TO THE GENERATOR ---
+    excel_buffer = generate_excel_response(
+        data_to_export,
+        headers,
+        "PhD Students",
+        filter_info=filter_info # Pass the list here
+    )
 
-    # 4. Return the file as a downloadable response
+    # 5. Return the file as a downloadable response
     return StreamingResponse(
         excel_buffer,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
