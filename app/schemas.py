@@ -502,12 +502,13 @@ class PostdocBase(BaseModel):
     department:            Optional[str] = None
     discipline:            Optional[str] = None
     postdoc_project_title: Optional[str] = None
-    is_outgoing:           Optional[bool] = False
+    is_incoming:           Optional[bool] = False
     current_title_id:      Optional[int] = None
     current_title_other:   Optional[str] = None
     current_institution_id: Optional[int] = None
     current_institution_other: Optional[str] = None
     # current_department:    Optional[str] = None
+    link:                  Optional[str] = None
     notes:                 Optional[str] = None
 
 
@@ -530,12 +531,13 @@ class PostdocUpdate(BaseModel):
     department:             Optional[str] = None
     discipline:             Optional[str] = None
     postdoc_project_title:  Optional[str] = None
-    is_outgoing:            Optional[bool] = None
+    is_incoming:            Optional[bool] = None
     current_title_id:       Optional[int] = None
     current_title_other:    Optional[str] = None
     current_institution_id: Optional[int] = None
     current_institution_other: Optional[str] = None
     # current_department:     Optional[str] = None
+    link:                   Optional[str] = None
     notes:                  Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 

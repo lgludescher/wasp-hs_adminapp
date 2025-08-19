@@ -120,6 +120,13 @@ div.detail-item > strong {
 .panel-header h2 { margin: 0; font-size: 1.2rem; }
 .panel-content { padding: 1rem; background: #fdfdfd; border-top: 1px solid #eee; }
 
+/* New Search Container Style */
+.search-container {
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+    max-width: 300px;
+}
+
 /* Add form inside panels */
 .item-add-form {
   background: var(--color-bg);

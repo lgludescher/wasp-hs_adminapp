@@ -65,12 +65,13 @@ function renderMainDetails(isEdit = false) {
             </div>
             <div class="detail-column">
                 <div class="detail-item"><strong>Email:</strong> <span>${person.email}</span></div>
+                <label class="detail-item"><strong>Personal Link</strong><input name="link" type="url" value="${postdocData.link || ''}"></label>
                 <label class="detail-item"><strong>Notes</strong><textarea name="notes">${postdocData.notes || ''}</textarea></label>
             </div>
         </div>
         <div class="detail-bottom-section">
             <label class="detail-item"><strong>Cohort Number</strong><input name="cohort_number" type="number" min="0" max="99" value="${postdocData.cohort_number || ''}"></label>
-            <label class="detail-item"><span class="checkbox-label"><input name="is_outgoing" type="checkbox" ${postdocData.is_outgoing ? 'checked' : ''}> Outgoing?</span></label>
+            <label class="detail-item"><span class="checkbox-label"><input name="is_incoming" type="checkbox" ${postdocData.is_incoming ? 'checked' : ''}> Incoming?</span></label>
             <label class="detail-item"><strong>Department</strong><input name="department" type="text" value="${postdocData.department || ''}"></label>
             <label class="detail-item"><strong>Discipline</strong><input name="discipline" type="text" value="${postdocData.discipline || ''}"></label>
             
@@ -115,12 +116,13 @@ function renderMainDetails(isEdit = false) {
             </div>
             <div class="detail-column">
                 <div class="detail-item"><strong>Email:</strong> <span>${person.email}</span></div>
+                <div class="detail-item"><strong>Personal Link:</strong> ${renderAsConditionalLink(postdocData.link)}</div>
                 <div class="detail-item"><strong>Notes:</strong> <span>${postdocData.notes || ''}</span></div>
             </div>
         </div>
         <div class="detail-bottom-section">
             <div class="detail-item"><strong>Cohort Number:</strong> <span>${postdocData.cohort_number ?? ''}</span></div>
-            <div class="detail-item"><strong>Outgoing?:</strong> <input type="checkbox" disabled ${postdocData.is_outgoing ? 'checked' : ''}></div>
+            <div class="detail-item"><strong>Incoming?:</strong> <input type="checkbox" disabled ${postdocData.is_incoming ? 'checked' : ''}></div>
             <div class="detail-item"><strong>Department:</strong> <span>${postdocData.department || ''}</span></div>
             <div class="detail-item"><strong>Discipline:</strong> <span>${postdocData.discipline || ''}</span></div>
 
@@ -141,9 +143,10 @@ async function saveMainDetails() {
     const instSelect = form.querySelector('[name="current_institution_id"]');
 
     const postdocUpdate = {
+        link: form.querySelector('[name="link"]').value.trim() || null,
         notes: form.querySelector('[name="notes"]').value.trim() || null,
         cohort_number: parseInt(form.querySelector('[name="cohort_number"]').value, 10) || null,
-        is_outgoing: form.querySelector('[name="is_outgoing"]').checked,
+        is_incoming: form.querySelector('[name="is_incoming"]').checked,
         department: form.querySelector('[name="department"]').value.trim() || null,
         discipline: form.querySelector('[name="discipline"]').value.trim() || null,
         postdoc_project_title: form.querySelector('[name="postdoc_project_title"]').value.trim() || null,

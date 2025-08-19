@@ -52,7 +52,7 @@ let institutionsList = [];
     if (filterSearch.value.trim()) p.set('search', filterSearch.value.trim());
     if (filterActive.value) p.set('is_active', filterActive.value);
     if (filterCohort.value) p.set('cohort_number', filterCohort.value);
-    if (filterMobility.value) p.set('is_outgoing', filterMobility.value);
+    if (filterMobility.value) p.set('is_incoming', filterMobility.value);
     if (filterInstitution.value) p.set('institution_id', filterInstitution.value);
     if (filterBranch.value) p.set('branch_id', filterBranch.value);
     if (filterField.value) p.set('field_id', filterField.value);
@@ -128,7 +128,7 @@ async function loadPostdocs() {
   if (filterSearch.value.trim()) p.set('search', filterSearch.value.trim());
   if (filterActive.value) p.set('is_active', filterActive.value);
   if (filterCohort.value) p.set('cohort_number', filterCohort.value);
-  if (filterMobility.value) p.set('is_outgoing', filterMobility.value);
+  if (filterMobility.value) p.set('is_incoming', filterMobility.value);
   if (filterInstitution.value) p.set('institution_id', filterInstitution.value);
   if (filterBranch.value) p.set('branch_id', filterBranch.value);
   if (filterField.value) p.set('field_id', filterField.value);
@@ -157,7 +157,7 @@ function renderTable(list) {
     const pr = item.person_role;
     const name = `${pr.person.first_name} ${pr.person.last_name}`;
     const cohort = item.cohort_number ?? '';
-    const mobility = item.is_outgoing ? 'Outgoing' : 'Incoming';
+    const mobility = item.is_incoming ? 'Incoming' : 'Outgoing';
     const start = pr.start_date?.split('T')[0] || '';
     const end = pr.end_date?.split('T')[0] || '';
     let cols;
@@ -208,9 +208,9 @@ function startEdit(tr, item) {
       <td>${pr.person.email}</td>
       <td><input name="cohort_number" type="number" min="0" max="99" value="${item.cohort_number ?? ''}" /></td>
       <td>
-        <select name="is_outgoing">
-          <option value="false">Incoming</option>
-          <option value="true">Outgoing</option>
+        <select name="is_incoming">
+          <option value="true">Incoming</option>
+          <option value="false">Outgoing</option>
         </select>
       </td>
       <td><input name="start_date" type="date" value="${start}" /></td>
@@ -249,7 +249,7 @@ function startEdit(tr, item) {
   `;
 
   if (viewMode === 'default') {
-    tr.querySelector('select[name="is_outgoing"]').value = String(item.is_outgoing);
+    tr.querySelector('select[name="is_incoming"]').value = String(item.is_incoming);
   } else {
     const selT = tr.querySelector('#sel-title');
     const inpT = tr.querySelector('#inp-title-other');
@@ -283,7 +283,7 @@ function startEdit(tr, item) {
     let newStart, newEnd;
 
     if (viewMode === 'default') {
-      payload.is_outgoing = tr.querySelector('[name="is_outgoing"]').value === 'true';
+      payload.is_incoming = tr.querySelector('[name="is_incoming"]').value === 'true';
       newStart = tr.querySelector('[name="start_date"]').value || null;
       newEnd   = tr.querySelector('[name="end_date"]').value   || null;
     } else {

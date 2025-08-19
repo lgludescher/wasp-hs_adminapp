@@ -35,7 +35,7 @@ def list_postdocs(
     person_role_id: Optional[int] = Query(None, ge=1, description="Filter by person_role_id"),
     is_active:      Optional[bool] = Query(None, description="Only active/inactive roles"),
     cohort_number:  Optional[int] = Query(None, ge=0, description="Filter by cohort number"),
-    is_outgoing:    Optional[bool] = Query(None, description="Only incoming/outgoing postdocs"),
+    is_incoming:    Optional[bool] = Query(None, description="Only incoming/outgoing postdocs"),
     institution_id: Optional[int] = Query(None, ge=1, description="Filter by institution"),
     field_id:       Optional[int] = Query(None, ge=1, description="Filter by academic field"),
     branch_id:      Optional[int] = Query(None, ge=1, description="Filter by academic branch"),
@@ -53,7 +53,7 @@ def list_postdocs(
         person_role_id=person_role_id,
         is_active=is_active,
         cohort_number=cohort_number,
-        is_outgoing=is_outgoing,
+        is_incoming=is_incoming,
         institution_id=institution_id,
         field_id=field_id,
         branch_id=branch_id,
@@ -115,7 +115,7 @@ def export_postdocs_to_excel(
     person_role_id: Optional[int] = Query(None, ge=1),
     is_active:      Optional[bool] = Query(None),
     cohort_number:  Optional[int] = Query(None, ge=0),
-    is_outgoing:    Optional[bool] = Query(None),
+    is_incoming:    Optional[bool] = Query(None),
     institution_id: Optional[int] = Query(None, ge=1),
     field_id:       Optional[int] = Query(None, ge=1),
     branch_id:      Optional[int] = Query(None, ge=1),
@@ -132,7 +132,7 @@ def export_postdocs_to_excel(
     # 1. Reuse the exact same CRUD function to get the filtered data
     postdocs = crud.list_postdocs(
         db, person_role_id=person_role_id, is_active=is_active, cohort_number=cohort_number,
-        is_outgoing=is_outgoing, institution_id=institution_id, field_id=field_id,
+        is_incoming=is_incoming, institution_id=institution_id, field_id=field_id,
         branch_id=branch_id, search=search,
     )
 
@@ -145,8 +145,8 @@ def export_postdocs_to_excel(
         filter_info.append(f"Status: {status}")
     if cohort_number is not None:
         filter_info.append(f"Cohort: {cohort_number}")
-    if is_outgoing is not None:
-        mobility = "Outgoing" if is_outgoing else "Incoming"
+    if is_incoming is not None:
+        mobility = "Incoming" if is_incoming else "Outgoing"
         filter_info.append(f"Mobility Status: {mobility}")
     if institution_id:
         institution = crud.get_institution(db, institution_id)
@@ -183,7 +183,7 @@ def export_postdocs_to_excel(
                 "Name": f"{p.person_role.person.first_name} {p.person_role.person.last_name}",
                 "Email": p.person_role.person.email,
                 "Cohort": p.cohort_number,
-                "Mobility Status": "Outgoing" if p.is_outgoing else "Incoming",
+                "Mobility Status": "Incoming" if p.is_incoming else "Outgoing",
                 "Start Date": p.person_role.start_date.strftime("%Y-%m-%d") if p.person_role.start_date else "",
                 "End Date": p.person_role.end_date.strftime("%Y-%m-%d") if p.person_role.end_date else ""
             })

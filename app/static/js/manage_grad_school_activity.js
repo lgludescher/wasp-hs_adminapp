@@ -241,6 +241,7 @@ function setupCoursesAddForm(panel) {
 // --- STUDENTS PANEL ---
 async function loadStudents(panel) {
     const tbody = panel.querySelector('tbody');
+    const searchInput = panel.querySelector('#student-search-input'); // Assumes you added this input in the HTML
     panel.querySelector('thead').innerHTML = `
         <tr>
             <th></th>
@@ -249,27 +250,41 @@ async function loadStudents(panel) {
             <th>Name</th>
             <th></th>
         </tr>`;
-    try {
-        const studentActivities = await apiFetch(`/grad-school-activities/${gradSchoolActivityId}/student-activities/`);
-        const enrichedData = await Promise.all(studentActivities.map(async (activity) => {
-            const student = await apiFetch(`/phd-students/${activity.phd_student_id}`);
-            return { ...activity, student };
-        }));
 
-        tbody.innerHTML = '';
-        if (!enrichedData.length) {
-            tbody.innerHTML = `<tr><td colspan="5">No students associated with this activity.</td></tr>`;
-        } else {
-            enrichedData.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.dataset.activityId = item.id;
-                renderStudentRow(tr, item);
-                tbody.appendChild(tr);
-            });
+    const fetchAndRender = async () => {
+        try {
+            const params = new URLSearchParams();
+            const searchTerm = searchInput.value.trim();
+            if (searchTerm) {
+                params.set('search', searchTerm);
+            }
+            // The API endpoint now includes the search parameter
+            const studentActivities = await apiFetch(`/grad-school-activities/${gradSchoolActivityId}/student-activities/?${params.toString()}`);
+
+            const enrichedData = await Promise.all(studentActivities.map(async (activity) => {
+                const student = await apiFetch(`/phd-students/${activity.phd_student_id}`);
+                return { ...activity, student };
+            }));
+
+            tbody.innerHTML = '';
+            if (!enrichedData.length) {
+                tbody.innerHTML = `<tr><td colspan="5">No students found.</td></tr>`;
+            } else {
+                enrichedData.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.dataset.activityId = item.id;
+                    renderStudentRow(tr, item);
+                    tbody.appendChild(tr);
+                });
+            }
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="5">Could not load students: ${err.message}</td></tr>`;
         }
-    } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5">Could not load students: ${err.message}</td></tr>`;
-    }
+    };
+
+    // Set up the debounced event listener and trigger the initial load
+    searchInput.oninput = debounce(fetchAndRender, 300);
+    await fetchAndRender();
     setupStudentsAddForm(panel);
 }
 
@@ -391,4 +406,12 @@ async function populateDropdown(select, endpoint, textField, selectedId = null, 
       select.add(option);
     });
   } catch (err) { showError(err); }
+}
+
+function debounce(fn, delay) {
+  let t;
+  return (...a) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...a), delay);
+  };
 }

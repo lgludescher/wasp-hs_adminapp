@@ -1397,7 +1397,7 @@ def list_postdocs(
     person_role_id:   Optional[int] = None,
     is_active:        Optional[bool] = None,
     cohort_number:    Optional[int] = None,
-    is_outgoing:      Optional[bool] = None,
+    is_incoming:      Optional[bool] = None,
     institution_id:   Optional[int] = None,
     field_id:         Optional[int] = None,
     branch_id:        Optional[int] = None,
@@ -1428,9 +1428,9 @@ def list_postdocs(
         q = q.filter(models.Postdoc.cohort_number == cohort_number)
 
     # 4) is_outgoing
-    if is_outgoing is not None:
+    if is_incoming is not None:
         # q = q.filter_by(is_outgoing=is_outgoing)
-        q = q.filter(models.Postdoc.is_outgoing == is_outgoing)
+        q = q.filter(models.Postdoc.is_incoming == is_incoming)
 
     # 5) institution (active assignments only)
     if institution_id is not None:
