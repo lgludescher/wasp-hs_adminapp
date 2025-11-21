@@ -215,18 +215,23 @@ function attachPanelHandlers(panel, personId) {
   const form       = panel.querySelector('.role-form');
   const cancelForm = form.querySelector('.cancel-btn');
 
-  // Only allow adding a new role if no active role exists
-  addBtn.onclick = () => {
-    const rows = panel.querySelectorAll('tbody tr');
-    const hasActive = Array.from(rows).some(r => {
-      const endCell = r.cells[3].textContent.trim();
-      return endCell === '';
-    });
-    if (hasActive) {
-      showError('Only one active role is allowed at a time.');
-      return;
+  // Check backend for active roles before showing the form
+  addBtn.onclick = async () => {
+    try {
+      // Call the endpoint with the active=true filter
+      const activeRoles = await apiFetch(`/person-roles/?person_id=${personId}&active=true`);
+
+      // If the list is not empty, an active role exists
+      if (activeRoles.length > 0) {
+        showError('Only one active role is allowed at a time.');
+        return;
+      }
+
+      // Safe to add new role
+      form.classList.remove('hidden');
+    } catch (err) {
+      showError(err);
     }
-    form.classList.remove('hidden');
   };
 
   cancelForm.onclick   = () => form.reset() || form.classList.add('hidden');

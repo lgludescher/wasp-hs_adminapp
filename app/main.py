@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi import Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse
@@ -17,10 +18,8 @@ from .logger import logger
 if settings.debug:
     Base.metadata.create_all(bind=engine)
 
-app = FastAPI(debug=settings.debug)
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-templates = Jinja2Templates(directory="app/templates")
 
+# --- HELPER FUNCTIONS ---
 
 def seed_roles(db: Session):
     """Ensure the roles table contains exactly the members of RoleType."""
@@ -31,15 +30,40 @@ def seed_roles(db: Session):
     db.commit()
 
 
-@app.on_event("startup")
-def on_startup():
-    # only if you want to run migrations here, else skip
-    # Base.metadata.create_all(bind=engine)  # if you removed the DEBUG guard
+# --- LIFESPAN CONTEXT MANAGER (Replaces on_event) ---
+
+@asynccontextmanager
+async def lifespan(fastapi_app: FastAPI):
+    # 1. Startup Logic
+    # It is safe to run synchronous DB code here; it only blocks once during boot.
     db = SessionLocal()
     try:
         seed_roles(db)
     finally:
         db.close()
+
+    yield  # Application runs here
+
+    # 2. Shutdown Logic (Optional - currently empty)
+    pass
+
+
+# --- APP INITIALIZATION ---
+
+app = FastAPI(debug=settings.debug, lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+templates = Jinja2Templates(directory="app/templates")
+
+
+# @app.on_event("startup")
+# def on_startup():
+#     # only if you want to run migrations here, else skip
+#     # Base.metadata.create_all(bind=engine)  # if you removed the DEBUG guard
+#     db = SessionLocal()
+#     try:
+#         seed_roles(db)
+#     finally:
+#         db.close()
 
 
 # Log every request and unhandled exception

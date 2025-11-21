@@ -437,12 +437,14 @@ def delete_grad_school_activity(db: Session, gsa_id: int):
 
 # Course Term
 SEASON_ORDER = {
-    Season.WINTER: 0,
-    Season.SPRING: 1,
-    Season.SUMMER: 2,
-    Season.FALL:   3,
+    Season.WINTER: -1, # Deprecated, but kept for sorting legacy data
+    Season.SPRING: 0,
+    Season.SUMMER: 1,
+    Season.FALL:   2,
 }
 
+# A strict list of what creates a valid *new* term
+ACTIVE_SEASONS = [Season.SPRING, Season.SUMMER, Season.FALL]
 
 def get_course_term(db: Session, term_id: int):
     return db.query(models.CourseTerm).filter_by(id=term_id).first()
@@ -472,18 +474,42 @@ def list_course_terms(db: Session, active: Optional[bool] = None) -> list[models
 
 def create_next_course_term(db: Session) -> models.CourseTerm:
     existing = list_course_terms(db)
+
     if existing:
-        last = existing[0]
-        idx = SEASON_ORDER[last.season]
-        if idx < len(SEASON_ORDER) - 1:
-            next_season = list(SEASON_ORDER)[idx + 1]
+        last = existing[0]  # This is the most recent term
+
+        # Scenario A: The DB ends with a "Winter" term (Legacy Data)
+        # "Jumps" from the deprecated Winter to the new start: Spring of the SAME year.
+        if last.season == Season.WINTER:
+            next_season = Season.SPRING
             next_year = last.year
+
+        # Scenario B: The DB ends with Spring, Summer, or Fall (Standard Cycle)
         else:
-            next_season = list(SEASON_ORDER)[0]
-            next_year = last.year + 1
+            # Find where it is in the ACTIVE list (0, 1, or 2)
+            try:
+                current_idx = ACTIVE_SEASONS.index(last.season)
+
+                if current_idx < len(ACTIVE_SEASONS) - 1:
+                    # Spring -> Summer, or Summer -> Fall
+                    next_season = ACTIVE_SEASONS[current_idx + 1]
+                    next_year = last.year
+                else:
+                    # Fall -> Spring (Next Year)
+                    next_season = ACTIVE_SEASONS[0]
+                    next_year = last.year + 1
+
+            except ValueError:
+                # Failsafe: If for some reason the season is not in ACTIVE_SEASONS
+                # and not caught by the Winter check (shouldn't happen), default to Spring next year.
+                next_season = ACTIVE_SEASONS[0]
+                next_year = last.year + 1
+
+        # --- LOGIC CHANGE END ---
+
     else:
-        # very first term: WINTER 2019
-        next_season, next_year = list(SEASON_ORDER)[0], 2019
+        # Very first term for a NEW database (Spring 2019)
+        next_season, next_year = Season.SPRING, 2019
 
     new = models.CourseTerm(season=next_season, year=next_year)
     db.add(new)
@@ -778,9 +804,10 @@ def list_projects(db: Session, call_type_id: Optional[int] = None, title: Option
     #         q = q.filter(models.Project.end_date.is_not(None))
 
     # project status
-    start_of_today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-
     if project_status is not None:
+
+        start_of_today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
         if project_status.lower() == 'ongoing':
             q = q.filter(
                 or_(
@@ -991,11 +1018,26 @@ def list_person_roles(
         q = q.filter_by(person_id=person_id)
     if role_id is not None:
         q = q.filter_by(role_id=role_id)
+
+    # ACTIVE
     if active is not None:
+        start_of_today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         if active:
-            q = q.filter(models.PersonRole.end_date.is_(None))
+            # q = q.filter(models.PersonRole.end_date.is_(None))
+            q = q.filter(
+                or_(
+                    models.PersonRole.end_date.is_(None),
+                    models.PersonRole.end_date >= start_of_today
+                )
+            )
         else:
-            q = q.filter(models.PersonRole.end_date.isnot(None))
+            # q = q.filter(models.PersonRole.end_date.isnot(None))
+            q = q.filter(
+                and_(
+                    models.PersonRole.end_date.isnot(None),
+                    models.PersonRole.end_date < start_of_today
+                )
+            )
 
     return q.order_by(models.PersonRole.start_date.desc()).all()  # type: ignore
 
@@ -1132,10 +1174,24 @@ def list_researchers(
             q = q.join(models.PersonRole,
                        models.Researcher.person_role_id == models.PersonRole.id)
             seen.add("pr")
+
+        start_of_today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         if is_active:
-            q = q.filter(models.PersonRole.end_date.is_(None))
+            # q = q.filter(models.PersonRole.end_date.is_(None))
+            q = q.filter(
+                or_(
+                    models.PersonRole.end_date.is_(None),
+                    models.PersonRole.end_date >= start_of_today
+                )
+            )
         else:
-            q = q.filter(models.PersonRole.end_date.isnot(None))
+            # q = q.filter(models.PersonRole.end_date.isnot(None))
+            q = q.filter(
+                and_(
+                    models.PersonRole.end_date.isnot(None),
+                    models.PersonRole.end_date < start_of_today
+                )
+            )
 
     # 3) institution filter (only active links)
     if institution_id is not None:
@@ -1277,10 +1333,24 @@ def list_phd_students(
             q = q.join(models.PersonRole,
                        models.PhDStudent.person_role_id == models.PersonRole.id)
             seen.add("pr")
+
+        start_of_today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         if is_active:
-            q = q.filter(models.PersonRole.end_date.is_(None))
+            # q = q.filter(models.PersonRole.end_date.is_(None))
+            q = q.filter(
+                or_(
+                    models.PersonRole.end_date.is_(None),
+                    models.PersonRole.end_date >= start_of_today
+                )
+            )
         else:
-            q = q.filter(models.PersonRole.end_date.isnot(None))
+            # q = q.filter(models.PersonRole.end_date.isnot(None))
+            q = q.filter(
+                and_(
+                    models.PersonRole.end_date.isnot(None),
+                    models.PersonRole.end_date < start_of_today
+                )
+            )
 
     # 3) cohort_number, is_affiliated, is_graduated
     if cohort_number is not None:
@@ -1417,10 +1487,24 @@ def list_postdocs(
             q = q.join(models.PersonRole,
                        models.Postdoc.person_role_id == models.PersonRole.id)
             seen.add("pr")
+
+        start_of_today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         if is_active:
-            q = q.filter(models.PersonRole.end_date.is_(None))
+            # q = q.filter(models.PersonRole.end_date.is_(None))
+            q = q.filter(
+                or_(
+                    models.PersonRole.end_date.is_(None),
+                    models.PersonRole.end_date >= start_of_today
+                )
+            )
         else:
-            q = q.filter(models.PersonRole.end_date.isnot(None))
+            # q = q.filter(models.PersonRole.end_date.isnot(None))
+            q = q.filter(
+                and_(
+                    models.PersonRole.end_date.isnot(None),
+                    models.PersonRole.end_date < start_of_today
+                )
+            )
 
     # 3) cohort_number
     if cohort_number is not None:

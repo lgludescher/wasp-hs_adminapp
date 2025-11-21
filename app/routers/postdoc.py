@@ -137,7 +137,12 @@ def export_postdocs_to_excel(
     )
 
     # --- 2. BUILD THE FILTER INFO LIST ---
-    filter_info = [f"View Mode: {view_mode.title()}"]
+    filter_info = []
+    if view_mode == "activity":
+        filter_info.append(f"View Mode: Current Position")
+    else:  # view_mode == default
+        filter_info.append(f"View Mode: {view_mode.title()}")
+    # filter_info = [f"View Mode: {view_mode.title()}"]
     if search:
         filter_info.append(f"Search: {search}")
     if is_active is not None:
