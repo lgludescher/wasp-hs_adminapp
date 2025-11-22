@@ -191,8 +191,9 @@ async function loadMembers(panel) {
   panel.querySelector('thead').innerHTML = `
     <tr>
       <th></th>
+      <th class="cell-center">Active?</th>
       <th class="cell-center">PI?</th>
-      <th class="cell-center">Leader?</th>
+      <th class="cell-center">Contact Person?</th>
       <th>Role</th>
       <th>Name</th>
       <th></th>
@@ -239,8 +240,9 @@ function renderMemberRow(tr, item) {
 
     tr.innerHTML = `
       <td>${profileLink}</td>
+      <td class="cell-center">${item.is_active ? '✔' : '✘'}</td>
       <td class="cell-center">${item.is_principal_investigator ? '✔' : '✘'}</td>
-      <td class="cell-center">${item.is_leader ? '✔' : '✘'}</td>
+      <td class="cell-center">${item.is_contact_person ? '✔' : '✘'}</td>
       <td>${roleName}</td>
       <td>${person.first_name} ${person.last_name}</td>
       <td class="cell-actions">
@@ -265,8 +267,9 @@ function startEditMemberRow(tr, item) {
 
     tr.innerHTML = `
       <td>${profileLink}</td>
+      <td class="cell-center"><input type="checkbox" name="is_active" ${item.is_active ? 'checked' : ''}></td>
       <td class="cell-center"><input type="checkbox" name="is_pi" ${item.is_principal_investigator ? 'checked' : ''}></td>
-      <td class="cell-center"><input type="checkbox" name="is_leader" ${item.is_leader ? 'checked' : ''}></td>
+      <td class="cell-center"><input type="checkbox" name="is_contact_person" ${item.is_contact_person ? 'checked' : ''}></td>
       <td>${roleName}</td>
       <td>${person.first_name} ${person.last_name}</td>
       <td class="cell-actions">
@@ -277,8 +280,9 @@ function startEditMemberRow(tr, item) {
     tr.querySelector('.save-btn').onclick = async () => {
         const data = {
             person_role_id: item.person_role_id,
+            is_active: tr.querySelector('[name=is_active]').checked,
             is_principal_investigator: tr.querySelector('[name=is_pi]').checked,
-            is_leader: tr.querySelector('[name=is_leader]').checked
+            is_contact_person: tr.querySelector('[name=is_contact_person]').checked
         };
         try {
             const updatedItem = await apiFetch(`/projects/${projectId}/people-roles/${item.person_role_id}`, {
@@ -323,7 +327,7 @@ async function setupMembersAddForm(panel) {
             body: JSON.stringify({
                 person_role_id: parseInt(formData.get('person_role_id')),
                 is_principal_investigator: formData.get('is_pi') === 'on',
-                is_leader: formData.get('is_leader') === 'on'
+                is_contact_person: formData.get('is_contact_person') === 'on'
             })
         }),
     });

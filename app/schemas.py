@@ -658,7 +658,9 @@ class ProjectFieldLink(BaseModel):
 class ProjectPersonRoleLink(BaseModel):
     person_role_id: int
     is_principal_investigator: Optional[bool] = False
-    is_leader: Optional[bool] = False
+    # is_leader: Optional[bool] = False
+    is_contact_person: Optional[bool] = False
+    is_active: Optional[bool] = True
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -667,7 +669,9 @@ class ProjectPersonRoleRead(BaseModel):
     person_role_id: int
     project_id: int
     is_principal_investigator: bool
-    is_leader: bool
+    # is_leader: bool
+    is_contact_person: bool
+    is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
 

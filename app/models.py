@@ -383,7 +383,9 @@ class PersonProject(Base):
     person_role_id = Column(Integer, ForeignKey("people_roles.id"), nullable=False)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
     is_principal_investigator = Column(Boolean, default=False)
-    is_leader = Column(Boolean, default=False)
+    # is_leader = Column(Boolean, default=False)
+    is_contact_person = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True, nullable=False)
 
     person_role = relationship("PersonRole", back_populates="projects")
     project = relationship("Project", back_populates="person_projects")

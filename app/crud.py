@@ -2179,10 +2179,13 @@ def get_project_people_roles(db: Session, project_id: int) -> list[models.Person
               models.PersonRole.person_id == models.Person.id
         )
         .order_by(
+              models.PersonProject.is_active.desc(),
               # principal investigators first
               models.PersonProject.is_principal_investigator.desc(),
               # then leaders
-              models.PersonProject.is_leader.desc(),
+              # models.PersonProject.is_leader.desc(),
+              # then contact persons
+              models.PersonProject.is_contact_person.desc(),
               # then alphabetical by person name
               models.Person.last_name,
               models.Person.first_name,
@@ -2209,7 +2212,9 @@ def add_person_role_to_project(db: Session, project_id: int,
     link = models.PersonProject(project_id=project_id,
                                 person_role_id=in_data.person_role_id,
                                 is_principal_investigator=in_data.is_principal_investigator,
-                                is_leader=in_data.is_leader)
+                                # is_leader=in_data.is_leader,
+                                is_contact_person=in_data.is_contact_person,
+                                is_active=in_data.is_active)
     db.add(link)
     db.commit()
     db.refresh(link)
@@ -2232,11 +2237,15 @@ def update_person_role_project_link(db: Session, project_id: int, person_role_id
         raise EntityNotFoundError(f"PersonProject for project #{project_id} and "
                                   f"person role {person_role_id} not found")
 
-    # Update is_principal_investigator / is_leader if provided
+    # Update is_principal_investigator / is_contact_person / is_active if provided
     if getattr(in_data, "is_principal_investigator", None) is not None:
         pp.is_principal_investigator = in_data.is_principal_investigator
-    if getattr(in_data, "is_leader", None) is not None:
-        pp.is_leader = in_data.is_leader
+    # if getattr(in_data, "is_leader", None) is not None:
+    #     pp.is_leader = in_data.is_leader
+    if getattr(in_data, "is_contact_person", None) is not None:
+        pp.is_contact_person = in_data.is_contact_person
+    if getattr(in_data, "is_active", None) is not None:
+        pp.is_active = in_data.is_active
 
     db.commit()
     db.refresh(pp)
@@ -2408,10 +2417,12 @@ def get_person_role_projects(db: Session, person_role_id: int) -> List[models.Pe
     #    c) then leaders
     #    d) then project.start_date descending
     q = q.order_by(
+        models.PersonProject.is_active.desc(),
         # Boolean IS NULL becomes 1 for True, 0 for False, so desc() puts True first
         models.Project.end_date.is_(None).desc(),
         models.PersonProject.is_principal_investigator.desc(),
-        models.PersonProject.is_leader.desc(),
+        # models.PersonProject.is_leader.desc(),
+        models.PersonProject.is_contact_person.desc(),
         desc(models.Project.start_date),
     )
 

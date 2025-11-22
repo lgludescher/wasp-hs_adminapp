@@ -77,7 +77,7 @@ function renderMainDetails(isEdit = false) {
             <label class="detail-item"><strong>Cohort Number</strong><input name="cohort_number" type="number" min="0" max="99" value="${phdStudentData.cohort_number || ''}"></label>
             <label class="detail-item"><span class="checkbox-label"><input name="is_affiliated" type="checkbox" ${phdStudentData.is_affiliated ? 'checked' : ''}> Affiliated?</span></label>
             <label class="detail-item"><strong>Department</strong><input name="department" type="text" value="${phdStudentData.department || ''}"></label>
-            <label class="detail-item"><strong>Discipline</strong><input name="discipline" type="text" value="${phdStudentData.discipline || ''}"></label>
+            <label class="detail-item"><strong>Forskningsutbildningsämne</strong><input name="discipline" type="text" value="${phdStudentData.discipline || ''}"></label>
             
             <label class="detail-item"><strong>Planned Defense Date</strong><input name="planned_defense_date" type="date" value="${phdStudentData.planned_defense_date?.split('T')[0] || ''}"></label>
             <label class="detail-item"><span class="checkbox-label"><input name="is_graduated" type="checkbox" ${phdStudentData.is_graduated ? 'checked' : ''}> Graduated?</span></label>
@@ -118,7 +118,7 @@ function renderMainDetails(isEdit = false) {
             <div class="detail-item"><strong>Cohort Number:</strong> <span>${phdStudentData.cohort_number ?? ''}</span></div>
             <div class="detail-item"><strong>Affiliated?</strong> <input type="checkbox" disabled ${phdStudentData.is_affiliated ? 'checked' : ''}></div>
             <div class="detail-item"><strong>Department:</strong> <span>${phdStudentData.department || ''}</span></div>
-            <div class="detail-item"><strong>Discipline:</strong> <span>${phdStudentData.discipline || ''}</span></div>
+            <div class="detail-item"><strong>Forskningsutbildningsämne:</strong> <span>${phdStudentData.discipline || ''}</span></div>
 
             <div class="detail-item"><strong>Planned Defense Date:</strong> <span>${phdStudentData.planned_defense_date?.split('T')[0] || ''}</span></div>
             <div class="detail-item"><strong>Graduated?</strong> <input type="checkbox" disabled ${phdStudentData.is_graduated ? 'checked' : ''}></div>
@@ -814,8 +814,9 @@ async function loadProjects(panel) {
   panel.querySelector('thead').innerHTML = `
     <tr>
       <th></th>
+      <th class="cell-center">Active?</th>
       <th class="cell-center">PI?</th>
-      <th class="cell-center">Leader?</th>
+      <th class="cell-center">Contact Person?</th>
       <th>Project #</th>
       <th>Call Type</th>
       <th>Title</th>
@@ -848,8 +849,9 @@ async function loadProjects(panel) {
 function renderProjectRow(tr, item) {
   tr.innerHTML = `
     <td><a href="/manage-projects/${item.project.id}/" class="go-to-btn">Go to Project</a></td>
+    <td class="cell-center">${item.is_active ? '✔' : '✘'}</td>
     <td class="cell-center">${item.is_principal_investigator ? '✔' : '✘'}</td>
-    <td class="cell-center">${item.is_leader ? '✔' : '✘'}</td>
+    <td class="cell-center">${item.is_contact_person ? '✔' : '✘'}</td>
     <td>${item.project.project_number}</td>
     <td>${item.project.call_type.type}</td>
     <td>${item.project.title}</td>
@@ -868,8 +870,9 @@ function renderProjectRow(tr, item) {
 function startEditProjectRow(tr, item) {
   tr.innerHTML = `
     <td><a href="/manage-projects/${item.project.id}/" class="go-to-btn">Go to Project</a></td>
+    <td class="cell-center"><input type="checkbox" name="is_active" ${item.is_active ? 'checked' : ''}></td>
     <td class="cell-center"><input type="checkbox" name="is_pi" ${item.is_principal_investigator ? 'checked' : ''}></td>
-    <td class="cell-center"><input type="checkbox" name="is_leader" ${item.is_leader ? 'checked' : ''}></td>
+    <td class="cell-center"><input type="checkbox" name="is_contact_person" ${item.is_contact_person ? 'checked' : ''}></td>
     <td>${item.project.project_number}</td>
     <td>${item.project.call_type.type}</td>
     <td>${item.project.title}</td>
@@ -883,8 +886,9 @@ function startEditProjectRow(tr, item) {
   tr.querySelector('.save-btn').onclick = async () => {
     const data = {
         person_role_id: phdStudentData.person_role_id,
+        is_active: tr.querySelector('[name=is_active]').checked,
         is_principal_investigator: tr.querySelector('[name=is_pi]').checked,
-        is_leader: tr.querySelector('[name=is_leader]').checked
+        is_contact_person: tr.querySelector('[name=is_contact_person]').checked
     };
     try {
       const updatedItem = await apiFetch(`/projects/${item.project.id}/people-roles/${phdStudentData.person_role_id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
@@ -928,7 +932,7 @@ async function setupProjectsAddForm(panel) {
       loadFn: loadProjects,
       addCallback: (formData) => apiFetch(`/projects/${formData.get('project_id')}/people-roles/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ person_role_id: phdStudentData.person_role_id, is_principal_investigator: formData.get('is_pi') === 'on', is_leader: formData.get('is_leader') === 'on' })
+        body: JSON.stringify({ person_role_id: phdStudentData.person_role_id, is_principal_investigator: formData.get('is_pi') === 'on', is_contact_person: formData.get('is_contact_person') === 'on' })
       }),
     });
 }

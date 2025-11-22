@@ -203,8 +203,9 @@ async function loadProjects(panel) {
   panel.querySelector('thead').innerHTML = `
     <tr>
       <th></th>
+      <th class="cell-center">Active?</th>
       <th class="cell-center">PI?</th>
-      <th class="cell-center">Leader?</th>
+      <th class="cell-center">Contact Person?</th>
       <th>Project #</th>
       <th>Call Type</th>
       <th>Title</th>
@@ -237,8 +238,9 @@ async function loadProjects(panel) {
 function renderProjectRow(tr, item) {
   tr.innerHTML = `
     <td><a href="/manage-projects/${item.project.id}/" class="go-to-btn">Go to Project</a></td>
+    <td class="cell-center">${item.is_active ? '✔' : '✘'}</td>
     <td class="cell-center">${item.is_principal_investigator ? '✔' : '✘'}</td>
-    <td class="cell-center">${item.is_leader ? '✔' : '✘'}</td>
+    <td class="cell-center">${item.is_contact_person ? '✔' : '✘'}</td>
     <td>${item.project.project_number}</td>
     <td>${item.project.call_type.type}</td>
     <td>${item.project.title}</td>
@@ -257,8 +259,9 @@ function renderProjectRow(tr, item) {
 function startEditProjectRow(tr, item) {
   tr.innerHTML = `
     <td><a href="/manage-projects/${item.project.id}/" class="go-to-btn">Go to Project</a></td>
+    <td class="cell-center"><input type="checkbox" name="is_active" ${item.is_active ? 'checked' : ''}></td>
     <td class="cell-center"><input type="checkbox" name="is_pi" ${item.is_principal_investigator ? 'checked' : ''}></td>
-    <td class="cell-center"><input type="checkbox" name="is_leader" ${item.is_leader ? 'checked' : ''}></td>
+    <td class="cell-center"><input type="checkbox" name="is_contact_person" ${item.is_contact_person ? 'checked' : ''}></td>
     <td>${item.project.project_number}</td>
     <td>${item.project.call_type.type}</td>
     <td>${item.project.title}</td>
@@ -272,8 +275,9 @@ function startEditProjectRow(tr, item) {
   tr.querySelector('.save-btn').onclick = async () => {
     const data = {
         person_role_id: researcherData.person_role_id,
+        is_active: tr.querySelector('[name=is_active]').checked,
         is_principal_investigator: tr.querySelector('[name=is_pi]').checked,
-        is_leader: tr.querySelector('[name=is_leader]').checked
+        is_contact_person: tr.querySelector('[name=is_contact_person]').checked
     };
     try {
       const updatedItem = await apiFetch(`/projects/${item.project.id}/people-roles/${researcherData.person_role_id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
@@ -324,7 +328,7 @@ async function setupProjectsAddForm(panel) {
       loadFn: loadProjects,
       addCallback: (formData) => apiFetch(`/projects/${formData.get('project_id')}/people-roles/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ person_role_id: researcherData.person_role_id, is_principal_investigator: formData.get('is_pi') === 'on', is_leader: formData.get('is_leader') === 'on' })
+        body: JSON.stringify({ person_role_id: researcherData.person_role_id, is_principal_investigator: formData.get('is_pi') === 'on', is_contact_person: formData.get('is_contact_person') === 'on' })
       }),
     });
 }
