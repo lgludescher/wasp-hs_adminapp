@@ -196,6 +196,29 @@ class PersonRole(Base):
     end_date = Column(DateTime, nullable=True)
     notes = Column(String, nullable=True)
 
+    # --- IS_ACTIVE PROPERTY ---
+    @property
+    def is_active(self) -> bool:
+        # 1. If no end_date, they are active
+        if self.end_date is None:
+            return True
+
+        # 2. Get "Start of Today" in UTC (matching CRUD logic)
+        start_of_today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # 3. Prepare end_date for comparison
+        # (SQLite might return a naive datetime; force it to UTC to match start_of_today)
+        end_date_checked = self.end_date
+        if end_date_checked.tzinfo is None:
+            end_date_checked = end_date_checked.replace(tzinfo=timezone.utc)
+        else:
+            end_date_checked = end_date_checked.astimezone(timezone.utc)
+
+        # 4. Compare
+        return end_date_checked >= start_of_today
+
+    # -------------------------------
+
     person = relationship("Person", back_populates="roles")
     role = relationship("Role", back_populates="person_roles")
     researcher = relationship("Researcher", back_populates="person_role", uselist=False)

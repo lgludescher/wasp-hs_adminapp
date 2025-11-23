@@ -172,6 +172,17 @@ a.go-to-btn:hover {
     opacity: 0.9;
 }
 
+/* Status Badges for Supervisee List */
+.status-active {
+  color: #28a745; /* Green */
+  font-weight: 500;
+}
+
+.status-inactive {
+  color: #6c757d; /* Muted Grey */
+  font-style: italic;
+}
+
 
 /* Modal */
 .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 1000; }

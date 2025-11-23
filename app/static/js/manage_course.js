@@ -326,10 +326,14 @@ async function loadStudents(panel) {
 
 function renderStudentRow(tr, item) {
     const person = item.student.person_role.person;
+
+    // Define the display text
+    const gradeDisplay = item.grade ? item.grade.toUpperCase() : 'Not available';
+
     tr.innerHTML = `
       <td><a href="/manage-phd-students/${item.phd_student_id}/" class="go-to-btn">Go to Student</a></td>
       <td class="cell-center">${item.is_completed ? '✔' : '✘'}</td>
-      <td>${(item.grade || '').toUpperCase()}</td>
+      <td>${gradeDisplay}</td>
       <td>${person.first_name} ${person.last_name}</td>
       <td class="cell-actions">
         <button class="btn edit-btn">Edit</button>
@@ -349,7 +353,7 @@ function startEditStudentRow(tr, item) {
       <td class="cell-center"><input name="is_completed" type="checkbox" ${item.is_completed ? 'checked' : ''}></td>
       <td>
         <select name="grade">
-          <option value="" ${!item.grade ? 'selected' : ''}>N/A</option>
+          <option value="" ${!item.grade ? 'selected' : ''}>Not available</option>
           <option value="pass" ${item.grade === 'pass' ? 'selected' : ''}>PASS</option>
           <option value="fail" ${item.grade === 'fail' ? 'selected' : ''}>FAIL</option>
         </select>

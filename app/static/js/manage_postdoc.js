@@ -711,6 +711,7 @@ async function loadSupervisees(panel) {
   panel.querySelector('thead').innerHTML = `
     <tr>
       <th></th>
+      <th class="cell-center">Status</th>
       <th class="cell-center">Main Supervisor?</th>
       <th>Role</th>
       <th>Name</th>
@@ -734,9 +735,18 @@ async function loadSupervisees(panel) {
       return { ...supervision, studentRole, subRolePath, subRoleId };
     }));
 
+    // Apply Stable Sort: Active first, then Inactive
+    // If status is the same, return 0 to preserve the backend's original order
+    enrichedData.sort((a, b) => {
+        const activeA = a.studentRole.is_active ? 1 : 0;
+        const activeB = b.studentRole.is_active ? 1 : 0;
+        // b - a sorts True (1) before False (0)
+        return activeB - activeA;
+    });
+
     tbody.innerHTML = '';
     if (!enrichedData.length) {
-      tbody.innerHTML = `<tr><td colspan="5">No supervisees associated.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6">No supervisees associated.</td></tr>`;
     } else {
       enrichedData.forEach(item => {
         const tr = document.createElement('tr');
@@ -746,7 +756,7 @@ async function loadSupervisees(panel) {
       });
     }
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5">Could not load supervisees: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6">Could not load supervisees: ${err.message}</td></tr>`;
   }
   setupSuperviseesAddForm(panel);
 }
@@ -756,8 +766,14 @@ function renderSuperviseeRow(tr, item) {
     const roleName = ROLE_DISPLAY[item.studentRole.role.id] || item.studentRole.role.role;
     const profileLink = item.subRoleId ? `<a href="/manage-${item.subRolePath}/${item.subRoleId}/" class="go-to-btn">Go to Profile</a>` : '';
 
+    // Determine Status Display
+    const isActive = item.studentRole.is_active;
+    const statusLabel = isActive ? 'Active' : 'Inactive';
+    const statusClass = isActive ? 'status-active' : 'status-inactive';
+
     tr.innerHTML = `
       <td>${profileLink}</td>
+      <td class="cell-center"><span class="${statusClass}">${statusLabel}</span></td>
       <td class="cell-center">${item.is_main ? '✔' : '✘'}</td>
       <td>${roleName}</td>
       <td>${student.first_name} ${student.last_name}</td>
@@ -781,8 +797,14 @@ function startEditSuperviseeRow(tr, item) {
     const roleName = ROLE_DISPLAY[item.studentRole.role.id] || item.studentRole.role.role;
     const profileLink = item.subRoleId ? `<a href="/manage-${item.subRolePath}/${item.subRoleId}/" class="go-to-btn">Go to Profile</a>` : '';
 
+    // Determine Status (Read-only in Edit mode)
+    const isActive = item.studentRole.is_active;
+    const statusLabel = isActive ? 'Active' : 'Inactive';
+    const statusClass = isActive ? 'status-active' : 'status-inactive';
+
     tr.innerHTML = `
       <td>${profileLink}</td>
+      <td class="cell-center"><span class="${statusClass}">${statusLabel}</span></td>
       <td class="cell-center"><input type="checkbox" name="is_main" ${item.is_main ? 'checked' : ''}></td>
       <td>${roleName}</td>
       <td>${student.first_name} ${student.last_name}</td>

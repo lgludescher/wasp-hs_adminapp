@@ -335,6 +335,9 @@ class PersonRoleReadSlim(BaseModel):
     end_date:     Optional[datetime]
     notes:        Optional[str]
     role:         RoleRead
+
+    is_active: bool
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -378,6 +381,9 @@ class PersonRoleReadFull(BaseModel):
     notes:        Optional[str]
     role:         RoleRead
     person:       PersonRead
+
+    is_active: bool
+
     model_config = ConfigDict(from_attributes=True)
 
 

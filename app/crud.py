@@ -1817,7 +1817,10 @@ def update_student_activity(
         # Update is_completed / grade if provided
         if getattr(in_data, "is_completed", None) is not None:
             gss.is_completed = in_data.is_completed
-        if getattr(in_data, "grade", None) is not None:
+        # if getattr(in_data, "grade", None) is not None:
+        #     gss.grade = in_data.grade
+        # Check if 'grade' was actually included in the request payload (ALLOW SETTING TO NULL)
+        if "grade" in in_data.model_dump(exclude_unset=True):
             gss.grade = in_data.grade
 
         db.commit()
@@ -1910,10 +1913,10 @@ def list_student_activities_for_grad_school(
             )
         )
 
-    # final ordering by last_name then first_name
+    # final ordering by first_name then last_name
     q = q.order_by(
-        models.Person.last_name,
-        models.Person.first_name
+        models.Person.first_name,
+        models.Person.last_name
     )
 
     return q.all()  # type: ignore
@@ -2041,10 +2044,10 @@ def get_course_students(db: Session, course_id: int, search: Optional[str] = Non
             )
         )
 
-    # 4) order alphabetically by last name, then first name
+    # 4) order alphabetically by first_name, then last_name
     q = q.order_by(
-        models.Person.last_name,
-        models.Person.first_name
+        models.Person.first_name,
+        models.Person.last_name
     )
 
     # 5) return the list of link‐rows
@@ -2095,7 +2098,10 @@ def update_student_course_link(db: Session, course_id: int, phd_student_id: int,
     # Update is_completed / grade if provided
     if getattr(in_data, "is_completed", None) is not None:
         psc.is_completed = in_data.is_completed
-    if getattr(in_data, "grade", None) is not None:
+    # if getattr(in_data, "grade", None) is not None:
+    #     psc.grade = in_data.grade
+    # Check if 'grade' was actually included in the request payload (ALLOW SETTING TO NULL)
+    if "grade" in in_data.model_dump(exclude_unset=True):
         psc.grade = in_data.grade
 
     db.commit()
@@ -2187,8 +2193,8 @@ def get_project_people_roles(db: Session, project_id: int) -> list[models.Person
               # then contact persons
               models.PersonProject.is_contact_person.desc(),
               # then alphabetical by person name
-              models.Person.last_name,
               models.Person.first_name,
+              models.Person.last_name,
         )
     )
     return q.all()  # type: ignore

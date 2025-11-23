@@ -285,10 +285,13 @@ function renderCourseRow(tr, item) {
       termLabel = `${course.grad_school_activity.activity_type.type} ${course.grad_school_activity.year}`;
     }
 
+    // Define the display text
+    const gradeDisplay = item.grade ? item.grade.toUpperCase() : 'Not available';
+
     tr.innerHTML = `
       <td><a href="/manage-courses/${course.id}/" class="go-to-btn">Go to Course</a></td>
       <td class="cell-center">${item.is_completed ? '✔' : '✘'}</td>
-      <td>${(item.grade || '').toUpperCase()}</td>
+      <td>${gradeDisplay}</td>
       <td>${course.title}</td>
       <td>${termLabel}</td>
       <td class="cell-center">${course.credit_points || ''}</td>
@@ -322,7 +325,7 @@ function startEditCourseRow(tr, item) {
       <td class="cell-center"><input name="is_completed" type="checkbox" ${item.is_completed ? 'checked' : ''}></td>
       <td>
         <select name="grade">
-          <option value="" ${!item.grade ? 'selected' : ''}>N/A</option>
+          <option value="" ${!item.grade ? 'selected' : ''}>Not available</option>
           <option value="pass" ${item.grade === 'pass' ? 'selected' : ''}>PASS</option>
           <option value="fail" ${item.grade === 'fail' ? 'selected' : ''}>FAIL</option>
         </select>
@@ -473,10 +476,14 @@ async function loadGradSchoolActivities(panel) {
 
 function renderGradSchoolRow(tr, item) {
     const activity = item.activity;
+
+    // Define the display text
+    const gradeDisplay = item.grade ? item.grade.toUpperCase() : 'Not available';
+
     tr.innerHTML = `
         <td><a href="/manage-grad-school-activities/${activity.id}/" class="go-to-btn">Go to Activity</a></td>
         <td class="cell-center">${item.is_completed ? '✔' : '✘'}</td>
-        <td>${(item.grade || '').toUpperCase()}</td>
+        <td>${gradeDisplay}</td>
         <td>${activity.activity_type.type}</td>
         <td>${activity.year}</td>
         <td>${activity.description || ''}</td>
@@ -498,7 +505,7 @@ function startEditGradSchoolRow(tr, item) {
         <td class="cell-center"><input name="is_completed" type="checkbox" ${item.is_completed ? 'checked' : ''}></td>
         <td>
             <select name="grade">
-                <option value="" ${!item.grade ? 'selected' : ''}>N/A</option>
+                <option value="" ${!item.grade ? 'selected' : ''}>Not available</option>
                 <option value="pass" ${item.grade === 'pass' ? 'selected' : ''}>PASS</option>
                 <option value="fail" ${item.grade === 'fail' ? 'selected' : ''}>FAIL</option>
             </select>
