@@ -24,6 +24,11 @@
   border-color: #999;
 }
 
+.export-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
 /* Page title moved into header-bar */
 .page-title {
     margin: 0;
@@ -106,12 +111,19 @@
     text-align: left;
 }
 
-.data-table th:nth-child(4), .data-table td:nth-child(4) {
+.col-center {
     text-align: center;
 }
 
 .data-table th {
     background: var(--color-surface);
+}
+
+/* Center checkboxes */
+.data-table td input[type="checkbox"] {
+  transform: scale(1.2);
+  margin: 0 auto;
+  display: block;
 }
 
 .cell-actions {

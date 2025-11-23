@@ -509,6 +509,7 @@ class PostdocBase(BaseModel):
     discipline:            Optional[str] = None
     postdoc_project_title: Optional[str] = None
     is_incoming:           Optional[bool] = False
+    is_graduated:          Optional[bool] = False
     current_title_id:      Optional[int] = None
     current_title_other:   Optional[str] = None
     current_institution_id: Optional[int] = None
@@ -538,6 +539,7 @@ class PostdocUpdate(BaseModel):
     discipline:             Optional[str] = None
     postdoc_project_title:  Optional[str] = None
     is_incoming:            Optional[bool] = None
+    is_graduated:           Optional[bool] = None
     current_title_id:       Optional[int] = None
     current_title_other:    Optional[str] = None
     current_institution_id: Optional[int] = None

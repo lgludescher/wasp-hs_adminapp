@@ -36,6 +36,7 @@ def list_postdocs(
     is_active:      Optional[bool] = Query(None, description="Only active/inactive roles"),
     cohort_number:  Optional[int] = Query(None, ge=0, description="Filter by cohort number"),
     is_incoming:    Optional[bool] = Query(None, description="Only incoming/outgoing postdocs"),
+    is_graduated:   Optional[bool] = Query(None, description="Filter by is_graduated"),
     institution_id: Optional[int] = Query(None, ge=1, description="Filter by institution"),
     field_id:       Optional[int] = Query(None, ge=1, description="Filter by academic field"),
     branch_id:      Optional[int] = Query(None, ge=1, description="Filter by academic branch"),
@@ -46,6 +47,7 @@ def list_postdocs(
     logger.info(
         f"{current_user.username} listed postdocs "
         f"(person_role_id={person_role_id}, is_active={is_active}, cohort={cohort_number}, "
+        f"is_incoming={is_incoming}, is_graduated={is_graduated}, "
         f"institution_id={institution_id}, field_id={field_id}, branch_id={branch_id}, search={search!r})"
     )
     return crud.list_postdocs(
@@ -54,6 +56,7 @@ def list_postdocs(
         is_active=is_active,
         cohort_number=cohort_number,
         is_incoming=is_incoming,
+        is_graduated=is_graduated,
         institution_id=institution_id,
         field_id=field_id,
         branch_id=branch_id,
@@ -116,6 +119,7 @@ def export_postdocs_to_excel(
     is_active:      Optional[bool] = Query(None),
     cohort_number:  Optional[int] = Query(None, ge=0),
     is_incoming:    Optional[bool] = Query(None),
+    is_graduated:   Optional[bool] = Query(None),
     institution_id: Optional[int] = Query(None, ge=1),
     field_id:       Optional[int] = Query(None, ge=1),
     branch_id:      Optional[int] = Query(None, ge=1),
@@ -132,8 +136,8 @@ def export_postdocs_to_excel(
     # 1. Reuse the exact same CRUD function to get the filtered data
     postdocs = crud.list_postdocs(
         db, person_role_id=person_role_id, is_active=is_active, cohort_number=cohort_number,
-        is_incoming=is_incoming, institution_id=institution_id, field_id=field_id,
-        branch_id=branch_id, search=search,
+        is_incoming=is_incoming, is_graduated=is_graduated, institution_id=institution_id,
+        field_id=field_id, branch_id=branch_id, search=search,
     )
 
     # --- 2. BUILD THE FILTER INFO LIST ---
@@ -153,6 +157,8 @@ def export_postdocs_to_excel(
     if is_incoming is not None:
         mobility = "Incoming" if is_incoming else "Outgoing"
         filter_info.append(f"Mobility Status: {mobility}")
+    if is_graduated is not None:
+        filter_info.append(f"Graduated: {'Yes' if is_graduated else 'No'}")
     if institution_id:
         institution = crud.get_institution(db, institution_id)
         if institution:
@@ -171,24 +177,26 @@ def export_postdocs_to_excel(
     data_to_export = []
 
     if view_mode == 'activity':
-        headers = ["Name", "Cohort", "Current Title", "Current Institution"]
+        headers = ["Name", "Cohort", "Graduated", "Current Title", "Current Institution"]
         for p in postdocs:
             title = p.current_title.title if p.current_title else p.current_title_other
             institution = p.current_institution.institution if p.current_institution else p.current_institution_other
             data_to_export.append({
                 "Name": f"{p.person_role.person.first_name} {p.person_role.person.last_name}",
                 "Cohort": p.cohort_number,
+                "Graduated": "Yes" if p.is_graduated else "No",
                 "Current Title": title,
                 "Current Institution": institution
             })
     else:  # Default view
-        headers = ["Name", "Email", "Cohort", "Mobility Status", "Start Date", "End Date"]
+        headers = ["Name", "Email", "Cohort", "Mobility Status", "Graduated", "Start Date", "End Date"]
         for p in postdocs:
             data_to_export.append({
                 "Name": f"{p.person_role.person.first_name} {p.person_role.person.last_name}",
                 "Email": p.person_role.person.email,
                 "Cohort": p.cohort_number,
                 "Mobility Status": "Incoming" if p.is_incoming else "Outgoing",
+                "Graduated": "Yes" if p.is_graduated else "No",
                 "Start Date": p.person_role.start_date.strftime("%Y-%m-%d") if p.person_role.start_date else "",
                 "End Date": p.person_role.end_date.strftime("%Y-%m-%d") if p.person_role.end_date else ""
             })
@@ -207,6 +215,74 @@ def export_postdocs_to_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=postdocs.xlsx"}
     )
+
+
+@router.get("/postdocs/export/emails")
+def export_postdoc_emails(
+    person_role_id: Optional[int] = Query(None, ge=1),
+    is_active:      Optional[bool] = Query(None),
+    cohort_number:  Optional[int] = Query(None, ge=0),
+    is_incoming:    Optional[bool] = Query(None),
+    is_graduated:   Optional[bool] = Query(None),
+    institution_id: Optional[int] = Query(None, ge=1),
+    field_id:       Optional[int] = Query(None, ge=1),
+    branch_id:      Optional[int] = Query(None, ge=1),
+    search:         Optional[str] = Query(None),
+    current_user=Depends(dependencies.get_current_user),
+    db: Session = Depends(dependencies.get_db),
+):
+    """
+    Generate a JSON list of emails and filter metadata for Postdocs.
+    """
+    logger.info(f"{current_user.username} fetching Postdoc emails")
+
+    # 1. Retrieve data
+    postdocs = crud.list_postdocs(
+        db, person_role_id=person_role_id, is_active=is_active, cohort_number=cohort_number,
+        is_incoming=is_incoming, is_graduated=is_graduated, institution_id=institution_id,
+        field_id=field_id, branch_id=branch_id, search=search,
+    )
+
+    # 2. Build filter summary
+    filter_info = []
+    if search:
+        filter_info.append(f"Search: {search}")
+    if is_active is not None:
+        status = "Active" if is_active else "Inactive"
+        filter_info.append(f"Status: {status}")
+    if cohort_number is not None:
+        filter_info.append(f"Cohort: {cohort_number}")
+    if is_incoming is not None:
+        mobility = "Incoming" if is_incoming else "Outgoing"
+        filter_info.append(f"Mobility Status: {mobility}")
+    if is_graduated is not None:
+        filter_info.append(f"Graduated: {'Yes' if is_graduated else 'No'}")
+    if institution_id:
+        institution = crud.get_institution(db, institution_id)
+        if institution:
+            filter_info.append(f"Institution: {institution.institution}")
+    if branch_id:
+        branch = crud.get_branch(db, branch_id)
+        if branch:
+            filter_info.append(f"Branch: {branch.branch}")
+    if field_id:
+        field = crud.get_field(db, field_id)
+        if field:
+            filter_info.append(f"Field: {field.field}")
+
+    # 3. Extract emails
+    emails = [
+        p.person_role.person.email
+        for p in postdocs
+        if p.person_role.person.email
+    ]
+
+    # 4. Return JSON
+    return {
+        "count": len(emails),
+        "filter_summary": filter_info,
+        "emails": emails
+    }
 
 
 # </editor-fold>

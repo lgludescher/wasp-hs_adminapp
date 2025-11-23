@@ -1,4 +1,4 @@
-import { apiFetch } from './main.js';
+import { apiFetch, openEmailListModal } from './main.js';
 
 const POSTDOCS_ENDPOINT     = '/postdocs/';
 const INSTITUTIONS_ENDPOINT = '/institutions/';
@@ -11,12 +11,14 @@ const filterSearch      = document.getElementById('filter-search');
 const filterActive      = document.getElementById('filter-active');
 const filterCohort      = document.getElementById('filter-cohort');
 const filterMobility    = document.getElementById('filter-mobility-status');
+const filterGraduated   = document.getElementById('filter-graduated');
 const filterInstitution = document.getElementById('filter-institution');
 const filterBranch      = document.getElementById('filter-branch');
 const filterField       = document.getElementById('filter-field');
 const btnDefault        = document.getElementById('btn-default');
 const btnActivity       = document.getElementById('btn-activity');
 const btnExportExcel    = document.getElementById('btn-export-excel');
+const btnExportEmails   = document.getElementById('btn-export-emails');
 const theadRow          = document.getElementById('postdocs-thead');
 const tbody             = document.getElementById('postdocs-tbody');
 
@@ -53,6 +55,7 @@ let institutionsList = [];
     if (filterActive.value) p.set('is_active', filterActive.value);
     if (filterCohort.value) p.set('cohort_number', filterCohort.value);
     if (filterMobility.value) p.set('is_incoming', filterMobility.value);
+    if (filterGraduated.value) p.set('is_graduated', filterGraduated.value);
     if (filterInstitution.value) p.set('institution_id', filterInstitution.value);
     if (filterBranch.value) p.set('branch_id', filterBranch.value);
     if (filterField.value) p.set('field_id', filterField.value);
@@ -62,6 +65,30 @@ let institutionsList = [];
 
     const exportUrl = `/postdocs/export/postdocs.xlsx?${p.toString()}`;
     window.location.href = exportUrl;
+  };
+
+  btnExportEmails.onclick = async () => {
+    try {
+        const p = new URLSearchParams();
+        // Mimic the filters used in loadPostdocs/ExportExcel
+        if (filterSearch.value.trim()) p.set('search', filterSearch.value.trim());
+        if (filterActive.value)        p.set('is_active', filterActive.value);
+        if (filterCohort.value)        p.set('cohort_number', filterCohort.value);
+        // Note: Postdocs use 'is_incoming', not 'is_affiliated'
+        if (filterMobility.value)      p.set('is_incoming', filterMobility.value);
+        if (filterGraduated.value)     p.set('is_graduated', filterGraduated.value);
+        if (filterInstitution.value)   p.set('institution_id', filterInstitution.value);
+        if (filterBranch.value)        p.set('branch_id', filterBranch.value);
+        if (filterField.value)         p.set('field_id', filterField.value);
+
+        // Fetch data
+        const data = await apiFetch(`/postdocs/export/emails?${p.toString()}`);
+
+        // Open Modal
+        openEmailListModal(data);
+    } catch (err) {
+        showError(err);
+    }
   };
 
   modalCancelBtn.onclick = () => modal.classList.add('hidden');
@@ -118,6 +145,7 @@ function setupFilters() {
   filterActive.onchange = loadPostdocs;
   filterCohort.onchange = loadPostdocs;
   filterMobility.onchange = loadPostdocs;
+  filterGraduated.onchange = loadPostdocs;
   filterInstitution.onchange = loadPostdocs;
   filterBranch.onchange = async () => { await loadFields(filterBranch.value); loadPostdocs(); };
   filterField.onchange = loadPostdocs;
@@ -129,6 +157,7 @@ async function loadPostdocs() {
   if (filterActive.value) p.set('is_active', filterActive.value);
   if (filterCohort.value) p.set('cohort_number', filterCohort.value);
   if (filterMobility.value) p.set('is_incoming', filterMobility.value);
+  if (filterGraduated.value) p.set('is_graduated', filterGraduated.value);
   if (filterInstitution.value) p.set('institution_id', filterInstitution.value);
   if (filterBranch.value) p.set('branch_id', filterBranch.value);
   if (filterField.value) p.set('field_id', filterField.value);
@@ -140,13 +169,23 @@ async function loadPostdocs() {
 function renderHeader() {
   if (viewMode === 'default') {
     theadRow.innerHTML = `
-      <th></th><th>Name</th><th>Email</th><th>Cohort</th>
-      <th>Mobility Status</th><th>Start Date</th><th>End Date</th>
+      <th></th>
+      <th>Name</th>
+      <th>Email</th>
+      <th class="col-center">Cohort</th>
+      <th>Mobility Status</th>
+      <th class="col-center">Graduated</th>
+      <th>Start Date</th>
+      <th>End Date</th>
       <th class="cell-actions"></th>`;
   } else {
     theadRow.innerHTML = `
-      <th></th><th>Name</th><th>Cohort</th>
-      <th>Current Title</th><th>Current Institution</th>
+      <th></th>
+      <th>Name</th>
+      <th class="col-center">Cohort</th>
+      <th class="col-center">Graduated</th>
+      <th>Current Title</th>
+      <th>Current Institution</th>
       <th class="cell-actions"></th>`;
   }
 }
@@ -160,11 +199,20 @@ function renderTable(list) {
     const mobility = item.is_incoming ? 'Incoming' : 'Outgoing';
     const start = pr.start_date?.split('T')[0] || '';
     const end = pr.end_date?.split('T')[0] || '';
+
+    // Logic for checkbox state
+    const grdChk = item.is_graduated ? 'checked' : '';
+
     let cols;
     if (viewMode === 'default') {
       cols = `
-        <td>${name}</td><td>${pr.person.email}</td><td>${cohort}</td>
-        <td>${mobility}</td><td>${start}</td><td>${end}</td>`;
+        <td>${name}</td>
+        <td>${pr.person.email}</td>
+        <td class="col-center">${cohort}</td>
+        <td>${mobility}</td>
+        <td class="col-center"><input type="checkbox" disabled ${grdChk} /></td>
+        <td>${start}</td>
+        <td>${end}</td>`;
     } else {
       const titleText = item.current_title_id
         ? item.current_title?.title
@@ -173,8 +221,11 @@ function renderTable(list) {
         ? item.current_institution?.institution
         : (item.current_institution_other || '');
       cols = `
-        <td>${name}</td><td>${cohort}</td>
-        <td>${titleText}</td><td>${instText}</td>`;
+        <td>${name}</td>
+        <td class="col-center">${cohort}</td>
+        <td class="col-center"><input type="checkbox" disabled ${grdChk} /></td>
+        <td>${titleText}</td>
+        <td>${instText}</td>`;
     }
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -206,20 +257,22 @@ function startEdit(tr, item) {
     editCols = `
       <td>${name}</td>
       <td>${pr.person.email}</td>
-      <td><input name="cohort_number" type="number" min="0" max="99" value="${item.cohort_number ?? ''}" /></td>
+      <td class="col-center"><input name="cohort_number" type="number" min="0" max="99" value="${item.cohort_number ?? ''}" /></td>
       <td>
         <select name="is_incoming">
           <option value="true">Incoming</option>
           <option value="false">Outgoing</option>
         </select>
       </td>
+      <td class="col-center"><input name="is_graduated" type="checkbox" ${item.is_graduated ? 'checked' : ''} /></td>
       <td><input name="start_date" type="date" value="${start}" /></td>
       <td><input name="end_date" type="date" value="${end}" /></td>
     `;
   } else {
     editCols = `
       <td>${name}</td>
-      <td><input name="cohort_number" type="number" min="0" max="99" value="${item.cohort_number ?? ''}" /></td>
+      <td class="col-center"><input name="cohort_number" type="number" min="0" max="99" value="${item.cohort_number ?? ''}" /></td>
+      <td class="col-center"><input name="is_graduated" type="checkbox" ${item.is_graduated ? 'checked' : ''} /></td>
       <td>
         <select name="current_title_id" id="sel-title">
           <option value="">--</option>
@@ -278,7 +331,9 @@ function startEdit(tr, item) {
   tr.querySelector('.cancel-btn').onclick = loadPostdocs;
   tr.querySelector('.save-btn').onclick = async () => {
     const newCoh = parseInt(cohortInput.value) || null;
-    const payload = { cohort_number: newCoh };
+    // Capture Graduated status
+    const newGrd = tr.querySelector('[name="is_graduated"]').checked;
+    const payload = { cohort_number: newCoh, is_graduated: newGrd };
 
     let newStart, newEnd;
 

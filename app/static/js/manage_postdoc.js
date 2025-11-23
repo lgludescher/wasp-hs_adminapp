@@ -75,7 +75,9 @@ function renderMainDetails(isEdit = false) {
             <label class="detail-item"><strong>Department</strong><input name="department" type="text" value="${postdocData.department || ''}"></label>
             <label class="detail-item"><strong>Discipline</strong><input name="discipline" type="text" value="${postdocData.discipline || ''}"></label>
             
-            <label class="detail-item" style="grid-column: 1 / 5;"><strong>Postdoc Project Title</strong><input name="postdoc_project_title" type="text" value="${postdocData.postdoc_project_title || ''}"></label>
+            <label class="detail-item"><span class="checkbox-label"><input name="is_graduated" type="checkbox" ${postdocData.is_graduated ? 'checked' : ''}> Graduated?</span></label>
+            
+            <label class="detail-item" style="grid-column: 2 / 5;"><strong>Postdoc Project Title</strong><input name="postdoc_project_title" type="text" value="${postdocData.postdoc_project_title || ''}"></label>
             
             <label class="detail-item" style="grid-column: 1 / 3;">
                 <strong>Current Title</strong>
@@ -125,8 +127,10 @@ function renderMainDetails(isEdit = false) {
             <div class="detail-item"><strong>Incoming?:</strong> <input type="checkbox" disabled ${postdocData.is_incoming ? 'checked' : ''}></div>
             <div class="detail-item"><strong>Department:</strong> <span>${postdocData.department || ''}</span></div>
             <div class="detail-item"><strong>Discipline:</strong> <span>${postdocData.discipline || ''}</span></div>
-
-            <div class="detail-item" style="grid-column: 1 / 5;"><strong>Postdoc Project Title:</strong> <span>${postdocData.postdoc_project_title || ''}</span></div>
+            
+            <div class="detail-item"><strong>Graduated?:</strong> <input type="checkbox" disabled ${postdocData.is_graduated ? 'checked' : ''}></div>
+            
+            <div class="detail-item" style="grid-column: 2 / 5;"><strong>Postdoc Project Title:</strong> <span>${postdocData.postdoc_project_title || ''}</span></div>
             
             <div class="detail-item" style="grid-column: 1 / 3;"><strong>Current Title:</strong> <span>${currentTitle}</span></div>
             <div class="detail-item" style="grid-column: 3 / 5;"><strong>Current Institution:</strong> <span>${currentInst}</span></div>
@@ -147,6 +151,7 @@ async function saveMainDetails() {
         notes: form.querySelector('[name="notes"]').value.trim() || null,
         cohort_number: parseInt(form.querySelector('[name="cohort_number"]').value, 10) || null,
         is_incoming: form.querySelector('[name="is_incoming"]').checked,
+        is_graduated: form.querySelector('[name="is_graduated"]').checked,
         department: form.querySelector('[name="department"]').value.trim() || null,
         discipline: form.querySelector('[name="discipline"]').value.trim() || null,
         postdoc_project_title: form.querySelector('[name="postdoc_project_title"]').value.trim() || null,

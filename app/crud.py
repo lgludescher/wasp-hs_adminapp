@@ -1468,6 +1468,7 @@ def list_postdocs(
     is_active:        Optional[bool] = None,
     cohort_number:    Optional[int] = None,
     is_incoming:      Optional[bool] = None,
+    is_graduated:     Optional[bool] = None,
     institution_id:   Optional[int] = None,
     field_id:         Optional[int] = None,
     branch_id:        Optional[int] = None,
@@ -1511,10 +1512,13 @@ def list_postdocs(
         # q = q.filter_by(cohort_number=cohort_number)
         q = q.filter(models.Postdoc.cohort_number == cohort_number)
 
-    # 4) is_outgoing
+    # 4) is_outgoing / is_graduated
     if is_incoming is not None:
         # q = q.filter_by(is_outgoing=is_outgoing)
         q = q.filter(models.Postdoc.is_incoming == is_incoming)
+
+    if is_graduated is not None:
+        q = q.filter(models.Postdoc.is_graduated == is_graduated)
 
     # 5) institution (active assignments only)
     if institution_id is not None:

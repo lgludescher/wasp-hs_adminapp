@@ -306,6 +306,7 @@ class Postdoc(Base):
     postdoc_project_title = Column(String, nullable=True)
     # is_repatriated = Column(Boolean, default=False)
     is_incoming = Column(Boolean, default=False)
+    is_graduated = Column(Boolean, default=False)
 
     # Either point to a known title, or fill in free-text if the title is “Other”
     current_title_id = Column(Integer, ForeignKey("researcher_titles.id"), nullable=True)

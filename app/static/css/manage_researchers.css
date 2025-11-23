@@ -29,6 +29,11 @@
   border-color: #999;
 }
 
+.export-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
 /* Page title */
 .page-title {
   margin-bottom: 1rem;

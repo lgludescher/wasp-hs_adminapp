@@ -1,4 +1,4 @@
-import { apiFetch } from './main.js';
+import { apiFetch, openEmailListModal } from './main.js';
 
 const ROLE_TITLE_ENDPOINT    = '/researcher-titles/';
 const INSTITUTIONS_ENDPOINT  = '/institutions/';
@@ -12,6 +12,7 @@ const filterInstitution  = document.getElementById('filter-institution');
 const filterBranch       = document.getElementById('filter-branch');
 const filterField        = document.getElementById('filter-field');
 const btnExportExcel     = document.getElementById('btn-export-excel');
+const btnExportEmails    = document.getElementById('btn-export-emails');
 const tbody              = document.getElementById('researchers-tbody');
 
 const modal              = document.getElementById('modal-confirm');
@@ -195,6 +196,27 @@ btnExportExcel.onclick = () => {
 
   const exportUrl = `/researchers/export/researchers.xlsx?${p.toString()}`;
   window.location.href = exportUrl;
+};
+
+btnExportEmails.onclick = async () => {
+    try {
+        const p = new URLSearchParams();
+        // Mimic the filters used in loadResearchers/ExportExcel
+        if (filterSearch.value.trim()) p.set('search', filterSearch.value.trim());
+        if (filterActive.value)        p.set('is_active', filterActive.value);
+        if (filterTitle.value)         p.set('title_id', filterTitle.value);
+        if (filterInstitution.value)   p.set('institution_id', filterInstitution.value);
+        if (filterBranch.value)        p.set('branch_id', filterBranch.value);
+        if (filterField.value)         p.set('field_id', filterField.value);
+
+        // Fetch data
+        const data = await apiFetch(`/researchers/export/emails?${p.toString()}`);
+
+        // Open Modal
+        openEmailListModal(data);
+    } catch (err) {
+        showError(err);
+    }
 };
 
 /** Display error modal */

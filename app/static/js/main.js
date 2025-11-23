@@ -91,3 +91,81 @@ export async function apiFetch(path, opts = {}) {
   // Success: parse JSON
   return response.json();
 }
+
+/**
+ * Opens a modal to display a list of emails for copying.
+ *
+ * @param {Object} data
+ * @param {string[]} data.emails - List of email strings
+ * @param {string[]} data.filter_summary - List of human-readable filters applied
+ * @param {number} data.count - Total number of results
+ */
+export function openEmailListModal(data) {
+  // 1. Prepare content
+  const emailsStr = data.emails.join('; ');
+
+  // 2. Create DOM elements dynamically
+  // We reuse the 'modal' and 'modal-content' classes from your CSS
+  const modalOverlay = document.createElement('div');
+  modalOverlay.className = 'modal'; // Starts visible (no 'hidden' class)
+
+  // Inner HTML structure
+  // We use inline styles for specific layout tweaks inside the modal to ensure it looks good
+  // without requiring global CSS changes right away.
+  modalOverlay.innerHTML = `
+    <div class="modal-content" style="max-width: 500px; display: flex; flex-direction: column; gap: 1rem;">
+      <h3 style="margin: 0; font-size: 1.2rem;">Export Email List</h3>
+      
+      <div>
+        <p>Found <strong>${data.count}</strong> entities matching criteria:</p>
+        <ul style="margin: 0.5rem 0; padding-left: 1.5rem; color: #555; font-size: 0.9rem;">
+          ${data.filter_summary.map(f => `<li>${f}</li>`).join('')}
+        </ul>
+      </div>
+
+      <details style="border: 1px solid #eee; border-radius: 4px; padding: 0.5rem;">
+        <summary style="cursor: pointer; font-size: 0.9rem; color: #666;">Show raw email list</summary>
+        <textarea readonly style="width: 100%; height: 100px; margin-top: 0.5rem; font-family: monospace; font-size: 0.85rem; border: 1px solid #ccc;">${emailsStr}</textarea>
+      </details>
+
+      <div class="modal-actions">
+        <button id="btn-modal-copy" class="btn" style="background-color: var(--color-accent, #007bff); color: #fff;">Copy to Clipboard</button>
+        <button id="btn-modal-close" class="btn cancel-btn">Close</button>
+      </div>
+    </div>
+  `;
+
+  // 3. Attach to DOM
+  document.body.appendChild(modalOverlay);
+
+  // 4. Event Handlers
+  const btnCopy = modalOverlay.querySelector('#btn-modal-copy');
+  const btnClose = modalOverlay.querySelector('#btn-modal-close');
+
+  btnCopy.onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(emailsStr);
+      const originalText = btnCopy.textContent;
+      btnCopy.textContent = 'Copied!';
+      btnCopy.disabled = true;
+      setTimeout(() => {
+        btnCopy.textContent = originalText;
+        btnCopy.disabled = false;
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy', err);
+      alert('Could not copy automatically. Please open "Show raw email list" and copy manually.');
+    }
+  };
+
+  const closeModal = () => {
+    modalOverlay.remove(); // Completely remove from DOM
+  };
+
+  btnClose.onclick = closeModal;
+
+  // Close on click outside
+  modalOverlay.onclick = (e) => {
+    if (e.target === modalOverlay) closeModal();
+  };
+}

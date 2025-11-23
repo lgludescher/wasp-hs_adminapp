@@ -267,4 +267,72 @@ def export_researchers_to_excel(
     )
 
 
+@router.get("/researchers/export/emails")
+def export_researcher_emails(
+    person_role_id:   Optional[int] = Query(None, ge=1),
+    is_active:        Optional[bool] = Query(None),
+    title_id:         Optional[int] = Query(None, ge=1),
+    institution_id:   Optional[int] = Query(None, ge=1),
+    field_id:         Optional[int] = Query(None, ge=1),
+    branch_id:        Optional[int] = Query(None, ge=1),
+    search:           Optional[str] = Query(None),
+    current_user=Depends(dependencies.get_current_user),
+    db: Session = Depends(dependencies.get_db),
+):
+    """
+    Generate a JSON list of emails and filter metadata for Researchers.
+    """
+    logger.info(f"{current_user.username} fetching Researcher emails")
+
+    # 1. Retrieve data
+    researchers = crud.list_researchers(
+        db,
+        person_role_id=person_role_id,
+        is_active=is_active,
+        title_id=title_id,
+        institution_id=institution_id,
+        field_id=field_id,
+        branch_id=branch_id,
+        search=search,
+    )
+
+    # 2. Build filter summary
+    filter_info = []
+    if search:
+        filter_info.append(f"Search: {search}")
+    if is_active is not None:
+        status = "Active" if is_active else "Inactive"
+        filter_info.append(f"Status: {status}")
+    if title_id:
+        title = crud.get_researcher_title(db, title_id)
+        if title:
+            filter_info.append(f"Title: {title.title}")
+    if institution_id:
+        institution = crud.get_institution(db, institution_id)
+        if institution:
+            filter_info.append(f"Institution: {institution.institution}")
+    if branch_id:
+        branch = crud.get_branch(db, branch_id)
+        if branch:
+            filter_info.append(f"Branch: {branch.branch}")
+    if field_id:
+        field = crud.get_field(db, field_id)
+        if field:
+            filter_info.append(f"Field: {field.field}")
+
+    # 3. Extract emails
+    emails = [
+        r.person_role.person.email
+        for r in researchers
+        if r.person_role.person.email
+    ]
+
+    # 4. Return JSON
+    return {
+        "count": len(emails),
+        "filter_summary": filter_info,
+        "emails": emails
+    }
+
+
 # </editor-fold>

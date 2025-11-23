@@ -1,4 +1,4 @@
-import { apiFetch } from './main.js';
+import { apiFetch, openEmailListModal } from './main.js';
 
 const PHDS_ENDPOINT         = '/phd-students/';
 const INSTITUTIONS_ENDPOINT = '/institutions/';
@@ -16,6 +16,7 @@ const filterField       = document.getElementById('filter-field');
 const btnDefault        = document.getElementById('btn-default');
 const btnActivity       = document.getElementById('btn-activity');
 const btnExportExcel    = document.getElementById('btn-export-excel');
+const btnExportEmails   = document.getElementById('btn-export-emails');
 const theadRow          = document.getElementById('students-thead');
 const tbody             = document.getElementById('students-tbody');
 
@@ -53,6 +54,29 @@ let viewMode = 'default';
 
     const exportUrl = `/phd-students/export/phd-students.xlsx?${p.toString()}`;
     window.location.href = exportUrl;
+  };
+
+  btnExportEmails.onclick = async () => {
+    try {
+      const p = new URLSearchParams();
+      // Apply the same filters as the list view
+      if (filterSearch.value.trim()) p.set('search', filterSearch.value.trim());
+      if (filterActive.value)        p.set('is_active', filterActive.value);
+      if (filterCohort.value)        p.set('cohort_number', filterCohort.value);
+      if (filterAffiliated.value)    p.set('is_affiliated', filterAffiliated.value);
+      if (filterGraduated.value)     p.set('is_graduated', filterGraduated.value);
+      if (filterInstitution.value)   p.set('institution_id', filterInstitution.value);
+      if (filterBranch.value)        p.set('branch_id', filterBranch.value);
+      if (filterField.value)         p.set('field_id', filterField.value);
+
+      // Fetch the data (returns { count, filter_summary, emails })
+      const data = await apiFetch(`/phd-students/export/emails?${p.toString()}`);
+
+      // Open the shared modal
+      openEmailListModal(data);
+    } catch (err) {
+      showError(err);
+    }
   };
 
   modalCancelBtn.onclick = () => modal.classList.add('hidden');
@@ -143,9 +167,9 @@ function renderHeader() {
       <th></th>
       <th>Name</th>
       <th>Email</th>
-      <th>Cohort</th>
-      <th>Affiliated</th>
-      <th>Graduated</th>
+      <th class="col-center">Cohort</th>
+      <th class="col-center">Affiliated</th>
+      <th class="col-center">Graduated</th>
       <th>Start Date</th>
       <th>End Date</th>
       <th class="cell-actions"></th>
@@ -154,9 +178,9 @@ function renderHeader() {
     theadRow.innerHTML = `
       <th></th>
       <th>Name</th>
-      <th>Cohort</th>
-      <th>Affiliated</th>
-      <th>Graduated</th>
+      <th class="col-center">Cohort</th>
+      <th class="col-center">Affiliated</th>
+      <th class="col-center">Graduated</th>
       <th>Current Title</th>
       <th>Current Organization</th>
       <th class="cell-actions"></th>
@@ -179,18 +203,18 @@ function renderTable(list) {
       cols = `
         <td>${name}</td>
         <td>${pr.person.email}</td>
-        <td>${cohort}</td>
-        <td><input type="checkbox" disabled ${affChk} /></td>
-        <td><input type="checkbox" disabled ${grdChk} /></td>
+        <td class="col-center">${cohort}</td>
+        <td class="col-center"><input type="checkbox" disabled ${affChk} /></td>
+        <td class="col-center"><input type="checkbox" disabled ${grdChk} /></td>
         <td>${start}</td>
         <td>${end}</td>
       `;
     } else {
       cols = `
         <td>${name}</td>
-        <td>${cohort}</td>
-        <td><input type="checkbox" disabled ${affChk} /></td>
-        <td><input type="checkbox" disabled ${grdChk} /></td>
+        <td class="col-center">${cohort}</td>
+        <td class="col-center"><input type="checkbox" disabled ${affChk} /></td>
+        <td class="col-center"><input type="checkbox" disabled ${grdChk} /></td>
         <td>${item.current_title ?? ''}</td>
         <td>${item.current_organization ?? ''}</td>
       `;
@@ -224,18 +248,18 @@ function startEdit(tr, item) {
     editCols = `
       <td>${name}</td>
       <td>${pr.person.email}</td>
-      <td><input name="cohort_number" type="number" min="0" max="99" value="${item.cohort_number ?? ''}" /></td>
-      <td><input name="is_affiliated" type="checkbox" ${item.is_affiliated?'checked':''} /></td>
-      <td><input name="is_graduated"  type="checkbox" ${item.is_graduated  ?'checked':''} /></td>
-      <td><input name="start_date"    type="date"      value="${start}" /></td>
-      <td><input name="end_date"      type="date"      value="${end}"   /></td>
+      <td class="col-center"><input name="cohort_number" type="number" min="0" max="99" value="${item.cohort_number ?? ''}" /></td>
+      <td class="col-center"><input name="is_affiliated" type="checkbox" ${item.is_affiliated?'checked':''} /></td>
+      <td class="col-center"><input name="is_graduated"  type="checkbox" ${item.is_graduated  ?'checked':''} /></td>
+      <td><input name="start_date"    type="date"       value="${start}" /></td>
+      <td><input name="end_date"      type="date"       value="${end}"   /></td>
     `;
   } else {
     editCols = `
       <td>${name}</td>
-      <td><input name="cohort_number" type="number" min="0" max="99" value="${item.cohort_number ?? ''}" /></td>
-      <td><input name="is_affiliated" type="checkbox" ${item.is_affiliated?'checked':''} /></td>
-      <td><input name="is_graduated"  type="checkbox" ${item.is_graduated  ?'checked':''} /></td>
+      <td class="col-center"><input name="cohort_number" type="number" min="0" max="99" value="${item.cohort_number ?? ''}" /></td>
+      <td class="col-center"><input name="is_affiliated" type="checkbox" ${item.is_affiliated?'checked':''} /></td>
+      <td class="col-center"><input name="is_graduated"  type="checkbox" ${item.is_graduated  ?'checked':''} /></td>
       <td><input name="current_title" type="text" value="${item.current_title ?? ''}" /></td>
       <td><input name="current_organization" type="text" value="${item.current_organization ?? ''}" /></td>
     `;

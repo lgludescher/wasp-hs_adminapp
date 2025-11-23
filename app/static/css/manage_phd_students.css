@@ -24,6 +24,12 @@
   border-color: #999;
 }
 
+/* Wrapper to group the two export icons closely */
+.export-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
 /* Page title (used now inside header-bar) */
 .page-title {
   font-size: 1.5rem;
@@ -86,13 +92,7 @@
   /* restore default left alignment */
   text-align: left;
 }
-/* center only Cohort (4), Affiliated (5) & Graduated (6) */
-.data-table th:nth-child(4),
-.data-table th:nth-child(5),
-.data-table th:nth-child(6),
-.data-table td:nth-child(4),
-.data-table td:nth-child(5),
-.data-table td:nth-child(6) {
+.col-center {
   text-align: center;
 }
 .data-table th {

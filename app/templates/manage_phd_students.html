@@ -9,11 +9,20 @@
   <div class="header-bar">
     <h1 class="page-title">Manage PhD Students</h1>
     <div class="header-actions">
-        <button id="btn-export-excel" class="btn btn-icon" title="Export to Excel">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.17v6h5V9h3.17L12 2z"/>
-            </svg>
-        </button>
+        <div class="export-group">
+            <button id="btn-export-excel" class="btn btn-icon" title="Export to Excel">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.17v6h5V9h3.17L12 2z"/>
+                </svg>
+            </button>
+
+            <button id="btn-export-emails" class="btn btn-icon" title="Copy Email List">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                </svg>
+            </button>
+        </div>
+
         <div class="view-toggle">
             <button id="btn-default" class="active">Default View</button>
             <button id="btn-activity">Current Position</button>
