@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, timedelta
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, selectinload, joinedload, aliased
 from . import models, schemas
 from typing import Optional, List, Union
 from sqlalchemy import case, desc, and_, or_, select
@@ -2446,17 +2446,114 @@ def get_supervision(db: Session, supervision_id: int) -> Optional[models.Supervi
 
 
 def list_supervisions(
-    db: Session,
-    *,
-    student_role_id:   Optional[int] = None,
-    supervisor_role_id: Optional[int] = None
+        db: Session,
+        *,
+        student_role_id: Optional[int] = None,
+        supervisor_role_id: Optional[int] = None
 ) -> List[models.SupervisorPhDStudent]:
-    q = db.query(models.SupervisorPhDStudent)
+    # We add options(joinedload(...)) to optimize the query
+    q = db.query(models.SupervisorPhDStudent).options(
+        joinedload(models.SupervisorPhDStudent.supervisor),
+        joinedload(models.SupervisorPhDStudent.student)
+    )
+
     if student_role_id is not None:
         q = q.filter_by(student_role_id=student_role_id)
     if supervisor_role_id is not None:
         q = q.filter_by(supervisor_role_id=supervisor_role_id)
+
     return q.order_by(models.SupervisorPhDStudent.id).all()  # type: ignore
+
+
+def report_supervisions(
+        db: Session,
+        *,
+        is_main: Optional[bool] = None,
+        # Active Status Filters
+        is_active_supervisor: Optional[bool] = None,
+        is_active_student: Optional[bool] = None,
+        # Role Filters (IDs)
+        supervisor_role_id: Optional[int] = None,
+        supervisee_role_id: Optional[int] = None,
+        # Cohort
+        cohort_number: Optional[int] = None,
+        # Search
+        search_supervisor: Optional[str] = None
+) -> List[models.SupervisorPhDStudent]:
+    # 1. Base Query with Eager Loading
+    q = db.query(models.SupervisorPhDStudent).options(
+        joinedload(models.SupervisorPhDStudent.supervisor).joinedload(models.PersonRole.person),
+        joinedload(models.SupervisorPhDStudent.student).joinedload(models.PersonRole.person)
+    )
+
+    # 2. Aliases setup
+    SupervisorPersonRole = aliased(models.PersonRole)
+    StudentPersonRole = aliased(models.PersonRole)
+    SupervisorPersonDetails = aliased(models.Person)
+
+    # 3. Perform Joins
+    # We join these explicitly to allow filtering and sorting
+    q = q.join(SupervisorPersonRole, models.SupervisorPhDStudent.supervisor)
+    q = q.join(SupervisorPersonDetails, SupervisorPersonRole.person)
+    q = q.join(StudentPersonRole, models.SupervisorPhDStudent.student)
+
+    # 4. Apply Filters
+
+    # --- Search Filter (Supervisor Name) ---
+    if search_supervisor:
+        term = f"%{search_supervisor}%"
+        q = q.filter(
+            or_(
+                SupervisorPersonDetails.first_name.ilike(term),  # type: ignore
+                SupervisorPersonDetails.last_name.ilike(term),  # type: ignore
+            )
+        )
+
+    if is_main is not None:
+        q = q.filter(models.SupervisorPhDStudent.is_main == is_main)
+
+    if supervisor_role_id is not None:
+        q = q.filter(SupervisorPersonRole.role_id == supervisor_role_id)  # type: ignore
+
+    if supervisee_role_id is not None:
+        q = q.filter(StudentPersonRole.role_id == supervisee_role_id)  # type: ignore
+
+    # --- Active Status Checks ---
+    start_of_today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    if is_active_supervisor is not None:
+        if is_active_supervisor:
+            q = q.filter(or_(SupervisorPersonRole.end_date.is_(None), SupervisorPersonRole.end_date >= start_of_today))  # type: ignore
+        else:
+            q = q.filter(
+                and_(SupervisorPersonRole.end_date.isnot(None), SupervisorPersonRole.end_date < start_of_today))  # type: ignore
+
+    if is_active_student is not None:
+        if is_active_student:
+            q = q.filter(or_(StudentPersonRole.end_date.is_(None), StudentPersonRole.end_date >= start_of_today))  # type: ignore
+        else:
+            q = q.filter(and_(StudentPersonRole.end_date.isnot(None), StudentPersonRole.end_date < start_of_today))  # type: ignore
+
+    # --- Cohort Filter ---
+    if cohort_number is not None:
+        q = q.outerjoin(models.PhDStudent, models.PhDStudent.person_role_id == StudentPersonRole.id)
+        q = q.outerjoin(models.Postdoc, models.Postdoc.person_role_id == StudentPersonRole.id)
+        q = q.filter(
+            or_(
+                models.PhDStudent.cohort_number == cohort_number,
+                models.Postdoc.cohort_number == cohort_number
+            )
+        )
+
+    # 5. Ordering
+    # Sort by: Supervisor First Name -> Supervisor Last Name -> Student Role ID
+    q = q.order_by(
+        SupervisorPersonDetails.first_name,
+        SupervisorPersonDetails.last_name,
+        models.SupervisorPhDStudent.student_role_id
+        )
+
+    return q.all()  # type: ignore
 
 
 def create_supervision(

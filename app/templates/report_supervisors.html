@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/report_supervisors.css') }}" />
+  <script type="module" src="{{ url_for('static', path='js/report_supervisors.js') }}"></script>
+{% endblock %}
+
+{% block body %}
+  <div class="page-header">
+    <h1 class="page-title">Supervisors Report</h1>
+    <div class="export-group">
+      <button id="btn-export-excel" class="btn btn-icon" title="Export to Excel">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.17v6h5V9h3.17L12 2z"/>
+        </svg>
+      </button>
+
+      <button id="btn-export-emails" class="btn btn-icon" title="Copy Email List">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+          </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="actions-bar">
+    <div class="report-controls">
+
+      <div class="filter-row">
+        <span class="filter-group-label">Supervisor Criteria</span>
+        <div class="filters">
+          <label>Search:
+            <input id="filter-search" type="text" placeholder="Search supervisor..." />
+          </label>
+
+          <label>Status:
+            <select id="filter-sup-status">
+              <option value="true" selected>Active Supervisors</option>
+              <option value="">All Supervisors</option>
+              <option value="false">Inactive Supervisors</option>
+            </select>
+          </label>
+
+          <label>Role:
+            <select id="filter-sup-role">
+              <option value="">All roles</option>
+              </select>
+          </label>
+
+          <label>Main:
+            <select id="filter-main">
+              <option value="">All</option>
+              <option value="true">Main Only</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <span class="filter-group-label">Supervisee Context</span>
+        <div class="filters">
+          <label>Status:
+            <select id="filter-stu-status">
+              <option value="true" selected>Active Supervisees</option>
+              <option value="">All Supervisees</option>
+              <option value="false">Inactive Supervisees</option>
+            </select>
+          </label>
+
+          <label>Role:
+            <select id="filter-stu-role">
+              <option value="">All roles</option>
+              </select>
+          </label>
+
+          <label>Cohort:
+            <select id="filter-cohort">
+              <option value="">All cohorts</option>
+              </select>
+          </label>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="list-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th></th> <th class="cell-center">Main?</th>
+          <th>Role</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+        </tr>
+      </thead>
+      <tbody id="supervisors-tbody">
+        </tbody>
+    </table>
+  </div>
+
+  <div id="modal-confirm" class="modal hidden">
+    <div class="modal-content">
+      <p id="modal-text"></p>
+      <div class="modal-actions">
+        <button id="modal-confirm-btn" class="btn hidden">Confirm</button>
+        <button id="modal-cancel-btn" class="btn cancel-btn">OK</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}

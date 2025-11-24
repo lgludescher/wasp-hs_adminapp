@@ -10,7 +10,7 @@ from .database import engine, Base, SessionLocal
 from .config import settings
 from .dependencies import get_current_user
 from .routers import (user, institution, domain, grad_school_activity, course, project,
-                      person, researcher, phd_student, postdoc)
+                      person, researcher, phd_student, postdoc, report)
 from .models import Role, RoleType
 from .logger import logger
 
@@ -343,6 +343,17 @@ async def manage_grad_school_activity_page(
     )
 
 
+@app.get("/reports/supervisors/", response_class=HTMLResponse)
+async def report_supervisors_page(
+    request: Request,
+    current_user=Depends(get_current_user)
+):
+    return templates.TemplateResponse(
+        "report_supervisors.html",
+        {"request": request}
+    )
+
+
 app.include_router(user.router)
 app.include_router(institution.router)
 app.include_router(domain.router)
@@ -353,3 +364,4 @@ app.include_router(person.router)
 app.include_router(researcher.router)
 app.include_router(phd_student.router)
 app.include_router(postdoc.router)
+app.include_router(report.router)

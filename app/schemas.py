@@ -724,7 +724,10 @@ class SupervisionCreate(SupervisionBase):
 
 class SupervisionRead(SupervisionBase):
     id: int
-    # maybe embed minimal person info?
+
+    supervisor: PersonRoleReadFull
+    student: PersonRoleReadFull
+
     model_config = ConfigDict(from_attributes=True)
 
 
