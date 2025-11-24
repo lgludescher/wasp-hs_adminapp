@@ -209,6 +209,47 @@ def list_student_activities_for_grad_school_activity(
     return crud.list_student_activities_for_grad_school(db, grad_school_activity_id=gsa_id, search=search)
 
 
+@router.get("/grad-school-activities/{gsa_id}/student-activities/export/emails")
+def export_gsa_student_emails(
+    gsa_id: int,
+    search: Optional[str] = Query(None),
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    """
+    Generate a JSON list of emails for students in a specific Grad School Activity.
+    """
+    logger.info(f"{current_user.username} fetching emails for GSA #{gsa_id}")
+
+    # 1. Retrieve data
+    # Note: We reuse the existing CRUD logic which handles the search filter
+    activities = crud.list_student_activities_for_grad_school(
+        db, grad_school_activity_id=gsa_id, search=search
+    )
+
+    # 2. Build filter summary
+    filter_info = []
+    if search:
+        filter_info.append(f"Search: {search}")
+    else:
+        filter_info.append("All students in activity")
+
+    # 3. Extract emails
+    # Hierarchy: StudentActivity -> PhdStudent (student) -> PersonRole -> Person -> email
+    emails = []
+    for act in activities:
+        # Check relationships exist to avoid errors
+        if act.student and act.student.person_role.person.email:
+            emails.append(act.student.person_role.person.email)
+
+    # 4. Return JSON
+    return {
+        "count": len(emails),
+        "filter_summary": filter_info,
+        "emails": emails
+    }
+
+
 # </editor-fold>
 
 # <editor-fold desc="GradSchoolActivity-related courses endpoints">

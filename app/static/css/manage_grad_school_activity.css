@@ -202,3 +202,34 @@ a.go-to-btn:hover {
 .hidden { display: none !important; }
 .modal-content { background: var(--color-bg); padding: 1.5rem; border-radius: 4px; max-width: 500px; width: 90%; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
+
+
+/* Container for panel top actions */
+.panel-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+/* --- Export Button Styles (Icon Button) --- */
+.btn-icon {
+  width: 38px;
+  height: 38px;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50% !important;
+  border: 1px solid #ccc !important;
+  background-color: #fff !important;
+  color: #333 !important;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.btn-icon:hover {
+  background-color: #f0f0f0 !important;
+  border-color: #999 !important;
+  opacity: 1 !important;
+}

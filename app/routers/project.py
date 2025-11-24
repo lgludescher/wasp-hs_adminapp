@@ -301,12 +301,25 @@ def remove_project_field(
 
 @router.get("/projects/{project_id}/people-roles/", response_model=List[schemas.ProjectPersonRoleRead])
 def list_project_people_roles(
-    project_id: int,
-    db: Session = Depends(dependencies.get_db),
-    current_user=Depends(dependencies.get_current_user)
+        project_id: int,
+        is_active: Optional[bool] = Query(None, description="Filter by active status within the project"),
+        is_principal_investigator: Optional[bool] = Query(None, description="Filter by PI status"),
+        is_contact_person: Optional[bool] = Query(None, description="Filter by contact person status"),
+
+        db: Session = Depends(dependencies.get_db),
+        current_user=Depends(dependencies.get_current_user)
 ):
-    logger.info(f"{current_user.username} listing people roles for project {project_id}")
-    return crud.get_project_people_roles(db, project_id)
+    logger.info(f"{current_user.username} listing people roles for project {project_id} "
+                f"(is_active={is_active}, is_principal_investigator={is_principal_investigator}, "
+                f"is_contact_person={is_contact_person})")
+
+    return crud.get_project_people_roles(
+        db,
+        project_id,
+        is_active=is_active,
+        is_principal_investigator=is_principal_investigator,
+        is_contact_person=is_contact_person
+    )
 
 
 @router.post("/projects/{project_id}/people-roles/", response_model=schemas.ProjectPersonRoleRead)
@@ -363,6 +376,55 @@ def remove_project_person_role(
         logger.warning(str(e))
         raise HTTPException(404, str(e))
     return Response(status_code=204)
+
+
+@router.get("/projects/{project_id}/people-roles/export/emails")
+def export_project_member_emails(
+    project_id: int,
+    is_active: Optional[bool] = Query(None),
+    is_principal_investigator: Optional[bool] = Query(None),
+    is_contact_person: Optional[bool] = Query(None),
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    """
+    Generate a JSON list of emails and filter metadata for Project Members.
+    """
+    logger.info(f"{current_user.username} fetching Project Member emails for project {project_id}")
+
+    # 1. Retrieve data (Reuse existing CRUD logic)
+    members = crud.get_project_people_roles(
+        db,
+        project_id,
+        is_active=is_active,
+        is_principal_investigator=is_principal_investigator,
+        is_contact_person=is_contact_person
+    )
+
+    # 2. Build filter summary
+    filter_info = []
+    if is_active is not None:
+        status = "Active" if is_active else "Inactive"
+        filter_info.append(f"Status: {status}")
+    if is_principal_investigator:
+        filter_info.append("Role: Principal Investigators Only")
+    if is_contact_person:
+        filter_info.append("Contact: Contact Persons Only")
+
+    # 3. Extract emails
+    # Note: Structure is ProjectPersonRole -> PersonRole -> Person -> email
+    emails = [
+        m.person_role.person.email
+        for m in members
+        if m.person_role.person.email
+    ]
+
+    # 4. Return JSON
+    return {
+        "count": len(emails),
+        "filter_summary": filter_info,
+        "emails": emails
+    }
 
 
 # </editor-fold>

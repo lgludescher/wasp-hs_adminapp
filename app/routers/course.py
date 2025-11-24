@@ -284,6 +284,40 @@ def remove_course_teacher(
     return Response(status_code=204)
 
 
+@router.get("/courses/{course_id}/teachers/export/emails")
+def export_course_teacher_emails(
+    course_id: int,
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    """
+    Generate a JSON list of emails for teachers in a specific course.
+    """
+    logger.info(f"{current_user.username} fetching Teacher emails for course {course_id}")
+
+    # 1. Retrieve data
+    # Returns a list of PersonRole objects representing the teachers
+    teachers = crud.get_course_teachers(db, course_id)
+
+    # 2. Build filter summary
+    # There are no filters for teachers currently
+    filter_info = ["All teachers in course"]
+
+    # 3. Extract emails
+    # Hierarchy: PersonRole -> Person -> email
+    emails = []
+    for t in teachers:
+        if t.person and t.person.email:
+            emails.append(t.person.email)
+
+    # 4. Return JSON
+    return {
+        "count": len(emails),
+        "filter_summary": filter_info,
+        "emails": emails
+    }
+
+
 # </editor-fold>
 
 # <editor-fold desc="Course-related students endpoints">
@@ -354,6 +388,45 @@ def remove_course_student(
         logger.warning(str(e))
         raise HTTPException(404, str(e))
     return Response(status_code=204)
+
+
+@router.get("/courses/{course_id}/students/export/emails")
+def export_course_student_emails(
+    course_id: int,
+    search: Optional[str] = Query(None),
+    db: Session = Depends(dependencies.get_db),
+    current_user=Depends(dependencies.get_current_user)
+):
+    """
+    Generate a JSON list of emails for students in a specific course.
+    """
+    logger.info(f"{current_user.username} fetching Course Student emails for course {course_id}")
+
+    # 1. Retrieve data
+    # Returns a list of CourseStudent association objects
+    course_students = crud.get_course_students(db, course_id=course_id, search=search)
+
+    # 2. Build filter summary
+    filter_info = []
+    if search:
+        filter_info.append(f"Search: {search}")
+    else:
+        filter_info.append("All students in course")
+
+    # 3. Extract emails
+    # Hierarchy: CourseStudent -> PhdStudent (student) -> PersonRole -> Person -> email
+    emails = []
+    for cs in course_students:
+        # distinct check to be safe, though usually 1:1 in this list
+        if cs.student and cs.student.person_role.person.email:
+            emails.append(cs.student.person_role.person.email)
+
+    # 4. Return JSON
+    return {
+        "count": len(emails),
+        "filter_summary": filter_info,
+        "emails": emails
+    }
 
 
 # </editor-fold>

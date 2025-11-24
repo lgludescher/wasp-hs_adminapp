@@ -1,4 +1,4 @@
-import { apiFetch } from './main.js';
+import { apiFetch, openEmailListModal } from './main.js';
 
 const ROLE_DISPLAY = { 1: 'Researcher', 2: 'PhD Student', 3: 'Postdoc' };
 const ROLE_PATHS = { 1: 'researchers', 2: 'phd-students', 3: 'postdocs' };
@@ -188,6 +188,8 @@ function setupPanelAddForm(panel, config) {
 // --- MEMBERS PANEL ---
 async function loadMembers(panel) {
   const tbody = panel.querySelector('tbody');
+
+  // Set table header (Same as before)
   panel.querySelector('thead').innerHTML = `
     <tr>
       <th></th>
@@ -198,10 +200,23 @@ async function loadMembers(panel) {
       <th>Name</th>
       <th></th>
     </tr>`;
-  try {
-    const members = await apiFetch(`/projects/${projectId}/people-roles/`);
 
-    // Enrich each member with their full details
+  try {
+    // 1. CAPTURE FILTER VALUES
+    const filterStatus  = document.getElementById('filter-members-status');
+    const filterPi      = document.getElementById('filter-members-pi');
+    const filterContact = document.getElementById('filter-members-contact');
+
+    // 2. BUILD QUERY PARAMETERS
+    const p = new URLSearchParams();
+    if (filterStatus && filterStatus.value !== '')  p.set('is_active', filterStatus.value);
+    if (filterPi && filterPi.value !== '')          p.set('is_principal_investigator', filterPi.value);
+    if (filterContact && filterContact.value !== '') p.set('is_contact_person', filterContact.value);
+
+    // 3. FETCH DATA WITH FILTERS
+    const members = await apiFetch(`/projects/${projectId}/people-roles/?${p.toString()}`);
+
+    // Enrich each member with their full details (Same as before)
     const enrichedData = await Promise.all(members.map(async (member) => {
       const personRole = await apiFetch(`/person-roles/${member.person_role_id}`);
       const subRolePath = ROLE_PATHS[personRole.role.id];
@@ -216,9 +231,10 @@ async function loadMembers(panel) {
       return { ...member, personRole, subRolePath, subRoleId };
     }));
 
+    // Render Rows (Same as before)
     tbody.innerHTML = '';
     if (!enrichedData.length) {
-      tbody.innerHTML = `<tr><td colspan="6">No members associated with this project.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#666;">No members found matching criteria.</td></tr>`;
     } else {
       enrichedData.forEach(item => {
         const tr = document.createElement('tr');
@@ -228,9 +244,61 @@ async function loadMembers(panel) {
       });
     }
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6">Could not load members: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7">Could not load members: ${err.message}</td></tr>`;
   }
+
+  // Initialize forms and filter listeners
   setupMembersAddForm(panel);
+  setupMemberFilters(panel); // <--- NEW CALL
+
+  // SETUP EXPORT BUTTON
+  const btnExport = panel.querySelector('#btn-export-project-emails');
+  if (btnExport) {
+    btnExport.onclick = async () => {
+      try {
+        // 1. Capture current filter values (same as load logic)
+        const filterStatus  = document.getElementById('filter-members-status');
+        const filterPi      = document.getElementById('filter-members-pi');
+        const filterContact = document.getElementById('filter-members-contact');
+
+        // 2. Build Query Params
+        const p = new URLSearchParams();
+        if (filterStatus && filterStatus.value !== '')  p.set('is_active', filterStatus.value);
+        if (filterPi && filterPi.value !== '')          p.set('is_principal_investigator', filterPi.value);
+        if (filterContact && filterContact.value !== '') p.set('is_contact_person', filterContact.value);
+
+        // 3. Fetch Data
+        // Use the global 'projectId' variable assumed to be available in this scope
+        const data = await apiFetch(`/projects/${projectId}/people-roles/export/emails?${p.toString()}`);
+
+        // 4. Open Modal
+        openEmailListModal(data);
+      } catch (err) {
+        // You might want to use a simpler alert or existing error handler here
+        console.error(err);
+        alert("Failed to generate email list: " + err.message);
+      }
+    };
+  }
+}
+
+/**
+ * Wire up the filter dropdowns to reload the member list on change.
+ */
+function setupMemberFilters(panel) {
+    const filters = [
+        document.getElementById('filter-members-status'),
+        document.getElementById('filter-members-pi'),
+        document.getElementById('filter-members-contact')
+    ];
+
+    filters.forEach(select => {
+        if (select) {
+            // We use .onchange property to prevent stacking multiple listeners
+            // if this function is called multiple times.
+            select.onchange = () => loadMembers(panel);
+        }
+    });
 }
 
 function renderMemberRow(tr, item) {

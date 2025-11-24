@@ -1,4 +1,4 @@
-import { apiFetch } from './main.js';
+import { apiFetch, openEmailListModal } from './main.js';
 
 const ROLE_DISPLAY = { 1: 'Researcher', 2: 'PhD Student', 3: 'Postdoc' };
 const ROLE_PATHS = { 1: 'researchers', 2: 'phd-students', 3: 'postdocs' };
@@ -225,6 +225,23 @@ async function loadTeachers(panel) {
     tbody.innerHTML = `<tr><td colspan="4">Could not load teachers: ${err.message}</td></tr>`;
   }
   setupTeachersAddForm(panel);
+
+  // SETUP EXPORT BUTTON
+  const btnExport = panel.querySelector('#btn-export-teacher-emails');
+  if (btnExport) {
+    btnExport.onclick = async () => {
+      try {
+        // Fetch Data (No filters needed for teachers)
+        const data = await apiFetch(`/courses/${courseId}/teachers/export/emails`);
+
+        // Open Modal
+        openEmailListModal(data);
+      } catch (err) {
+        console.error(err);
+        alert("Failed to generate email list: " + err.message);
+      }
+    };
+  }
 }
 
 function renderTeacherRow(tr, item) {
@@ -322,6 +339,31 @@ async function loadStudents(panel) {
   searchInput.oninput = debounce(fetchAndRender, 300);
   await fetchAndRender();
   setupStudentsAddForm(panel);
+
+  // SETUP EXPORT BUTTON
+  const btnExport = panel.querySelector('#btn-export-course-emails');
+  if (btnExport) {
+    btnExport.onclick = async () => {
+      try {
+        const params = new URLSearchParams();
+        const searchTerm = searchInput.value.trim();
+        if (searchTerm) {
+            params.set('search', searchTerm);
+        }
+
+        // Fetch Data
+        // Assumes 'courseId' is available in scope (global or captured)
+        const data = await apiFetch(`/courses/${courseId}/students/export/emails?${params.toString()}`);
+
+        // Open Modal
+        openEmailListModal(data);
+      } catch (err) {
+        // Simple error handling
+        console.error(err);
+        alert("Failed to generate email list: " + err.message);
+      }
+    };
+  }
 }
 
 function renderStudentRow(tr, item) {

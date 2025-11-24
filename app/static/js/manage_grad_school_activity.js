@@ -1,4 +1,4 @@
-import { apiFetch } from './main.js';
+import { apiFetch, openEmailListModal } from './main.js';
 
 // --- DOM Elements ---
 const detailsSection = document.getElementById('grad-school-activity-details-section');
@@ -286,6 +286,31 @@ async function loadStudents(panel) {
     searchInput.oninput = debounce(fetchAndRender, 300);
     await fetchAndRender();
     setupStudentsAddForm(panel);
+
+    // SETUP EXPORT BUTTON
+    const btnExport = panel.querySelector('#btn-export-gsa-emails');
+    if (btnExport) {
+        btnExport.onclick = async () => {
+            try {
+                const params = new URLSearchParams();
+                // Capture the value from the search input we defined earlier in this function
+                const searchTerm = searchInput.value.trim();
+                if (searchTerm) {
+                    params.set('search', searchTerm);
+                }
+
+                // Fetch Data
+                // Assumes 'gradSchoolActivityId' is available in global scope
+                const data = await apiFetch(`/grad-school-activities/${gradSchoolActivityId}/student-activities/export/emails?${params.toString()}`);
+
+                // Open Modal
+                openEmailListModal(data);
+            } catch (err) {
+                console.error(err);
+                alert("Failed to generate email list: " + err.message);
+            }
+        };
+    }
 }
 
 function renderStudentRow(tr, item) {

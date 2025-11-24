@@ -19,7 +19,15 @@
       <h2>Members</h2>
     </div>
     <div id="panel-content-members" class="panel-content hidden">
-      <button class="btn btn-secondary btn-show-add-form">Add Member</button>
+      <div class="panel-actions-bar">
+        <button class="btn btn-secondary btn-show-add-form">Add Member</button>
+
+        <button id="btn-export-project-emails" class="btn btn-icon" title="Copy Email List">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+            </svg>
+        </button>
+      </div>
       <form class="item-add-form hidden">
         <fieldset>
           <label>Role:
@@ -40,6 +48,29 @@
           </div>
         </fieldset>
       </form>
+
+      <div class="panel-filters">
+          <label>Status:
+            <select id="filter-members-status">
+              <option value="true" selected>Active Members</option>
+              <option value="">All Members</option>
+              <option value="false">Inactive Members</option>
+            </select>
+          </label>
+          <label>Role:
+            <select id="filter-members-pi">
+              <option value="">All</option>
+              <option value="true">Principal Investigators Only</option>
+            </select>
+          </label>
+          <label>Contact:
+            <select id="filter-members-contact">
+              <option value="">All</option>
+              <option value="true">Contact Persons Only</option>
+            </select>
+          </label>
+      </div>
+
       <div class="list-container">
         <table class="data-table"><thead></thead><tbody></tbody></table>
       </div>

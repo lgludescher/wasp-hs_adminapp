@@ -195,7 +195,7 @@ function renderRoleRow(r) {
   return `
     <tr data-role-id="${id}" data-sub-type="${subType}" data-sub-id="${subId}">
       <td>
-        <a href="/manage-${subType}/${subId}/" class="go-role-btn">Go to Role</a>
+        <a href="/manage-${subType}/${subId}/" class="go-role-btn">Go to Profile</a>
       </td>
       <td>${ROLE_DISPLAY[r.role.id] || r.role.role}</td>
       <td>${r.start_date?.split('T')[0] || ''}</td>
@@ -363,7 +363,7 @@ function startEditRole(row, personId) {
 
   row.innerHTML = `
     <td>
-      <a href="/manage-${subType}/${subId}/" class="go-role-btn">Go to Role</a>
+      <a href="/manage-${subType}/${subId}/" class="go-role-btn">Go to Profile</a>
     </td>
     <td>${roleName}</td>
     <td><input name="start_date" type="date" value="${row.cells[2].textContent}" /></td>

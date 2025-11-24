@@ -2171,7 +2171,13 @@ def remove_field_from_project(db: Session, project_id: int, field_id: int):
 
 
 # --- people roles for a project ---
-def get_project_people_roles(db: Session, project_id: int) -> list[models.PersonProject]:
+def get_project_people_roles(
+        db: Session,
+        project_id: int,
+        is_active: Optional[bool] = None,
+        is_principal_investigator: Optional[bool] = None,
+        is_contact_person: Optional[bool] = None
+) -> list[models.PersonProject]:
     # ensure project exists
     project = get_project(db, project_id)
     if not project:
@@ -2181,26 +2187,39 @@ def get_project_people_roles(db: Session, project_id: int) -> list[models.Person
         db.query(models.PersonProject)
         .filter_by(project_id=project_id)
         .join(
-              models.PersonRole,
-              models.PersonProject.person_role_id == models.PersonRole.id
+            models.PersonRole,
+            models.PersonProject.person_role_id == models.PersonRole.id
         )
         .join(
-              models.Person,
-              models.PersonRole.person_id == models.Person.id
-        )
-        .order_by(
-              models.PersonProject.is_active.desc(),
-              # principal investigators first
-              models.PersonProject.is_principal_investigator.desc(),
-              # then leaders
-              # models.PersonProject.is_leader.desc(),
-              # then contact persons
-              models.PersonProject.is_contact_person.desc(),
-              # then alphabetical by person name
-              models.Person.first_name,
-              models.Person.last_name,
+            models.Person,
+            models.PersonRole.person_id == models.Person.id
         )
     )
+
+    # --- Apply Filters ---
+    if is_active is not None:
+        q = q.filter(models.PersonProject.is_active == is_active)
+
+    if is_principal_investigator is not None:
+        q = q.filter(models.PersonProject.is_principal_investigator == is_principal_investigator)
+
+    if is_contact_person is not None:
+        q = q.filter(models.PersonProject.is_contact_person == is_contact_person)
+
+    # --- Apply Ordering ---
+    q = q.order_by(
+        models.PersonProject.is_active.desc(),
+        # principal investigators first
+        models.PersonProject.is_principal_investigator.desc(),
+        # then leaders (commented out in original)
+        # models.PersonProject.is_leader.desc(),
+        # then contact persons
+        models.PersonProject.is_contact_person.desc(),
+        # then alphabetical by person name
+        models.Person.first_name,
+        models.Person.last_name,
+    )
+
     return q.all()  # type: ignore
 
 
