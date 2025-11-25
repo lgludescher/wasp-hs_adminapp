@@ -212,6 +212,9 @@ class CourseRead(CourseBase):
     id:        int
     course_term: Optional[CourseTermRead] = None
     grad_school_activity: Optional[GradSchoolActivityRead] = None
+
+    student_count: int = 0
+
     model_config = ConfigDict(from_attributes=True)
 
 

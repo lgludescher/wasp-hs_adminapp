@@ -2,7 +2,7 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session, selectinload, joinedload, aliased
 from . import models, schemas
 from typing import Optional, List, Union
-from sqlalchemy import case, desc, and_, or_, select
+from sqlalchemy import func, case, desc, and_, or_, select
 from sqlalchemy import cast, String
 from .models import Season, CourseTerm, GradSchoolActivity, EntityType, GradeType, ActivityType
 from sqlalchemy.exc import NoResultFound
@@ -554,7 +554,20 @@ def list_courses(db: Session, title: Optional[str] = None, term_id: Optional[int
                  teacher_role_id: Optional[int] = None,
                  search: Optional[str] = None):
 
-    q = db.query(models.Course)
+    # --- CHANGE 1: Define the subquery for the count ---
+    # This selects the count of student IDs where the course_id matches the parent query
+    student_count_sub = (
+        db.query(func.count(models.PhDStudentCourse.phd_student_id))
+        .filter(models.PhDStudentCourse.course_id == models.Course.id)
+        .correlate(models.Course)
+        .label("student_count")
+    )
+
+    # --- CHANGE 2: Add the subquery to the main selection ---
+    # Instead of just models.Course, ask for (models.Course, student_count_sub)
+    q = db.query(models.Course, student_count_sub)
+
+    # q = db.query(models.Course)
 
     if title is not None:
         q = q.filter_by(title=title)
@@ -624,7 +637,21 @@ def list_courses(db: Session, title: Optional[str] = None, term_id: Optional[int
         desc(season_ordering)
     )
 
-    return q.all()  # type: ignore
+    # --- CHANGE 3: Process the results ---
+    # q.all() now returns a list of tuples: [(CourseObject, 5), (CourseObject, 0), ...]
+    # Need to attach the integer to the object so Pydantic picks it up.
+
+    results = q.all()
+
+    final_list = []
+    for course_obj, count_val in results:
+        # We manually attach the count to the object.
+        # Since 'student_count' is in your Pydantic Schema, it will read this attribute.
+        course_obj.student_count = count_val
+        final_list.append(course_obj)
+
+    # return q.all()  # type: ignore
+    return final_list
 
 
 def create_course(db: Session, c_in: schemas.CourseCreate):

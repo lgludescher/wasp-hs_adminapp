@@ -535,10 +535,11 @@ def export_courses_to_excel(
         data_to_export.append({
             "Title": course.title,
             "Term": term_label,
+            "Students": getattr(course, "student_count", 0),
             "Credits": course.credit_points
         })
 
-    headers = ["Title", "Term", "Credits"]
+    headers = ["Title", "Term", "Students", "Credits"]
 
     # --- 4. PASS THE FILTERS TO THE GENERATOR ---
     excel_buffer = generate_excel_response(

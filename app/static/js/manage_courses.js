@@ -102,7 +102,8 @@ function renderTable(list) {
       <td class="cell-go">${goLink}</td>
       <td>${item.title}</td>
       <td>${termLabel}</td>
-      <td>${credits}</td>
+      <td style="text-align: center;">${item.student_count ?? 0}</td>
+      <td style="text-align: center;">${credits}</td>
       <td class="cell-actions">
         <button class="btn edit-btn">Edit</button>
         <button class="btn remove-btn">Remove</button>
@@ -151,6 +152,9 @@ function startEdit(tr, item) {
     </td>
     <td><input name="title" value="${item.title}" /></td>
     <td>${termCellHtml}</td>
+    <td style="text-align: center; color: #777;">
+        ${item.student_count ?? 0}
+    </td>
     <td><input name="credit_points" type="number" value="${item.credit_points||0}" min="0" /></td>
     <td class="cell-actions">
       <button class="btn save-btn">Save</button>
