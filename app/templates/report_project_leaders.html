@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/report_project_leaders.css') }}" />
+  <script type="module" src="{{ url_for('static', path='js/report_project_leaders.js') }}"></script>
+{% endblock %}
+
+{% block body %}
+  <div class="page-header">
+    <h1 class="page-title">Project Leaders Report</h1>
+    <div class="export-group">
+      <button id="btn-export-excel" class="btn btn-icon" title="Export to Excel">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.17v6h5V9h3.17L12 2z"/>
+        </svg>
+      </button>
+
+      <button id="btn-export-emails" class="btn btn-icon" title="Copy Email List">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+          </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="actions-bar">
+    <div class="report-controls">
+
+      <div class="filter-row">
+        <span class="filter-group-label">Person Criteria</span>
+        <div class="filters">
+          <label>Search:
+            <input id="filter-search" type="text" placeholder="Search person..." />
+          </label>
+
+          <label>Status:
+            <select id="filter-person-status">
+              <option value="true" selected>Active People</option>
+              <option value="">All People</option>
+              <option value="false">Inactive People</option>
+            </select>
+          </label>
+
+          <label>Role:
+            <select id="filter-person-role">
+              <option value="">All roles</option>
+              </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <span class="filter-group-label">Project Role</span>
+        <div class="filters">
+          <label>Type:
+            <select id="filter-membership-role">
+              <option value="">All Leaders</option>
+              <option value="pi">Principal Investigators Only</option>
+              <option value="contact">Contact Persons Only</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <span class="filter-group-label">Project Scope</span>
+        <div class="filters">
+          <label>Call Type:
+            <select id="filter-call-type">
+              <option value="">All Call Types</option>
+              </select>
+          </label>
+
+          <label>Project Status:
+            <select id="filter-project-status">
+              <option value="ongoing" selected>Ongoing Projects</option>
+              <option value="">All Projects</option>
+              <option value="awaiting_report">Awaiting Report</option>
+              <option value="completed">Completed</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="list-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th></th> <th class="cell-center">PI?</th>
+          <th class="cell-center">Contact Person?</th>
+          <th>Role</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+        </tr>
+      </thead>
+      <tbody id="leaders-tbody">
+        </tbody>
+    </table>
+  </div>
+
+  <div id="modal-confirm" class="modal hidden">
+    <div class="modal-content">
+      <p id="modal-text"></p>
+      <div class="modal-actions">
+        <button id="modal-confirm-btn" class="btn hidden">Confirm</button>
+        <button id="modal-cancel-btn" class="btn cancel-btn">OK</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}

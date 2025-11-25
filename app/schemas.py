@@ -681,6 +681,9 @@ class ProjectPersonRoleRead(BaseModel):
     is_contact_person: bool
     is_active: bool
 
+    person_role: PersonRoleReadFull
+    project: ProjectRead
+
     model_config = ConfigDict(from_attributes=True)
 
 

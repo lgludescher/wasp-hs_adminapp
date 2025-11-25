@@ -343,13 +343,24 @@ async def manage_grad_school_activity_page(
     )
 
 
-@app.get("/reports/supervisors/", response_class=HTMLResponse)
+@app.get("/reports/supervisors-report/", response_class=HTMLResponse)
 async def report_supervisors_page(
     request: Request,
     current_user=Depends(get_current_user)
 ):
     return templates.TemplateResponse(
         "report_supervisors.html",
+        {"request": request}
+    )
+
+
+@app.get("/reports/project-leaders-report/", response_class=HTMLResponse)
+async def report_project_leaders_page(
+    request: Request,
+    current_user=Depends(get_current_user)
+):
+    return templates.TemplateResponse(
+        "report_project_leaders.html",
         {"request": request}
     )
 

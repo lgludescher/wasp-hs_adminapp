@@ -2185,7 +2185,16 @@ def get_project_people_roles(
 
     q = (
         db.query(models.PersonProject)
+        # --- NEW: Eager load relationships for the schema ---
+        .options(
+            # Load PersonRole -> Person
+            joinedload(models.PersonProject.person_role).joinedload(models.PersonRole.person),
+            # Load Project -> CallType (since ProjectRead includes call_type)
+            joinedload(models.PersonProject.project).joinedload(models.Project.call_type)
+        )
+        # ----------------------------------------------------
         .filter_by(project_id=project_id)
+        # Keep these explicit joins to be used for the Order By logic below
         .join(
             models.PersonRole,
             models.PersonProject.person_role_id == models.PersonRole.id
@@ -2211,14 +2220,147 @@ def get_project_people_roles(
         models.PersonProject.is_active.desc(),
         # principal investigators first
         models.PersonProject.is_principal_investigator.desc(),
-        # then leaders (commented out in original)
-        # models.PersonProject.is_leader.desc(),
         # then contact persons
         models.PersonProject.is_contact_person.desc(),
         # then alphabetical by person name
         models.Person.first_name,
         models.Person.last_name,
     )
+
+    return q.all()  # type: ignore
+
+
+def report_project_leaders(
+        db: Session,
+        *,
+        # Person Filters
+        search: Optional[str] = None,
+        is_active_person_role: Optional[bool] = None,  # True=Active, False=Inactive, None=All
+        person_role_id: Optional[int] = None,  # To filter by generic role (Researcher/Postdoc/etc)
+
+        # Project Membership Filters
+        is_pi_only: Optional[bool] = None,
+        is_contact_only: Optional[bool] = None,
+
+        # Project Filters
+        call_type_id: Optional[int] = None,
+        project_status: Optional[str] = None  # 'ongoing', 'awaiting_report', 'completed', or None (All)
+) -> List[models.PersonProject]:
+    # 1. Base Query with Eager Loading
+    # We load everything needed for the report columns to avoid N+1 queries
+    q = db.query(models.PersonProject).options(
+        joinedload(models.PersonProject.person_role).joinedload(models.PersonRole.person),
+        joinedload(models.PersonProject.person_role).joinedload(models.PersonRole.role),
+        joinedload(models.PersonProject.project).joinedload(models.Project.call_type)
+    )
+
+    # 2. Aliases Setup
+    # We alias the joined tables so we can filter on them safely
+    MemberPersonRole = aliased(models.PersonRole)
+    MemberPerson = aliased(models.Person)
+    MemberRole = aliased(models.Role)
+    TargetProject = aliased(models.Project)
+
+    # 3. Joins
+    q = q.join(MemberPersonRole, models.PersonProject.person_role)
+    q = q.join(MemberPerson, MemberPersonRole.person)
+    q = q.join(MemberRole, MemberPersonRole.role)
+    q = q.join(TargetProject, models.PersonProject.project)
+
+    # 4. HARD CONSTRAINTS
+    # Constraint A: Must be an ACTIVE member of the project (historical records excluded)
+    q = q.filter(models.PersonProject.is_active.is_(True))
+
+    # Constraint B: Must be a LEADER (PI or Contact Person)
+    # If specific filters are applied later (e.g. PI Only), this is redundant but safe.
+    # If "All" is selected, this ensures we don't list regular members.
+    q = q.filter(
+        or_(
+            models.PersonProject.is_principal_investigator.is_(True),
+            models.PersonProject.is_contact_person.is_(True)
+        )
+    )
+
+    # 5. DYNAMIC FILTERS
+
+    # --- Person Level Filters ---
+    if search:
+        term = f"%{search}%"
+        q = q.filter(
+            or_(
+                MemberPerson.first_name.ilike(term),
+                MemberPerson.last_name.ilike(term),
+            )
+        )
+
+    # Filter by Generic Role (Researcher / Postdoc / PhD Student)
+    if person_role_id is not None:
+        q = q.filter(MemberPersonRole.role_id == person_role_id)
+
+    # Filter by PersonRole Status (Active/Inactive based on dates)
+    start_of_today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    if is_active_person_role is not None:
+        if is_active_person_role:
+            q = q.filter(
+                or_(
+                    MemberPersonRole.end_date.is_(None),
+                    MemberPersonRole.end_date >= start_of_today
+                )
+            )
+        else:
+            q = q.filter(
+                and_(
+                    MemberPersonRole.end_date.isnot(None),
+                    MemberPersonRole.end_date < start_of_today
+                )
+            )
+
+    # --- Project Membership Filters ---
+    if is_pi_only:
+        q = q.filter(models.PersonProject.is_principal_investigator.is_(True))
+
+    if is_contact_only:
+        q = q.filter(models.PersonProject.is_contact_person.is_(True))
+
+    # --- Project Level Filters ---
+    if call_type_id is not None:
+        q = q.filter(TargetProject.call_type_id == call_type_id)
+
+    if project_status:
+        status_lower = project_status.lower()
+
+        if status_lower == 'ongoing':
+            q = q.filter(
+                or_(
+                    TargetProject.end_date.is_(None),
+                    TargetProject.end_date >= start_of_today
+                )
+            )
+        elif status_lower == 'awaiting_report':
+            q = q.filter(
+                and_(
+                    TargetProject.end_date.isnot(None),
+                    TargetProject.end_date < start_of_today,
+                    TargetProject.final_report_submitted.is_(False)
+                )
+            )
+        elif status_lower == 'completed':
+            q = q.filter(
+                and_(
+                    TargetProject.end_date.isnot(None),
+                    TargetProject.end_date < start_of_today,
+                    TargetProject.final_report_submitted.is_(True)
+                )
+            )
+
+    # 6. Ordering
+    # Order by Person Name to facilitate aggregation on the frontend/export
+    q = q.order_by(
+        MemberPerson.first_name,
+        MemberPerson.last_name,
+        models.PersonProject.project_id
+        )
 
     return q.all()  # type: ignore
 
@@ -2433,17 +2575,26 @@ def get_person_role_projects(db: Session, person_role_id: int) -> List[models.Pe
     if not pr:
         raise EntityNotFoundError(f"Person role #{person_role_id} not found")
 
-    # 2) build the query with a join to Project for end_date and start_date
+    # 2) build the query
     q = (
         db.query(models.PersonProject)
+          # --- NEW: Eager load relationships for the schema ---
+          .options(
+              # Load PersonRole -> Person
+              joinedload(models.PersonProject.person_role).joinedload(models.PersonRole.person),
+              # Load Project -> CallType (since ProjectRead includes call_type)
+              joinedload(models.PersonProject.project).joinedload(models.Project.call_type)
+          )
+          # ----------------------------------------------------
           .filter_by(person_role_id=person_role_id)
+          # Keep the explicit join to Project because it is used for the complex ordering logic below
           .join(models.Project, models.PersonProject.project_id == models.Project.id)
     )
 
     # 3) order by:
     #    a) active (end_date IS NULL) first
     #    b) then principal investigators
-    #    c) then leaders
+    #    c) then contact persons
     #    d) then project.start_date descending
     q = q.order_by(
         models.PersonProject.is_active.desc(),
