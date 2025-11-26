@@ -103,6 +103,9 @@ function renderTable(list) {
       <td>${item.project_number}</td>
       <td>${item.call_type.type}</td>
       <td>${item.title}</td>
+      
+      <td class="cell-center">${item.field_count ?? 0}</td>
+      
       <td>${item.start_date?.split('T')[0]||''}</td>
       <td>${item.end_date?.split('T')[0]||''}</td>
       <td class="cell-actions">
@@ -131,6 +134,9 @@ function startEdit(tr, item) {
     <td><input name="project_number" value="${item.project_number}" /></td>
     <td><select name="call_type_id"></select></td>
     <td><input name="title" value="${item.title}" /></td>
+    
+    <td class="cell-center" style="color: #888;">${item.field_count ?? 0}</td>
+    
     <td><input name="start_date" type="date" value="${item.start_date?.split('T')[0]||''}" /></td>
     <td><input name="end_date"   type="date" value="${item.end_date?.split('T')[0]||''}" /></td>
     <td class="cell-actions">

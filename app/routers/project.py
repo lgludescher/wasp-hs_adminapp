@@ -539,13 +539,17 @@ def export_projects_to_excel(
             "Project #": p.project_number,
             "Call Type": p.call_type.type,
             "Title": p.title,
+
+            # Safe access using getattr, defaulting to 0
+            "Fields": getattr(p, "field_count", 0),
+
             "Start Date": p.start_date.strftime("%Y-%m-%d") if p.start_date else "",
             "End Date": p.end_date.strftime("%Y-%m-%d") if p.end_date else "",
             "Final Report Submitted": "Yes" if p.final_report_submitted else "No",
             "Extended": "Yes" if p.is_extended else "No"
         } for p in projects
     ]
-    headers = ["Project #", "Call Type", "Title", "Start Date", "End Date", "Final Report Submitted", "Extended"]
+    headers = ["Project #", "Call Type", "Title", "Fields", "Start Date", "End Date", "Final Report Submitted", "Extended"]
 
     # --- 4. PASS THE FILTERS TO THE GENERATOR ---
     excel_buffer = generate_excel_response(

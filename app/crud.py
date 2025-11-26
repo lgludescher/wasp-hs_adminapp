@@ -910,7 +910,17 @@ def list_projects(db: Session, call_type_id: Optional[int] = None, title: Option
                   field_id: Optional[int] = None,
                   branch_id: Optional[int] = None,
                   search: Optional[str] = None):
-    q = db.query(models.Project)
+    # --- Define the subquery for the count ---
+    field_count_sub = (
+        db.query(func.count(models.ProjectField.field_id))
+        .filter(models.ProjectField.project_id == models.Project.id)
+        .correlate(models.Project)
+        .label("field_count")
+    )
+
+    # --- Select the Model PLUS the subquery ---
+    q = db.query(models.Project, field_count_sub)
+    # q = db.query(models.Project)
 
     if call_type_id is not None:
         q = q.filter_by(call_type_id=call_type_id)
@@ -1002,7 +1012,22 @@ def list_projects(db: Session, call_type_id: Optional[int] = None, title: Option
         .order_by(desc(models.Project.start_date))
     )
 
-    return q.all()  # type: ignore
+    # --- Unpack results to attach the count ---
+    results = q.all()
+    final_list = []
+
+    for row in results:
+        # row is a tuple: (ProjectObject, int_count)
+        proj_obj = row[0]
+        count_val = row[1]
+
+        # Attach the count so Pydantic sees 'field_count'
+        proj_obj.field_count = count_val or 0
+        final_list.append(proj_obj)
+
+    # return q.all()  # type: ignore
+
+    return final_list
 
 
 def create_project(db: Session, p_in: schemas.ProjectCreate):

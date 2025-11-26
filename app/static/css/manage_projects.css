@@ -131,6 +131,9 @@
 .cell-actions {
   white-space: nowrap;
 }
+.cell-center {
+  text-align: center;
+}
 
 /* “Go to project” link styled as an orange button with underline */
 .go-btn {

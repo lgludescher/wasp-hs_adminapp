@@ -303,6 +303,10 @@ class ProjectCreate(ProjectBase):
 class ProjectRead(ProjectBase):
     id:         int
     call_type:  ProjectCallTypeRead
+
+    # Represents the number of linked Academic Fields
+    field_count: int = 0
+
     model_config = ConfigDict(from_attributes=True)
 
 
