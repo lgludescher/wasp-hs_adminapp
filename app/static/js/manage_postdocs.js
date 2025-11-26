@@ -175,8 +175,8 @@ function renderHeader() {
       <th class="col-center">Cohort</th>
       <th>Mobility Status</th>
       <th class="col-center">Graduated</th>
-      <th>Start Date</th>
-      <th>End Date</th>
+      <th>&nbsp;Start&nbsp;Date&nbsp;</th>
+      <th>&nbsp;&nbsp;End&nbsp;Date&nbsp;&nbsp;</th>
       <th class="cell-actions"></th>`;
   } else {
     theadRow.innerHTML = `

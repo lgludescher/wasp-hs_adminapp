@@ -175,7 +175,7 @@ div.detail-item > strong {
     border: 1px solid transparent;
     border-radius: 4px;
     cursor: pointer;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.8rem;
     font-size: 0.9rem;
 }
 .panel-content .btn:hover,
@@ -191,6 +191,7 @@ a.go-to-btn {
   font-size: 0.85rem;
   border-radius: 4px;
   cursor: pointer;
+  white-space: nowrap;
 }
 a.go-to-btn:hover {
     opacity: 0.9;

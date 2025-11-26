@@ -163,8 +163,8 @@ async function toggleExpand(tr, person) {
             <tr>
               <th></th>
               <th>Role</th>
-              <th>Start Date</th>
-              <th>End Date</th>
+              <th>&nbsp;Start&nbsp;Date&nbsp;</th>
+              <th>&nbsp;&nbsp;End&nbsp;Date&nbsp;&nbsp;</th>
               <th>Notes</th>
               <th class="cell-actions"></th>
             </tr>

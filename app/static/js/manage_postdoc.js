@@ -292,11 +292,11 @@ async function loadProjects(panel) {
       <th class="cell-center">Active?</th>
       <th class="cell-center">PI?</th>
       <th class="cell-center">Contact Person?</th>
-      <th>Project #</th>
-      <th>Call Type</th>
+      <th>Project&nbsp;#</th>
+      <th>Call&nbsp;Type</th>
       <th>Title</th>
-      <th>Start</th>
-      <th>End</th>
+      <th>&nbsp;Start&nbsp;Date&nbsp;</th>
+      <th>&nbsp;&nbsp;End&nbsp;Date&nbsp;&nbsp;</th>
       <th></th>
     </tr>`;
   try {

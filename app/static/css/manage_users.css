@@ -121,6 +121,10 @@
 }
 
 /* Action buttons in rows */
+.manage-users-table .cell-actions {
+  white-space: nowrap;
+}
+
 .manage-users-table .cell-actions .btn {
   margin-right: 0.5rem;
   padding: 0.25rem 0.5rem;

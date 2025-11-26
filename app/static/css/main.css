@@ -128,13 +128,13 @@ body {
 /* Utility button */
 .btn {
   display: inline-block;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.8rem;
   background: var(--color-accent);
   color: var(--color-text-inverse);
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 .btn:hover {
   opacity: 0.9;
