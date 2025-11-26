@@ -14,6 +14,14 @@ const modalCancelBtn = document.getElementById('modal-cancel-btn');
 
 let currentFilter = '', pendingRemove = null;
 
+function formatCount(active, total) {
+  // Returns: "<b>12</b> <span class='count-total'>(20)</span>"
+  // Safe navigation (|| 0) handles cases where API might send null
+  const act = active || 0;
+  const tot = total || 0;
+  return `<strong>${act}</strong> <span class="count-total">(${tot})</span>`;
+}
+
 // Load & render institutions
 async function loadInstitutions() {
   const params = new URLSearchParams();
@@ -28,6 +36,11 @@ function renderTable(list) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${item.institution}</td>
+      
+      <td class="cell-center">${formatCount(item.researchers_active, item.researchers_total)}</td>
+      <td class="cell-center">${formatCount(item.phd_students_active, item.phd_students_total)}</td>
+      <td class="cell-center">${formatCount(item.postdocs_active, item.postdocs_total)}</td>
+      
       <td class="cell-actions">
         <button class="btn edit-btn">Edit</button>
         <button class="btn remove-btn">Remove</button>
@@ -47,8 +60,17 @@ function attachHandlers(tr, item) {
 }
 
 function startEdit(tr, item) {
+  const researchersHtml = formatCount(item.researchers_active, item.researchers_total);
+  const phdHtml = formatCount(item.phd_students_active, item.phd_students_total);
+  const postdocHtml = formatCount(item.postdocs_active, item.postdocs_total);
+
   tr.innerHTML = `
     <td><input name="institution" value="${item.institution}" /></td>
+    
+    <td class="cell-center" style="opacity: 0.6;">${researchersHtml}</td>
+    <td class="cell-center" style="opacity: 0.6;">${phdHtml}</td>
+    <td class="cell-center" style="opacity: 0.6;">${postdocHtml}</td>
+    
     <td class="cell-actions">
       <button class="btn save-btn">Save</button>
       <button class="btn cancel-btn">Cancel</button>

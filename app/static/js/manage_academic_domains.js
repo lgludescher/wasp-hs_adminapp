@@ -123,12 +123,16 @@ async function startEditingBranch(tr, dr, branch) {
   tr.querySelector('.cancel-branch-btn').addEventListener('click', loadBranches);
   tr.querySelector('.save-branch-btn').addEventListener('click', async () => {
     const updated = { branch: tr.querySelector('input[name="branch"]').value.trim() };
-    await apiFetch(`/branches/${branch.id}`, {
-      method: 'PUT',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(updated),
-    });
-    loadBranches();
+    try {
+      await apiFetch(`/branches/${branch.id}`, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(updated),
+      });
+      loadBranches();
+    } catch (err) {
+      showError(err.message);
+    }
   });
 }
 
@@ -166,15 +170,19 @@ function wireUpFields(dr, branchId) {
   formCreateField.onsubmit = async e => {
     e.preventDefault();
     const data = { field: formCreateField.field.value.trim(), branch_id: branchId };
-    await apiFetch('/fields/', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(data),
-    });
-    formCreateField.reset();
-    formCreateField.classList.add('hidden');
-    btnShowField.disabled = false;
-    refreshFields();
+    try {
+      await apiFetch('/fields/', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(data),
+      });
+      formCreateField.reset();
+      formCreateField.classList.add('hidden');
+      btnShowField.disabled = false;
+      refreshFields();
+    } catch (err) {
+      showError(err.message);
+    }
   };
 
   refreshFields();
@@ -211,13 +219,17 @@ function attachFieldHandlers(tr, field, branchId) {
     };
     tr.querySelector('.save-field-btn').onclick = async () => {
       const updated = { field: tr.querySelector('input[name="field"]').value.trim() };
-      await apiFetch(`/fields/${field.id}`, {
-        method: 'PUT',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(updated),
-      });
-      const dr = tr.closest('tr.branch-details-row');
-      wireUpFields(dr, branchId);
+      try {
+        await apiFetch(`/fields/${field.id}`, {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(updated),
+        });
+        const dr = tr.closest('tr.branch-details-row');
+        wireUpFields(dr, branchId);
+      } catch (err) {
+        showError(err.message);
+      }
     };
   };
 
@@ -255,11 +267,16 @@ modalConfirm.onclick = async () => {
     pendingRemove = null;
     modal.classList.remove('active');
   } catch (err) {
-    modalText.textContent = err.message;
-    modalConfirm.style.display = 'none';
-    modalCancel.textContent = 'OK';
+    showError(err.message);
   }
 };
+
+function showError(msg) {
+  modalText.textContent = msg;
+  modalConfirm.style.display = 'none';
+  modalCancel.textContent = 'OK';
+  modal.classList.add('active');
+}
 
 btnShowCreateBranch.onclick = () => {
   formCreateBranch.classList.remove('hidden');
@@ -273,15 +290,19 @@ btnCancelCreateBranch.onclick = () => {
 formCreateBranch.onsubmit = async e => {
   e.preventDefault();
   const data = { branch: formCreateBranch.branch.value.trim() };
-  await apiFetch('/branches/', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(data),
-  });
-  formCreateBranch.reset();
-  formCreateBranch.classList.add('hidden');
-  btnShowCreateBranch.disabled = false;
-  loadBranches();
+  try {
+    await apiFetch('/branches/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data),
+    });
+    formCreateBranch.reset();
+    formCreateBranch.classList.add('hidden');
+    btnShowCreateBranch.disabled = false;
+    loadBranches();
+  } catch (err) {
+    showError(err.message);
+  }
 };
 
 branchSearchInput.oninput = () => {

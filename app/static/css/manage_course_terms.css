@@ -1,5 +1,5 @@
 .manage-course-terms {
-  max-width: 900px;
+  max-width: 500px;
   margin: 0 auto;
 }
 .manage-course-terms h1 {
@@ -40,6 +40,10 @@
 /* Inline-edit checkbox */
 .terms-table input[type="checkbox"] {
   transform: scale(1.2);
+}
+
+.cell-actions {
+  white-space: nowrap;
 }
 
 /* Row action buttons */

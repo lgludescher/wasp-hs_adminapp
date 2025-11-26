@@ -84,17 +84,112 @@ def get_institution(db: Session, institution_id: int):
     return db.query(models.Institution).filter_by(id=institution_id).first()
 
 
+# def get_institutions(db: Session, name: Optional[str] = None, search: Optional[str] = None):
+#     q = db.query(models.Institution)
+#     if name is not None:
+#         # exact‐match lookup for duplicate‐check
+#         return q.filter_by(institution=name).first()
+#
+#     if search:
+#         term = f"%{search}%"
+#         q = q.filter(models.Institution.institution.ilike(term))
+#
+#     return q.order_by(models.Institution.institution).all()
+
+
 def get_institutions(db: Session, name: Optional[str] = None, search: Optional[str] = None):
-    q = db.query(models.Institution)
+    # --- 1. FAST PATH: DUPLICATE CHECK ---
     if name is not None:
-        # exact‐match lookup for duplicate‐check
-        return q.filter_by(institution=name).first()
+        return db.query(models.Institution).filter_by(institution=name).first()
+
+    # --- 2. SETUP DATE LOGIC FOR LIST VIEW ---
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    def is_active_clause(column):
+        """Returns SQLAlchemy clause: Column is None OR Column >= Today"""
+        return or_(column.is_(None), column >= today)
+
+    # --- 3. DEFINE SUBQUERY HELPER ---
+    def make_count_subquery(role_type_enum, active_only: bool):
+        # Start counting entries in the Link table
+        sq = db.query(func.count(models.PersonInstitution.institution_id))
+
+        # Join Link -> PersonRole
+        sq = sq.join(
+            models.PersonRole,
+            models.PersonInstitution.person_role_id == models.PersonRole.id
+        )
+        # Join PersonRole -> Role (to filter by Researcher/PhD/Postdoc)
+        sq = sq.join(
+            models.Role,
+            models.PersonRole.role_id == models.Role.id
+        )
+
+        # Filter 1: Match the specific Role Type (Researcher, PhD, etc.)
+        sq = sq.filter(models.Role.role == role_type_enum)
+
+        # Filter 2: Correlate with the main Institution query
+        sq = sq.filter(models.PersonInstitution.institution_id == models.Institution.id)
+        sq = sq.correlate(models.Institution)
+
+        # Filter 3: Active Status (Only if requested)
+        if active_only:
+            sq = sq.filter(
+                and_(
+                    # The PersonRole itself must be active
+                    is_active_clause(models.PersonRole.end_date),
+                    # AND the Link to the institution must be active
+                    is_active_clause(models.PersonInstitution.end_date)
+                )
+            )
+
+        return sq.scalar_subquery()
+
+    # --- 4. BUILD SUBQUERIES ---
+    res_active = make_count_subquery(models.RoleType.RESEARCHER, active_only=True)
+    res_total = make_count_subquery(models.RoleType.RESEARCHER, active_only=False)
+
+    phd_active = make_count_subquery(models.RoleType.PHD_STUDENT, active_only=True)
+    phd_total = make_count_subquery(models.RoleType.PHD_STUDENT, active_only=False)
+
+    doc_active = make_count_subquery(models.RoleType.POSTDOC, active_only=True)
+    doc_total = make_count_subquery(models.RoleType.POSTDOC, active_only=False)
+
+    # --- 5. MAIN QUERY ---
+    q = db.query(
+        models.Institution,
+        res_active, res_total,
+        phd_active, phd_total,
+        doc_active, doc_total
+    )
 
     if search:
         term = f"%{search}%"
         q = q.filter(models.Institution.institution.ilike(term))
 
-    return q.order_by(models.Institution.institution).all()
+    q = q.order_by(models.Institution.institution)
+
+    # --- 6. UNPACK RESULTS ---
+    results = q.all()
+
+    final_list = []
+    # The result is a tuple: (Institution, int, int, int, int, int, int)
+    for row in results:
+        inst_obj = row[0]
+
+        # Attach the counts to the object so the Schema reads them
+        inst_obj.researchers_active = row[1] or 0
+        inst_obj.researchers_total = row[2] or 0
+
+        inst_obj.phd_students_active = row[3] or 0
+        inst_obj.phd_students_total = row[4] or 0
+
+        inst_obj.postdocs_active = row[5] or 0
+        inst_obj.postdocs_total = row[6] or 0
+
+        final_list.append(inst_obj)
+
+    return final_list
 
 
 def create_institution(db: Session, inst_in: schemas.InstitutionCreate):
@@ -120,6 +215,9 @@ def delete_institution(db: Session, institution_id: int):
     db_inst = get_institution(db, institution_id)
     if not db_inst:
         raise EntityNotFoundError(f"Institution #{institution_id} not found")
+    # only if no related sub-entities
+    if db_inst.person_institutions or db_inst.course_institutions:
+        raise Exception("Cannot delete institution with linked entities")
     db.delete(db_inst)
     db.commit()
 
@@ -224,6 +322,9 @@ def delete_field(db: Session, field_id: int):
     db_field = get_field(db, field_id)
     if not db_field:
         raise EntityNotFoundError(f"Field #{field_id} not found")
+    # only if no related sub-entities
+    if db_field.person_fields or db_field.project_fields:
+        raise Exception("Cannot delete field with linked entities")
     db.delete(db_field)
     db.commit()
 

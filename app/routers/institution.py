@@ -96,9 +96,9 @@ def delete_institution(
 
 @router.get("/export/institutions.xlsx")
 def export_institutions_to_excel(
-    search: Optional[str] = Query(None, description="Substring search on name"),
-    db: Session = Depends(dependencies.get_db),
-    current_user=Depends(dependencies.get_current_user),
+        search: Optional[str] = Query(None, description="Substring search on name"),
+        db: Session = Depends(dependencies.get_db),
+        current_user=Depends(dependencies.get_current_user),
 ):
     """
     Export a list of institutions to an Excel file, applying the same
@@ -107,6 +107,7 @@ def export_institutions_to_excel(
     logger.info(f"{current_user.username} exporting institutions (search={search!r})")
 
     # Reuse the same CRUD function to get the filtered data
+    # This now returns objects with .researchers_active, .researchers_total, etc. attached
     institutions = crud.get_institutions(db, search=search)
 
     # --- 1. BUILD THE FILTER INFO LIST ---
@@ -114,18 +115,38 @@ def export_institutions_to_excel(
     if search:
         filter_info.append(f"Search: {search}")
 
-    # Prepare the data in the desired format (list of dicts)
-    data_to_export = [
-        {"Institution Name": inst.institution} for inst in institutions
-    ]
-    headers = ["Institution Name"]
+    # --- 2. PREPARE DATA WITH SEPARATE COLUMNS ---
+    data_to_export = []
+    for inst in institutions:
+        data_to_export.append({
+            "Institution Name": inst.institution,
 
-    # --- 2. PASS THE FILTERS TO THE GENERATOR ---
+            # Researchers
+            "Researchers (Active)": getattr(inst, "researchers_active", 0),
+            "Researchers (Total)": getattr(inst, "researchers_total", 0),
+
+            # PhD Students
+            "PhD Students (Active)": getattr(inst, "phd_students_active", 0),
+            "PhD Students (Total)": getattr(inst, "phd_students_total", 0),
+
+            # Postdocs
+            "Postdocs (Active)": getattr(inst, "postdocs_active", 0),
+            "Postdocs (Total)": getattr(inst, "postdocs_total", 0),
+        })
+
+    headers = [
+        "Institution Name",
+        "Researchers (Active)", "Researchers (Total)",
+        "PhD Students (Active)", "PhD Students (Total)",
+        "Postdocs (Active)", "Postdocs (Total)"
+    ]
+
+    # --- 3. PASS THE FILTERS TO THE GENERATOR ---
     excel_buffer = generate_excel_response(
         data_to_export,
         headers,
         "Institutions",
-        filter_info=filter_info  # Pass the list here
+        filter_info=filter_info
     )
 
     # Return the file as a downloadable response

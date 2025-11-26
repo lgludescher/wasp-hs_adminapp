@@ -50,6 +50,18 @@ class InstitutionCreate(InstitutionBase):
 class InstitutionRead(InstitutionBase):
     id: int
 
+    # Researchers
+    researchers_active: int = 0
+    researchers_total: int = 0
+
+    # PhD Students
+    phd_students_active: int = 0
+    phd_students_total: int = 0
+
+    # Postdocs
+    postdocs_active: int = 0
+    postdocs_total: int = 0
+
     model_config = ConfigDict(from_attributes=True)
 
 
