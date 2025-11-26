@@ -141,9 +141,10 @@
 
 /* Row action buttons: wrap & gap */
 .cell-actions {
-  display: flex;
+  /* display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.5rem; */
+  white-space: nowrap;
 }
 .cell-actions .btn {
   padding: 0.25rem 0.5rem;

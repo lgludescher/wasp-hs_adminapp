@@ -121,6 +121,9 @@
   border-bottom: 1px solid #eee;
   vertical-align: middle;
 }
+.cell-actions {
+  white-space: nowrap;
+}
 .cell-actions .btn {
   margin-right: 0.5rem;
   padding: 0.25rem 0.5rem;

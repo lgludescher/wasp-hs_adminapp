@@ -38,10 +38,11 @@
 /* Actions bar */
 .actions-bar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-wrap: nowrap;
+  align-items: flex-end;
   justify-content: space-between;
   margin-bottom: 1rem;
+  gap: 1rem;
 }
 
 /* Filters */
