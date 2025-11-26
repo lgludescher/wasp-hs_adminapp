@@ -480,3 +480,102 @@ def export_project_leaders_emails(
 
 
 # </editor-fold>
+
+# <editor-fold desc="Report Semester Abroad endpoints">
+# --- Semester Abroad ---
+
+@router.get(
+    "/reports/semester-abroad-data/",
+    response_model=List[schemas.StudentActivityReportRead],
+    summary="Search and Filter Semester Abroad Activities"
+)
+def get_semester_abroad_report(
+        is_active_student: Optional[bool] = Query(None, description="Filter by active status of the PhD Student"),
+        activity_status: Optional[str] = Query(None, description="Filter by Activity Status (ongoing, completed)"),
+
+        db: Session = Depends(dependencies.get_db),
+        current_user=Depends(dependencies.get_current_user),
+):
+    """
+    Generates a list of Semester Abroad activities.
+    One row per activity.
+    """
+    logger.info(f"{current_user.username} accessing semester abroad report")
+
+    return crud.report_semester_abroad(
+        db,
+        is_active_student=is_active_student,
+        activity_status=activity_status
+    )
+
+
+@router.get("/reports/semester-abroad-data/export/excel")
+def export_semester_abroad_to_excel(
+        is_active_student: Optional[bool] = Query(None),
+        activity_status: Optional[str] = Query(None),
+
+        db: Session = Depends(dependencies.get_db),
+        current_user=Depends(dependencies.get_current_user),
+):
+    """
+    Export the Semester Abroad Report to Excel.
+    """
+    logger.info(f"{current_user.username} exporting semester abroad report to Excel")
+
+    # 1. Fetch Data
+    activities = crud.report_semester_abroad(
+        db,
+        is_active_student=is_active_student,
+        activity_status=activity_status
+    )
+
+    # 2. Build Filter Summary
+    filter_info = []
+    if is_active_student is not None:
+        filter_info.append(f"Student Status: {'Active' if is_active_student else 'Inactive'}")
+
+    if activity_status:
+        # Prettify string (e.g. 'ongoing' -> 'Ongoing')
+        filter_info.append(f"Activity Status: {activity_status.title()}")
+
+    # 3. Format Data
+    data_to_export = []
+    for act in activities:
+        # Navigate relationships: Activity -> Student -> PersonRole -> Person
+        student = act.student
+        person = student.person_role.person
+
+        data_to_export.append({
+            "Host Institution": act.host_institution or "",
+            "City": act.city or "",
+            "Country": act.country or "",
+            "Description": act.description or "",
+            "PhD Student": f"{person.first_name} {person.last_name}",
+            "Email": person.email,
+            "Start Date": act.start_date.strftime("%Y-%m-%d") if act.start_date else "",
+            "End Date": act.end_date.strftime("%Y-%m-%d") if act.end_date else ""
+        })
+
+    headers = ["Host Institution", "City", "Country", "Description", "PhD Student", "Email", "Start Date", "End Date"]
+
+    # 4. Generate and Return
+    excel_buffer = generate_excel_response(
+        data_to_export,
+        headers,
+        "Semester Abroad Report",
+        filter_info=filter_info
+    )
+
+    # filename = f"semester_abroad_report_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    filename = f"semester_abroad_report.xlsx"
+
+    return StreamingResponse(
+        excel_buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+
+# </editor-fold>

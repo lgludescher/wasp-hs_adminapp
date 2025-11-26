@@ -1839,6 +1839,80 @@ def list_student_activities(
     return q.all()  # type: ignore
 
 
+def report_semester_abroad(
+        db: Session,
+        *,
+        is_active_student: Optional[bool] = None,
+        activity_status: Optional[str] = None
+) -> List[models.AbroadStudentActivity]:
+    # 1. Base Query: Target the specific Subclass
+    # We query AbroadStudentActivity directly to access start_date, end_date, etc.
+    q = db.query(models.AbroadStudentActivity).options(
+        # Eager load the inherited 'student' relationship and the person chain
+        joinedload(models.AbroadStudentActivity.student)
+        .joinedload(models.PhDStudent.person_role)
+        .joinedload(models.PersonRole.person)
+    )
+
+    # 2. Joins for filtering/sorting by Student details
+    # We join from the subclass -> PhDStudent -> PersonRole -> Person
+    q = q.join(models.PhDStudent, models.AbroadStudentActivity.phd_student_id == models.PhDStudent.id)
+    q = q.join(models.PersonRole, models.PhDStudent.person_role_id == models.PersonRole.id)
+    q = q.join(models.Person, models.PersonRole.person_id == models.Person.id)
+
+    # 3. Filters
+    start_of_today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # --- Student Status Filter ---
+    if is_active_student is not None:
+        if is_active_student:
+            q = q.filter(
+                or_(
+                    models.PersonRole.end_date.is_(None),
+                    models.PersonRole.end_date >= start_of_today
+                )
+            )
+        else:
+            q = q.filter(
+                and_(
+                    models.PersonRole.end_date.isnot(None),
+                    models.PersonRole.end_date < start_of_today
+                )
+            )
+
+    # --- Activity Status Filter (Using subclass columns) ---
+    if activity_status:
+        status_lower = activity_status.lower()
+
+        if status_lower == 'ongoing':
+            # Ongoing = End Date is in the future OR End Date is undefined
+            q = q.filter(
+                or_(
+                    models.AbroadStudentActivity.end_date.is_(None),
+                    models.AbroadStudentActivity.end_date >= start_of_today
+                )
+            )
+        elif status_lower == 'completed':
+            # Completed = End Date is in the past
+            q = q.filter(
+                and_(
+                    models.AbroadStudentActivity.end_date.isnot(None),
+                    models.AbroadStudentActivity.end_date < start_of_today
+                )
+            )
+
+    # 4. Ordering
+    # Start Date (Desc) -> Host (Asc) -> Student Name (Asc)
+    q = q.order_by(
+        desc(models.AbroadStudentActivity.start_date),
+        models.AbroadStudentActivity.host_institution,
+        models.Person.first_name,
+        models.Person.last_name
+        )
+
+    return q.all()  # type: ignore
+
+
 def create_grad_school_student_activity(
     db: Session,
     stu_id: int,
@@ -1993,9 +2067,13 @@ def update_student_activity(
         # Only update whichever fields the payload provided
         if getattr(in_data, "description", None) is not None:
             abs_row.description = in_data.description
-        if getattr(in_data, "start_date", None) is not None:
+        # if getattr(in_data, "start_date", None) is not None:
+        #     abs_row.start_date = in_data.start_date
+        # if getattr(in_data, "end_date", None) is not None:
+        #     abs_row.end_date = in_data.end_date
+        if hasattr(in_data, "start_date"):
             abs_row.start_date = in_data.start_date
-        if getattr(in_data, "end_date", None) is not None:
+        if hasattr(in_data, "end_date"):
             abs_row.end_date = in_data.end_date
         if getattr(in_data, "city", None) is not None:
             abs_row.city = in_data.city

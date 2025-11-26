@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/report_semester_abroad.css') }}" />
+  <script type="module" src="{{ url_for('static', path='js/report_semester_abroad.js') }}"></script>
+{% endblock %}
+
+{% block body %}
+  <div class="page-header">
+    <h1 class="page-title">Semester Abroad Report</h1>
+    <div class="export-group">
+      <button id="btn-export-excel" class="btn btn-icon" title="Export to Excel">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.17v6h5V9h3.17L12 2z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="actions-bar">
+    <div class="report-controls">
+
+      <div class="filter-row">
+        <span class="filter-group-label">Student Scope</span>
+        <div class="filters">
+          <label>Student Status:
+            <select id="filter-student-status">
+              <option value="">All Students</option>
+              <option value="true" selected>Active Students</option>
+              <option value="false">Inactive Students</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <span class="filter-group-label">Activity Scope</span>
+        <div class="filters">
+          <label>Activity Status:
+            <select id="filter-activity-status">
+              <option value="" selected>All Activities</option>
+              <option value="ongoing">Ongoing</option>
+              <option value="completed">Completed</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="list-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th></th> <th>Host Institution</th>
+          <th>City</th>
+          <th>Country</th>
+          <th>PhD Student</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+        </tr>
+      </thead>
+      <tbody id="abroad-tbody">
+        </tbody>
+    </table>
+  </div>
+
+  <div id="modal-confirm" class="modal hidden">
+    <div class="modal-content">
+      <p id="modal-text"></p>
+      <div class="modal-actions">
+        <button id="modal-confirm-btn" class="btn hidden">Confirm</button>
+        <button id="modal-cancel-btn" class="btn cancel-btn">OK</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}

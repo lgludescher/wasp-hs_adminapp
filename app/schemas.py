@@ -636,6 +636,13 @@ class StudentActivityRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class StudentActivityReportRead(StudentActivityRead):
+    # Nest the student details so the report gets Names/Emails in one query
+    student: PhDStudentRead
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # </editor-fold>
 
 # <editor-fold desc="Course relationships entities">
