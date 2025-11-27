@@ -7,6 +7,7 @@ const FIELDS_ENDPOINT       = '/fields/';
 const TITLE_ENDPOINT        = '/researcher-titles/';
 
 // Controls
+const postdocTotalCount = document.getElementById('postdoc-total-count');
 const filterSearch      = document.getElementById('filter-search');
 const filterActive      = document.getElementById('filter-active');
 const filterCohort      = document.getElementById('filter-cohort');
@@ -191,6 +192,8 @@ function renderHeader() {
 }
 
 function renderTable(list) {
+  postdocTotalCount.textContent = `(${list.length})`;
+
   tbody.innerHTML = '';
   list.forEach(item => {
     const pr = item.person_role;

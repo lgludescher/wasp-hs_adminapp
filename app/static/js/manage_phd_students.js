@@ -5,6 +5,7 @@ const INSTITUTIONS_ENDPOINT = '/institutions/';
 const BRANCHES_ENDPOINT     = '/branches/';
 const FIELDS_ENDPOINT       = '/fields/';
 
+const phdStudentTotalCount = document.getElementById('phd-student-total-count');
 const filterSearch      = document.getElementById('filter-search');
 const filterActive      = document.getElementById('filter-active');
 const filterCohort      = document.getElementById('filter-cohort');
@@ -189,6 +190,8 @@ function renderHeader() {
 }
 
 function renderTable(list) {
+  phdStudentTotalCount.textContent = `(${list.length})`;
+
   tbody.innerHTML = '';
   list.forEach(item => {
     const pr   = item.person_role;

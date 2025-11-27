@@ -1,5 +1,6 @@
 import { apiFetch } from './main.js';
 
+const termTotalCount = document.getElementById('term-total-count');
 const btnAddNext          = document.getElementById('btn-add-next');
 const btnRemoveMostRecent = document.getElementById('btn-remove-most-recent');
 const tbody               = document.getElementById('terms-tbody');
@@ -23,6 +24,8 @@ async function loadTerms() {
 }
 
 function renderTable(list) {
+  termTotalCount.textContent = `(${list.length})`;
+
   tbody.innerHTML = '';
   list.forEach(item => {
     const label = `${item.season} ${item.year}`;

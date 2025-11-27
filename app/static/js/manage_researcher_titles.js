@@ -1,5 +1,6 @@
 import { apiFetch } from './main.js';
 
+const researcherTitleTotalCount = document.getElementById('researcher-title-total-count');
 const searchInput    = document.getElementById('title-search');
 const btnShowCreate  = document.getElementById('btn-show-create');
 const formCreate     = document.getElementById('form-create');
@@ -27,6 +28,8 @@ async function loadTitles() {
 }
 
 function renderTable(list) {
+  researcherTitleTotalCount.textContent = `(${list.length})`;
+
   tbody.innerHTML = '';
   list.forEach(item => {
     const tr = document.createElement('tr');

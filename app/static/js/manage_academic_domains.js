@@ -1,5 +1,6 @@
 import { apiFetch } from './main.js';
 
+const branchTotalCount = document.getElementById('branch-total-count');
 const branchSearchInput     = document.getElementById('branch-search');
 const btnShowCreateBranch   = document.getElementById('btn-show-create-branch');
 const formCreateBranch      = document.getElementById('form-create-branch');
@@ -27,6 +28,8 @@ async function loadBranches() {
 }
 
 function renderBranches(branches) {
+  branchTotalCount.textContent = `(${branches.length})`;
+
   branchesTbody.innerHTML = '';
   branches.forEach(branch => {
     const tr = document.createElement('tr');

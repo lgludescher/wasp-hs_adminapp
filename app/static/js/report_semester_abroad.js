@@ -3,6 +3,8 @@ import { apiFetch, openEmailListModal } from './main.js';
 // --- Endpoints ---
 const REPORT_ENDPOINT = '/reports/semester-abroad-data/';
 
+const activityTotalCount = document.getElementById('activity-total-count');
+
 // --- DOM Elements ---
 // Filters
 const filterStudentStatus  = document.getElementById('filter-student-status');
@@ -58,6 +60,8 @@ async function loadReport() {
 }
 
 function renderTable(list) {
+    activityTotalCount.textContent = `(${list.length})`;
+
     tbody.innerHTML = '';
 
     if (list.length === 0) {

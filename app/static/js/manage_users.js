@@ -1,5 +1,6 @@
 import { apiFetch, APP_CONFIG } from './main.js';
 
+const userTotalCount = document.getElementById('user-total-count');
 const searchInput   = document.getElementById('user-search');
 const filterSelect  = document.getElementById('filter-admin');
 const btnShowCreate = document.getElementById('btn-show-create');
@@ -27,6 +28,8 @@ async function loadUsers() {
 
 // Build the table rows
 function renderTable(users) {
+  userTotalCount.textContent = `(${users.length})`;
+
   usersTbody.innerHTML = '';
   users.forEach(user => {
     const tr = document.createElement('tr');

@@ -1,5 +1,6 @@
 import { apiFetch } from './main.js';
 
+const gsaTotalCount = document.getElementById('gsa-total-count');
 const filterTypeSelect  = document.getElementById('filter-activity-type');
 const filterYearInput   = document.getElementById('filter-year');
 const btnShowCreate     = document.getElementById('btn-show-create');
@@ -53,6 +54,8 @@ async function loadActivities() {
 }
 
 function renderTable(list) {
+  gsaTotalCount.textContent = `(${list.length})`;
+
   tbody.innerHTML = '';
   list.forEach(item => {
     const goLink = `<a class="btn go-btn" href="/manage-grad-school-activities/${item.id}/">Go to activity</a>`;

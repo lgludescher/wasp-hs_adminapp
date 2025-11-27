@@ -6,6 +6,7 @@ const ROLE_DISPLAY = {
   3: 'Postdoc'
 };
 
+const personTotalCount = document.getElementById('person-total-count');
 const filterSearch    = document.getElementById('filter-search');
 const btnShowCreate   = document.getElementById('btn-show-create');
 const formCreate      = document.getElementById('form-create');
@@ -53,6 +54,8 @@ async function loadPeople() {
 
 /** Render main table */
 function renderTable(list) {
+  personTotalCount.textContent = `(${list.length})`;
+
   tbody.innerHTML = '';
   list.forEach(person => {
     const tr = document.createElement('tr');

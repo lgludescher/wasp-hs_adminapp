@@ -1,5 +1,6 @@
 import { apiFetch } from './main.js';
 
+const courseTotalCount = document.getElementById('course-total-count');
 const filterSearch      = document.getElementById('filter-search');
 const filterTerm        = document.getElementById('filter-term');
 const filterActivity    = document.getElementById('filter-activity');
@@ -87,6 +88,8 @@ async function loadCourses() {
 }
 
 function renderTable(list) {
+  courseTotalCount.textContent = `(${list.length})`;
+
   tbody.innerHTML = '';
   list.forEach(item => {
     let termLabel = '';

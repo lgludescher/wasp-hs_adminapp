@@ -1,5 +1,6 @@
 import { apiFetch } from './main.js';
 
+const institutionTotalCount = document.getElementById('institution-total-count');
 const searchInput    = document.getElementById('institution-search');
 const btnShowCreate  = document.getElementById('btn-show-create');
 const btnExportExcel = document.getElementById('btn-export-excel');
@@ -31,6 +32,8 @@ async function loadInstitutions() {
 }
 
 function renderTable(list) {
+  institutionTotalCount.textContent = `(${list.length})`;
+
   tbody.innerHTML = '';
   list.forEach(item => {
     const tr = document.createElement('tr');

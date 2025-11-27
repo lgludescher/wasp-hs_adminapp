@@ -11,6 +11,13 @@
   font-size: 1.5rem;
 }
 
+.title-count {
+  color: #777;           /* Muted gray to not compete with the title */
+  font-weight: normal;   /* Regular weight looks cleaner next to Bold H1 */
+  font-size: 0.75em;     /* Slightly smaller than the main text */
+  margin-left: 0.5rem;   /* Space between title and count */
+}
+
 /* Section wrapper with subtitle */
 .subsection {
   display: flex;

@@ -1,5 +1,6 @@
 import { apiFetch } from './main.js';
 
+const gsatTotalCount = document.getElementById('gsat-total-count');
 const btnShowCreate  = document.getElementById('btn-show-create');
 const formCreate     = document.getElementById('form-create');
 const btnCancel      = document.getElementById('btn-cancel');
@@ -24,6 +25,8 @@ async function loadTypes() {
 
 /** Build table rows */
 function renderTable(list) {
+  gsatTotalCount.textContent = `(${list.length})`;
+
   tbody.innerHTML = '';
   list.forEach(item => {
     const tr = document.createElement('tr');

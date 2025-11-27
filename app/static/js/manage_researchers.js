@@ -5,6 +5,7 @@ const INSTITUTIONS_ENDPOINT  = '/institutions/';
 const BRANCHES_ENDPOINT      = '/branches/';
 const FIELDS_ENDPOINT        = '/fields/';
 
+const researcherTotalCount = document.getElementById('researcher-total-count');
 const filterSearch       = document.getElementById('filter-search');
 const filterActive       = document.getElementById('filter-active');
 const filterTitle        = document.getElementById('filter-title');
@@ -98,6 +99,8 @@ async function loadResearchers() {
 
 /** Build table rows */
 function renderTable(list) {
+  researcherTotalCount.textContent = `(${list.length})`;
+
   tbody.innerHTML = '';
   list.forEach(item => {
     const pr = item.person_role;

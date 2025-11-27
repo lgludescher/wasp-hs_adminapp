@@ -1,5 +1,6 @@
 import { apiFetch } from './main.js';
 
+const projectTotalCount = document.getElementById('project-total-count');
 const filterSearch      = document.getElementById('filter-search');
 const filterCallType    = document.getElementById('filter-call-type');
 const filterStatus      = document.getElementById('filter-status');
@@ -95,6 +96,8 @@ async function loadProjects() {
 
 /** Build rows, using an <a> for the “Go to project” link */
 function renderTable(list) {
+  projectTotalCount.textContent = `(${list.length})`;
+
   tbody.innerHTML = '';
   list.forEach(item => {
     const tr = document.createElement('tr');

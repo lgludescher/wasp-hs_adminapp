@@ -1,5 +1,6 @@
 import { apiFetch } from './main.js';
 
+const callTypeTotalCount = document.getElementById('call-type-total-count');
 const searchInput    = document.getElementById('calltype-search');
 const btnShowCreate  = document.getElementById('btn-show-create');
 const formCreate     = document.getElementById('form-create');
@@ -28,6 +29,8 @@ async function loadCallTypes() {
 
 /** Render table rows */
 function renderTable(list) {
+  callTypeTotalCount.textContent = `(${list.length})`;
+
   tbody.innerHTML = '';
   list.forEach(item => {
     const tr = document.createElement('tr');

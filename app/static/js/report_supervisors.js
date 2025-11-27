@@ -7,6 +7,8 @@ const POSTDOCS_ENDPOINT    = '/postdocs/';
 const RESEARCHERS_ENDPOINT = '/researchers/';
 const ROLES_ENDPOINT       = '/roles/';
 
+const supervisorTotalCount = document.getElementById('supervisor-total-count');
+
 // --- DOM Elements ---
 // Supervisor Filters
 const filterSearch      = document.getElementById('filter-search');
@@ -207,6 +209,8 @@ function aggregateSupervisors(supervisionList) {
 }
 
 function renderTable(list) {
+    supervisorTotalCount.textContent = `(${list.length})`;
+
     tbody.innerHTML = '';
 
     if (list.length === 0) {

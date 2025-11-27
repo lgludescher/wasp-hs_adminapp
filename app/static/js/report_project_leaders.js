@@ -8,6 +8,8 @@ const RESEARCHERS_ENDPOINT = '/researchers/';
 const POSTDOCS_ENDPOINT    = '/postdocs/';
 const PHDS_ENDPOINT        = '/phd-students/';
 
+const leaderTotalCount = document.getElementById('leader-total-count');
+
 // --- DOM Elements ---
 // Person Criteria
 const filterSearch       = document.getElementById('filter-search');
@@ -191,6 +193,8 @@ function aggregateLeaders(links) {
 }
 
 function renderTable(list) {
+    leaderTotalCount.textContent = `(${list.length})`;
+
     tbody.innerHTML = '';
 
     if (list.length === 0) {
