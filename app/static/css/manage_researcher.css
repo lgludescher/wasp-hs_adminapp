@@ -113,6 +113,14 @@
   border-top: 1px solid #eee;
 }
 
+.panel-count {
+  font-size: 0.8em;      /* Relative to the H2 size */
+  color: #888;           /* Muted color */
+  font-weight: normal;   /* Not bold */
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
 /* Add form inside panels */
 .item-add-form {
   background: var(--color-bg);

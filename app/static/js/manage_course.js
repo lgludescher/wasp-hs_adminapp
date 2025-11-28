@@ -210,6 +210,9 @@ async function loadTeachers(panel) {
       }
       return { ...teacher, subRolePath, subRoleId };
     }));
+
+    document.getElementById('count-teachers').textContent = `(${enrichedData.length})`;
+
     tbody.innerHTML = '';
     if (!enrichedData.length) {
       tbody.innerHTML = `<tr><td colspan="4">No teachers associated with this course.</td></tr>`;
@@ -319,6 +322,8 @@ async function loadStudents(panel) {
             const studentDetails = await apiFetch(`/phd-students/${link.phd_student_id}`);
             return { ...link, student: studentDetails };
         }));
+
+        document.getElementById('count-students').textContent = `(${enrichedData.length})`;
 
         tbody.innerHTML = '';
         if (!enrichedData.length) {
@@ -457,6 +462,9 @@ async function loadInstitutions(panel) {
   panel.querySelector('thead').innerHTML = '<tr><th>Institution</th><th></th></tr>';
   try {
     const institutions = await apiFetch(`/courses/${courseId}/institutions/`);
+
+    document.getElementById('count-institutions').textContent = `(${institutions.length})`;
+
     tbody.innerHTML = '';
     if (!institutions.length) {
       tbody.innerHTML = `<tr><td colspan="2">No institutions associated.</td></tr>`;
@@ -511,6 +519,9 @@ async function loadDecisionLetters(panel) {
   panel.querySelector('thead').innerHTML = `<tr><th>Link</th><th></th></tr>`;
   try {
     const letters = await apiFetch(`/courses/${courseId}/decision-letters/`);
+
+    document.getElementById('count-letters').textContent = `(${letters.length})`;
+
     tbody.innerHTML = '';
     if (!letters.length) {
       tbody.innerHTML = `<tr><td colspan="2">No decision letters associated.</td></tr>`;

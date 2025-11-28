@@ -219,6 +219,9 @@ async function loadProjects(panel) {
       const projectDetails = await apiFetch(`/projects/${link.project_id}/`);
       return { ...link, project: projectDetails };
     }));
+
+    document.getElementById('count-projects').textContent = `(${enrichedData.length})`;
+
     tbody.innerHTML = '';
     if (!enrichedData.length) {
       tbody.innerHTML = `<tr><td colspan="9">No projects associated.</td></tr>`;
@@ -344,6 +347,8 @@ async function loadInstitutions(panel) {
         return { ...link, institution: details };
     }));
 
+    document.getElementById('count-institutions').textContent = `(${enrichedData.length})`;
+
     tbody.innerHTML = '';
     if (!enrichedData.length) {
       tbody.innerHTML = `<tr><td colspan="4">No institutions associated.</td></tr>`;
@@ -426,6 +431,8 @@ async function loadFields(panel) {
       const branch = await apiFetch(`/branches/${field.branch_id}`);
       return { ...field, branch };
     }));
+
+    document.getElementById('count-fields').textContent = `(${enrichedData.length})`;
 
     tbody.innerHTML = '';
     if (!enrichedData.length) {
@@ -524,6 +531,8 @@ async function loadSupervisees(panel) {
         // b - a sorts True (1) before False (0)
         return activeB - activeA;
     });
+
+    document.getElementById('count-supervisees').textContent = `(${enrichedData.length})`;
 
     tbody.innerHTML = '';
     if (!enrichedData.length) {
@@ -666,6 +675,8 @@ async function loadCoursesTeaching(panel) {
   try {
     const courses = await apiFetch(`/person-roles/${researcherData.person_role_id}/courses_teaching/`);
 
+    document.getElementById('count-courses').textContent = `(${courses.length})`;
+
     tbody.innerHTML = '';
     if (!courses.length) {
       // FIX: Updated the message to be more general.
@@ -788,6 +799,9 @@ async function loadDecisionLetters(panel) {
   panel.querySelector('thead').innerHTML = `<tr><th>Link</th><th></th></tr>`;
   try {
     const letters = await apiFetch(`/person-roles/${researcherData.person_role_id}/decision-letters/`);
+
+    document.getElementById('count-letters').textContent = `(${letters.length})`;
+
     tbody.innerHTML = '';
     if (!letters.length) {
       tbody.innerHTML = `<tr><td colspan="2">No decision letters associated.</td></tr>`;

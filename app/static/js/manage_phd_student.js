@@ -14,6 +14,8 @@ const modalCancelBtn = document.getElementById('modal-cancel-btn');
 let phdStudentId = null;
 let phdStudentData = {};
 let pendingRemove = null;
+let countGSA = 0;
+let countAbroad = 0;
 
 // --- Initialization ---
 (async function init() {
@@ -259,6 +261,8 @@ async function loadCourses(panel) {
       return { ...link, course: courseDetails };
     }));
 
+    document.getElementById('count-courses').textContent = `(${enrichedData.length})`;
+
     tbody.innerHTML = '';
     if (!enrichedData.length) {
       tbody.innerHTML = `<tr><td colspan="7">No courses associated with this student.</td></tr>`;
@@ -443,6 +447,17 @@ async function loadActivities(panel) {
     setupAbroadAddForm(panel);
 }
 
+function updateActivityCounts() {
+    const total = countGSA + countAbroad;
+
+    // Update Main Header
+    document.getElementById('count-activities').textContent = `(${total})`;
+
+    // Update Subheaders
+    document.getElementById('count-activities-gsa').textContent = `(${countGSA})`;
+    document.getElementById('count-activities-abroad').textContent = `(${countAbroad})`;
+}
+
 // --- Subsection: Grad School Activities ---
 async function loadGradSchoolActivities(panel) {
     const tbody = panel.querySelector('.gsa-table tbody');
@@ -458,6 +473,10 @@ async function loadGradSchoolActivities(panel) {
         </tr>`;
     try {
         const activities = await apiFetch(`/phd-students/${phdStudentId}/activities/?activity_type=grad_school`);
+
+        countGSA = activities.length;
+        updateActivityCounts();
+
         tbody.innerHTML = '';
         if (!activities.length) {
             tbody.innerHTML = `<tr><td colspan="7">No Grad School Activities associated.</td></tr>`;
@@ -583,6 +602,10 @@ async function loadAbroadActivities(panel) {
         </tr>`;
     try {
         const activities = await apiFetch(`/phd-students/${phdStudentId}/activities/?activity_type=abroad`);
+
+        countAbroad = activities.length;
+        updateActivityCounts();
+
         tbody.innerHTML = '';
         if (!activities.length) {
             tbody.innerHTML = `<tr><td colspan="7">No Semester Abroad associated.</td></tr>`;
@@ -701,6 +724,8 @@ async function loadSupervisors(panel) {
       }
       return { ...supervision, supervisorRole, subRolePath, subRoleId };
     }));
+
+    document.getElementById('count-supervisors').textContent = `(${enrichedData.length})`;
 
     tbody.innerHTML = '';
     if (!enrichedData.length) {
@@ -837,6 +862,9 @@ async function loadProjects(panel) {
       const projectDetails = await apiFetch(`/projects/${link.project_id}/`);
       return { ...link, project: projectDetails };
     }));
+
+    document.getElementById('count-projects').textContent = `(${enrichedData.length})`;
+
     tbody.innerHTML = '';
     if (!enrichedData.length) {
       tbody.innerHTML = `<tr><td colspan="9">No projects associated.</td></tr>`;
@@ -956,6 +984,8 @@ async function loadInstitutions(panel) {
         return { ...link, institution: details };
     }));
 
+    document.getElementById('count-institutions').textContent = `(${enrichedData.length})`;
+
     tbody.innerHTML = '';
     if (!enrichedData.length) {
       tbody.innerHTML = `<tr><td colspan="4">No institutions associated.</td></tr>`;
@@ -1040,6 +1070,8 @@ async function loadFields(panel) {
       return { ...field, branch };
     }));
 
+    document.getElementById('count-fields').textContent = `(${enrichedData.length})`;
+
     tbody.innerHTML = '';
     if (!enrichedData.length) {
       tbody.innerHTML = `<tr><td colspan="2">No academic fields associated.</td></tr>`;
@@ -1106,6 +1138,9 @@ async function loadDecisionLetters(panel) {
   panel.querySelector('thead').innerHTML = `<tr><th>Link</th><th></th></tr>`;
   try {
     const letters = await apiFetch(`/person-roles/${phdStudentData.person_role_id}/decision-letters/`);
+
+    document.getElementById('count-letters').textContent = `(${letters.length})`;
+
     tbody.innerHTML = '';
     if (!letters.length) {
       tbody.innerHTML = `<tr><td colspan="2">No decision letters associated.</td></tr>`;

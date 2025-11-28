@@ -162,6 +162,9 @@ async function loadCourses(panel) {
         </tr>`;
     try {
         const courses = await apiFetch(`/grad-school-activities/${gradSchoolActivityId}/courses/`);
+
+        document.getElementById('count-courses').textContent = `(${courses.length})`;
+
         tbody.innerHTML = '';
         if (!courses.length) {
             tbody.innerHTML = `<tr><td colspan="5">No courses associated with this activity.</td></tr>`;
@@ -265,6 +268,8 @@ async function loadStudents(panel) {
                 const student = await apiFetch(`/phd-students/${activity.phd_student_id}`);
                 return { ...activity, student };
             }));
+
+            document.getElementById('count-students').textContent = `(${enrichedData.length})`;
 
             tbody.innerHTML = '';
             if (!enrichedData.length) {

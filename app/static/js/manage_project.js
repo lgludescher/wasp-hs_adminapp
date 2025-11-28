@@ -231,6 +231,8 @@ async function loadMembers(panel) {
       return { ...member, personRole, subRolePath, subRoleId };
     }));
 
+    document.getElementById('count-members').textContent = `(${enrichedData.length})`;
+
     // Render Rows (Same as before)
     tbody.innerHTML = '';
     if (!enrichedData.length) {
@@ -414,6 +416,8 @@ async function loadFields(panel) {
       return { ...field, branch };
     }));
 
+    document.getElementById('count-fields').textContent = `(${enrichedData.length})`;
+
     tbody.innerHTML = '';
     if (!enrichedData.length) {
       tbody.innerHTML = `<tr><td colspan="2">No academic fields associated.</td></tr>`;
@@ -480,6 +484,9 @@ async function loadResearchOutputReports(panel) {
   panel.querySelector('thead').innerHTML = `<tr><th>Link</th><th></th></tr>`;
   try {
     const reports = await apiFetch(`/projects/${projectId}/research-output-reports/`);
+
+    document.getElementById('count-outputs').textContent = `(${reports.length})`;
+
     tbody.innerHTML = '';
     if (!reports.length) {
       tbody.innerHTML = `<tr><td colspan="2">No research output reports associated.</td></tr>`;
@@ -554,6 +561,9 @@ async function loadDecisionLetters(panel) {
   panel.querySelector('thead').innerHTML = `<tr><th>Link</th><th></th></tr>`;
   try {
     const letters = await apiFetch(`/projects/${projectId}/decision-letters/`);
+
+    document.getElementById('count-letters').textContent = `(${letters.length})`;
+
     tbody.innerHTML = '';
     if (!letters.length) {
       tbody.innerHTML = `<tr><td colspan="2">No decision letters associated.</td></tr>`;
