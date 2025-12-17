@@ -79,7 +79,7 @@ function renderMainDetails(isEdit = false) {
             <label class="detail-item"><strong>Cohort Number</strong><input name="cohort_number" type="number" min="0" max="99" value="${phdStudentData.cohort_number || ''}"></label>
             <label class="detail-item"><span class="checkbox-label"><input name="is_affiliated" type="checkbox" ${phdStudentData.is_affiliated ? 'checked' : ''}> Affiliated?</span></label>
             <label class="detail-item"><strong>Department</strong><input name="department" type="text" value="${phdStudentData.department || ''}"></label>
-            <label class="detail-item"><strong>Forskningsutbildningsämne</strong><input name="discipline" type="text" value="${phdStudentData.discipline || ''}"></label>
+            <label class="detail-item"><strong>Forskarutbildningsämnen</strong><input name="discipline" type="text" value="${phdStudentData.discipline || ''}"></label>
             
             <label class="detail-item"><strong>Planned Defense Date</strong><input name="planned_defense_date" type="date" value="${phdStudentData.planned_defense_date?.split('T')[0] || ''}"></label>
             <label class="detail-item"><span class="checkbox-label"><input name="is_graduated" type="checkbox" ${phdStudentData.is_graduated ? 'checked' : ''}> Graduated?</span></label>
@@ -120,7 +120,7 @@ function renderMainDetails(isEdit = false) {
             <div class="detail-item"><strong>Cohort Number:</strong> <span>${phdStudentData.cohort_number ?? ''}</span></div>
             <div class="detail-item"><strong>Affiliated?</strong> <input type="checkbox" disabled ${phdStudentData.is_affiliated ? 'checked' : ''}></div>
             <div class="detail-item"><strong>Department:</strong> <span>${phdStudentData.department || ''}</span></div>
-            <div class="detail-item"><strong>Forskningsutbildningsämne:</strong> <span>${phdStudentData.discipline || ''}</span></div>
+            <div class="detail-item"><strong>Forskarutbildningsämnen:</strong> <span>${phdStudentData.discipline || ''}</span></div>
 
             <div class="detail-item"><strong>Planned Defense Date:</strong> <span>${phdStudentData.planned_defense_date?.split('T')[0] || ''}</span></div>
             <div class="detail-item"><strong>Graduated?</strong> <input type="checkbox" disabled ${phdStudentData.is_graduated ? 'checked' : ''}></div>

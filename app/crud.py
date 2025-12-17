@@ -1112,6 +1112,11 @@ def list_persons(db: Session, search: Optional[str] = None) -> List[models.Perso
 
 
 def create_person(db: Session, p_in: schemas.PersonCreate) -> models.Person:
+    # guard duplicate (same email)
+    dup_q = db.query(models.Person).filter_by(email=p_in.email)
+    if dup_q.first():
+        raise Exception("Person with same email already exists")
+
     db_obj = models.Person(
         first_name=p_in.first_name,
         last_name=p_in.last_name,

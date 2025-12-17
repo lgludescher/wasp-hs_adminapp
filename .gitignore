@@ -18,3 +18,5 @@ __pycache__/
 # Log files
 *.log
 logs/
+
+populate_db.py
