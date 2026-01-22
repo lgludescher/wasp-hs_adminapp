@@ -134,9 +134,9 @@ function attachHandlers(tr, item) {
 function startEdit(tr, item) {
   tr.innerHTML = `
     <td><a class="go-btn" href="/manage-projects/${item.id}">Go to project</a></td>
-    <td><input name="project_number" value="${item.project_number}" /></td>
-    <td><select name="call_type_id"></select></td>
-    <td><input name="title" value="${item.title}" /></td>
+    <td><input name="project_number" value="${item.project_number}" required /></td>
+    <td><select name="call_type_id" required></select></td>
+    <td><input name="title" value="${item.title}" required /></td>
     
     <td class="cell-center" style="color: #888;">${item.field_count ?? 0}</td>
     
@@ -155,9 +155,9 @@ function startEdit(tr, item) {
   tr.querySelector('.cancel-btn').onclick = loadProjects;
   tr.querySelector('.save-btn').onclick = async () => {
     const updated = {
-      project_number: tr.querySelector('[name="project_number"]').value.trim(),
-      call_type_id:   parseInt(sel.value),
-      title:          tr.querySelector('[name="title"]').value.trim(),
+      project_number: tr.querySelector('[name="project_number"]').value.trim() || null,
+      call_type_id:   parseInt(sel.value) || null,
+      title:          tr.querySelector('[name="title"]').value.trim() || null,
       start_date:     tr.querySelector('[name="start_date"]').value || null,
       end_date:       tr.querySelector('[name="end_date"]').value   || null,
     };
