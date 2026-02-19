@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional, List, Union, Literal
 from pydantic import BaseModel, ConfigDict
 from enum import Enum as PyEnum
+from decimal import Decimal
 from .models import GradeType, EntityType, RoleType, ActivityType
 
 
@@ -212,7 +213,7 @@ class CourseBase(BaseModel):
     title:                      str
     course_term_id:             Optional[int] = None
     grad_school_activity_id:    Optional[int] = None
-    credit_points:              Optional[int] = None
+    credit_points:              Optional[Decimal] = None
     notes:                      Optional[str] = None
 
 
@@ -234,7 +235,7 @@ class CourseUpdate(BaseModel):
     title:                      Optional[str] = None
     course_term_id:             Optional[int] = None
     grad_school_activity_id:    Optional[int] = None
-    credit_points:              Optional[int] = None
+    credit_points:              Optional[Decimal] = None
     notes:                      Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 

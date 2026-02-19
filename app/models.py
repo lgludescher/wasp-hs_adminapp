@@ -2,7 +2,8 @@ from datetime import datetime, timezone
 from enum import Enum as PyEnum
 from sqlalchemy import (
     Column, Integer, String, Boolean, DateTime,
-    ForeignKey, UniqueConstraint, CheckConstraint
+    ForeignKey, UniqueConstraint, CheckConstraint,
+    Numeric
 )
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship, foreign
@@ -119,7 +120,7 @@ class Course(Base):
     grad_school_activity_id = Column(Integer, ForeignKey("grad_school_activities.id"), nullable=True)
 
     # contact_teachers = Column(String, nullable=True)
-    credit_points = Column(Integer, nullable=True)
+    credit_points = Column(Numeric(precision=4, scale=1), nullable=True)
     notes = Column(String, nullable=True)
 
     # ensure **exactly one** of the two is set

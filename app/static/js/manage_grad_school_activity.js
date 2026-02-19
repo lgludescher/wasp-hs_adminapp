@@ -203,7 +203,7 @@ function startEditCourseRow(tr, item) {
     tr.innerHTML = `
         <td><a href="/manage-courses/${item.id}/" class="go-to-btn">Go to Course</a></td>
         <td><input name="title" type="text" value="${item.title || ''}"></td>
-        <td class="cell-center"><input name="credit_points" type="number" min="0" value="${item.credit_points || ''}" style="width: 80px;"></td>
+        <td class="cell-center"><input name="credit_points" type="number" min="0" step="0.5" value="${item.credit_points || ''}" style="width: 80px;"></td>
         <td><textarea name="notes">${item.notes || ''}</textarea></td>
         <td class="cell-actions">
             <button class="btn save-btn">Save</button>
@@ -213,7 +213,7 @@ function startEditCourseRow(tr, item) {
     tr.querySelector('.save-btn').onclick = async () => {
         const data = {
             title: tr.querySelector('[name=title]').value.trim(),
-            credit_points: parseInt(tr.querySelector('[name=credit_points]').value, 10) || null,
+            credit_points: parseFloat(tr.querySelector('[name=credit_points]').value) || null,
             notes: tr.querySelector('[name=notes]').value.trim() || null,
             grad_school_activity_id: gradSchoolActivityId // Keep the link
         };
@@ -233,7 +233,7 @@ function setupCoursesAddForm(panel) {
             body: JSON.stringify({
                 grad_school_activity_id: gradSchoolActivityId,
                 title: formData.get('title').trim(),
-                credit_points: parseInt(formData.get('credit_points'), 10) || null,
+                credit_points: parseFloat(formData.get('credit_points')) || null,
                 notes: formData.get('notes').trim() || null,
             })
         }),

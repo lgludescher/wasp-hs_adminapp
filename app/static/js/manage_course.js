@@ -76,7 +76,7 @@ function renderMainDetails(isEdit = false) {
       <div class="details-box-content">
         <label class="detail-item"><strong>Title</strong><input name="title" type="text" value="${courseData.title || ''}"></label>
         ${termEditHtml}
-        <label class="detail-item"><strong>Credits</strong><input name="credit_points" type="number" min="0" value="${courseData.credit_points || ''}"></label>
+        <label class="detail-item"><strong>Credits</strong><input name="credit_points" type="number" min="0" step="0.5" value="${courseData.credit_points || ''}"></label>
         <label class="detail-item"><strong>Notes</strong><textarea name="notes">${courseData.notes || ''}</textarea></label>
       </div>
       <div class="details-box-actions">
@@ -112,7 +112,7 @@ async function saveMainDetails() {
     const form = detailsSection;
     const courseUpdate = {
         title: form.querySelector('[name="title"]').value.trim() || null,
-        credit_points: parseInt(form.querySelector('[name="credit_points"]').value, 10) || null,
+        credit_points: parseFloat(form.querySelector('[name="credit_points"]').value) || null,
         notes: form.querySelector('[name="notes"]').value.trim() || null,
         course_term_id: form.querySelector('[name="course_term_id"]') ? parseInt(form.querySelector('[name="course_term_id"]').value, 10) : null,
         grad_school_activity_id: form.querySelector('[name="grad_school_activity_id"]') ? parseInt(form.querySelector('[name="grad_school_activity_id"]').value, 10) : null,

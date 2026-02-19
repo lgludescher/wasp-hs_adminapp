@@ -158,7 +158,7 @@ function startEdit(tr, item) {
     <td style="text-align: center; color: #777;">
         ${item.student_count ?? 0}
     </td>
-    <td><input name="credit_points" type="number" value="${item.credit_points||0}" min="0" /></td>
+    <td><input name="credit_points" type="number" value="${item.credit_points||0}" min="0" step="0.5" /></td>
     <td class="cell-actions">
       <button class="btn save-btn">Save</button>
       <button class="btn cancel-btn">Cancel</button>
@@ -176,7 +176,7 @@ function startEdit(tr, item) {
       title: titleI.value.trim() || null,
       course_term_id: termS ? parseInt(termS.value,10) : null,
       grad_school_activity_id: actS ? parseInt(actS.value,10) : null,
-      credit_points: parseInt(credI.value,10) || 0,
+      credit_points: parseFloat(credI.value) || 0,
     };
     try {
       await apiFetch(`/courses/${item.id}`, {
@@ -223,7 +223,7 @@ formCreate.onsubmit = async e => {
     title: e.target.title.value.trim(),
     course_term_id: parseInt(termVal,10) || null,
     grad_school_activity_id: parseInt(actVal,10) || null,
-    credit_points: parseInt(e.target.credit_points.value,10) || 0,
+    credit_points: parseFloat(e.target.credit_points.value) || 0,
     notes: e.target.notes.value.trim() || null,
   };
   try {
