@@ -3,7 +3,8 @@ from typing import Optional, List, Union, Literal
 from pydantic import BaseModel, ConfigDict
 from enum import Enum as PyEnum
 from decimal import Decimal
-from .models import GradeType, EntityType, RoleType, ActivityType
+from .models import (GradeType, EntityType, RoleType, ActivityType, MediaPlatform,
+                     ActionType, TriggerSource, ActionStatus)
 
 
 # <editor-fold desc="User-related entities">
@@ -763,6 +764,189 @@ class SupervisionRead(SupervisionBase):
 
 class SupervisionUpdate(BaseModel):
     is_main: Optional[bool] = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Media Publication-related entities">
+# ---------- Media Publication ----------
+
+class MediaPublicationBase(BaseModel):
+    platform:       MediaPlatform
+    external_id:    Optional[str] = None
+    title:          str
+    source_name:    str
+    published_date: datetime
+    content_url:    Optional[str] = None
+    article_body:   Optional[str] = None
+    is_relevant:    Optional[bool] = None
+    is_reviewed:    bool = False
+    is_pushed_to_wp: bool = False
+    wp_post_id:     Optional[int] = None
+    notes:          Optional[str] = None
+
+
+class MediaPublicationCreate(MediaPublicationBase):
+    pass
+
+
+class MediaPublicationRead(MediaPublicationBase):
+    id:         int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MediaPublicationUpdate(BaseModel):
+    platform:       Optional[MediaPlatform] = None
+    external_id:    Optional[str] = None
+    title:          Optional[str] = None
+    source_name:    Optional[str] = None
+    published_date: Optional[datetime] = None
+    content_url:    Optional[str] = None
+    article_body:   Optional[str] = None
+    is_relevant:    Optional[bool] = None
+    is_reviewed:    Optional[bool] = None
+    is_pushed_to_wp: Optional[bool] = None
+    wp_post_id:     Optional[int] = None
+    notes:          Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Media Publication relationship entities">
+# --- Media Publication ↔ People Roles ---
+
+class MediaPublicationPersonRoleLink(BaseModel):
+    person_role_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MediaPublicationPersonRoleRead(BaseModel):
+    id:                   int
+    media_publication_id: int
+    person_role_id:       int
+
+    person_role: Optional[PersonRoleReadFull] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Academic Publication-related entities">
+# ---------- Academic Publication ----------
+
+class AcademicPublicationBase(BaseModel):
+    swepub_id:        Optional[str] = None
+    doi:              Optional[str] = None
+    title:            str
+    abstract:         Optional[str] = None
+    publication_type: Optional[str] = None
+    journal_name:     Optional[str] = None
+    published_year:   Optional[int] = None
+    published_date:   Optional[datetime] = None
+    authors_raw:      Optional[str] = None
+    funding_info:     Optional[str] = None
+    is_relevant:      Optional[bool] = None
+    is_reviewed:      bool = False
+    is_pushed_to_wp:  bool = False
+    wp_post_id:       Optional[int] = None
+    notes:            Optional[str] = None
+
+
+class AcademicPublicationCreate(AcademicPublicationBase):
+    pass
+
+
+class AcademicPublicationRead(AcademicPublicationBase):
+    id:         int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AcademicPublicationUpdate(BaseModel):
+    swepub_id:        Optional[str] = None
+    doi:              Optional[str] = None
+    title:            Optional[str] = None
+    abstract:         Optional[str] = None
+    publication_type: Optional[str] = None
+    journal_name:     Optional[str] = None
+    published_year:   Optional[int] = None
+    published_date:   Optional[datetime] = None
+    authors_raw:      Optional[str] = None
+    funding_info:     Optional[str] = None
+    is_relevant:      Optional[bool] = None
+    is_reviewed:      Optional[bool] = None
+    is_pushed_to_wp:  Optional[bool] = None
+    wp_post_id:       Optional[int] = None
+    notes:            Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Academic Publication relationship entities">
+# --- Academic Publication ↔ People Roles ---
+
+class AcademicPublicationPersonRoleLink(BaseModel):
+    person_role_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AcademicPublicationPersonRoleRead(BaseModel):
+    id:                      int
+    academic_publication_id: int
+    person_role_id:          int
+
+    person_role: Optional[PersonRoleReadFull] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# </editor-fold>
+
+# <editor-fold desc="Automation Log-related entities">
+# ---------- Automation Log ----------
+
+class AutomationLogBase(BaseModel):
+    action_type:     ActionType
+    trigger_source:  TriggerSource
+    status:          ActionStatus
+    user_id:         Optional[int] = None
+    items_processed: Optional[int] = 0
+    error_message:   Optional[str] = None
+
+
+class AutomationLogCreate(AutomationLogBase):
+    pass
+
+
+class AutomationLogRead(AutomationLogBase):
+    id:        int
+    timestamp: datetime
+
+    # Bring in the nested user object
+    user: Optional[UserRead] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AutomationLogUpdate(BaseModel):
+    action_type:     Optional[ActionType] = None
+    trigger_source:  Optional[TriggerSource] = None
+    status:          Optional[ActionStatus] = None
+    user_id:         Optional[int] = None
+    items_processed: Optional[int] = None
+    error_message:   Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

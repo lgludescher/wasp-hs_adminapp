@@ -3,7 +3,7 @@ from enum import Enum as PyEnum
 from sqlalchemy import (
     Column, Integer, String, Boolean, DateTime,
     ForeignKey, UniqueConstraint, CheckConstraint,
-    Numeric
+    Numeric, Text
 )
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship, foreign
@@ -589,3 +589,148 @@ class ProjectDecisionLetter(DecisionLetter):
 
 class CourseDecisionLetter(DecisionLetter):
     __mapper_args__ = {'polymorphic_identity': EntityType.COURSE}
+
+
+# ---------- AUTOMATION PROJECT ----------
+class MediaPlatform(str, PyEnum):
+    RETRIEVER = "retriever"
+    FACTIVA = "factiva"
+
+
+class MediaPublication(Base):
+    __tablename__ = "media_publications"
+    __table_args__ = (
+        UniqueConstraint("platform", "external_id", name="uq_media_platform_external_id"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    platform = Column(SQLEnum(MediaPlatform), nullable=False)
+    external_id = Column(String, nullable=True, index=True)  # Factiva Accession Number or Retriever Hash
+    title = Column(String, nullable=False)
+    source_name = Column(String, nullable=False)
+    published_date = Column(DateTime, nullable=False)
+    content_url = Column(String, nullable=True)
+    article_body = Column(Text, nullable=True)  # Using Text for long article content
+
+    # --- Workflow & Automation Flags ---
+    is_relevant = Column(Boolean, default=None,
+                         nullable=True)  # True = Approved, False = Rejected, None = Pending Review
+    is_reviewed = Column(Boolean, default=False, nullable=False)
+    is_pushed_to_wp = Column(Boolean, default=False, nullable=False)
+    wp_post_id = Column(Integer, nullable=True)
+
+    # --- System Audit Metadata ---
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    notes = Column(String, nullable=True)
+
+    # --- Relationships ---
+    person_roles = relationship(
+        "MediaPublicationPersonRole",
+        back_populates="media_publication",
+        cascade="all, delete-orphan"
+    )
+
+
+class MediaPublicationPersonRole(Base):
+    __tablename__ = "media_publication_person_roles"
+
+    id = Column(Integer, primary_key=True)
+    media_publication_id = Column(Integer, ForeignKey("media_publications.id"), nullable=False)
+    person_role_id = Column(Integer, ForeignKey("people_roles.id"), nullable=False)
+
+    # --- Relationships ---
+    media_publication = relationship("MediaPublication", back_populates="person_roles")
+    person_role = relationship("PersonRole")  # Standard relationship without modifying PersonRole
+
+
+class AcademicPublication(Base):
+    __tablename__ = "academic_publications"
+
+    id = Column(Integer, primary_key=True)
+    swepub_id = Column(String, unique=True, index=True, nullable=True)  # SwePub URN or Record ID
+    doi = Column(String, index=True, nullable=True)
+    title = Column(String, nullable=False)
+    abstract = Column(Text, nullable=True)
+    publication_type = Column(String, nullable=True)  # e.g., "Journal Article", "Conference Paper"
+    journal_name = Column(String, nullable=True)      # Source, Venue, or Publisher
+    published_year = Column(Integer, nullable=True)
+    published_date = Column(DateTime, nullable=True)  # Full date if present in SwePub metadata
+    authors_raw = Column(Text, nullable=True)         # Raw author string as returned by SwePub
+    funding_info = Column(Text, nullable=True)        # Funder / Grant / Acknowledgements info
+
+    # --- Workflow & Automation Flags ---
+    is_relevant = Column(Boolean, default=None, nullable=True)  # True = Approved, False = Rejected, None = Pending Review
+    is_reviewed = Column(Boolean, default=False, nullable=False)
+    is_pushed_to_wp = Column(Boolean, default=False, nullable=False)
+    wp_post_id = Column(Integer, nullable=True)
+
+    # --- System Audit Metadata ---
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    notes = Column(String, nullable=True)
+
+    # --- Relationships ---
+    person_roles = relationship(
+        "AcademicPublicationPersonRole",
+        back_populates="academic_publication",
+        cascade="all, delete-orphan"
+    )
+
+
+class AcademicPublicationPersonRole(Base):
+    __tablename__ = "academic_publication_person_roles"
+
+    id = Column(Integer, primary_key=True)
+    academic_publication_id = Column(Integer, ForeignKey("academic_publications.id"), nullable=False)
+    person_role_id = Column(Integer, ForeignKey("people_roles.id"), nullable=False)
+
+    # --- Relationships ---
+    academic_publication = relationship("AcademicPublication", back_populates="person_roles")
+    person_role = relationship("PersonRole")
+
+
+# ----------------------------------------------------------------------
+# Automation Log Enums
+# ----------------------------------------------------------------------
+
+class ActionType(str, PyEnum):
+    MEDIA_INGESTION_RETRIEVER = "media_ingestion_retriever"
+    MEDIA_INGESTION_FACTIVA = "media_ingestion_factiva"
+    MEDIA_PROCESSING = "media_processing"
+    MEDIA_PUBLISH = "media_publish"
+    ACADEMIC_SYNC = "academic_sync"
+    ACADEMIC_PROCESSING = "academic_processing"
+
+
+class TriggerSource(str, PyEnum):
+    MANUAL = "manual"
+    SYSTEM = "system"
+
+
+class ActionStatus(str, PyEnum):
+    SUCCESS = "success"
+    PARTIAL = "partial"
+    FAILED = "failed"
+
+
+# ----------------------------------------------------------------------
+# Automation Log Model
+# ----------------------------------------------------------------------
+
+class AutomationLog(Base):
+    __tablename__ = "automation_logs"
+
+    id = Column(Integer, primary_key=True)
+    action_type = Column(SQLEnum(ActionType), nullable=False, index=True)
+    trigger_source = Column(SQLEnum(TriggerSource), nullable=False)
+    status = Column(SQLEnum(ActionStatus), nullable=False)
+
+    # Nullable User ID handles Approach B (System vs Manual)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    items_processed = Column(Integer, default=0, nullable=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    error_message = Column(Text, nullable=True)
+
+    # --- Relationships ---
+    # One-way relationship so we don't have to modify the existing User model
+    user = relationship("User")

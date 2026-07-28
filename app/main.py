@@ -10,7 +10,8 @@ from .database import engine, Base, SessionLocal
 from .config import settings
 from .dependencies import get_current_user
 from .routers import (user, institution, domain, grad_school_activity, course, project,
-                      person, researcher, phd_student, postdoc, report)
+                      person, researcher, phd_student, postdoc, report, media_publication,
+                      academic_publication, automation_log)
 from .models import Role, RoleType
 from .logger import logger
 
@@ -387,3 +388,6 @@ app.include_router(researcher.router)
 app.include_router(phd_student.router)
 app.include_router(postdoc.router)
 app.include_router(report.router)
+app.include_router(media_publication.router)
+app.include_router(academic_publication.router)
+app.include_router(automation_log.router)

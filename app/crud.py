@@ -3066,3 +3066,385 @@ def get_student_courses(db: Session, phd_student_id: int) -> List[models.PhDStud
 
 
 # </editor-fold>
+
+# <editor-fold desc="Media Publication-related functions">
+# ---------- Media Publication ----------
+
+def get_media_publication(db: Session, pub_id: int) -> Optional[models.MediaPublication]:
+    return db.query(models.MediaPublication).filter_by(id=pub_id).first()
+
+
+def get_media_by_external_id(db: Session, platform: models.MediaPlatform, external_id: str) -> Optional[
+    models.MediaPublication]:
+    return db.query(models.MediaPublication).filter_by(platform=platform, external_id=external_id).first()
+
+
+def list_media_publications(
+        db: Session,
+        platform: Optional[models.MediaPlatform] = None,
+        is_relevant: Optional[bool] = None,
+        is_reviewed: Optional[bool] = None,
+        is_pushed_to_wp: Optional[bool] = None,
+        search: Optional[str] = None
+) -> List[models.MediaPublication]:
+    q = db.query(models.MediaPublication)
+
+    if platform is not None:
+        q = q.filter_by(platform=platform)
+    if is_relevant is not None:
+        q = q.filter_by(is_relevant=is_relevant)
+    if is_reviewed is not None:
+        q = q.filter_by(is_reviewed=is_reviewed)
+    if is_pushed_to_wp is not None:
+        q = q.filter_by(is_pushed_to_wp=is_pushed_to_wp)
+
+    if search:
+        term = f"%{search}%"
+        q = q.filter(
+            or_(
+                models.MediaPublication.title.ilike(term),
+                models.MediaPublication.source_name.ilike(term)
+            )
+        )
+
+    return q.order_by(desc(models.MediaPublication.published_date)).all()  # type: ignore
+
+
+def create_media_publication(db: Session, pub_in: schemas.MediaPublicationCreate) -> models.MediaPublication:
+    # Guard against duplicates based on platform + external_id
+    if pub_in.external_id:
+        dup_q = get_media_by_external_id(db, platform=pub_in.platform, external_id=pub_in.external_id)
+        if dup_q:
+            raise Exception(
+                f"Media publication with platform {pub_in.platform} and external_id {pub_in.external_id} already exists")
+
+    db_obj = models.MediaPublication(**pub_in.model_dump())
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def update_media_publication(db: Session, pub_id: int,
+                             pub_in: schemas.MediaPublicationUpdate) -> models.MediaPublication:
+    db_obj = get_media_publication(db, pub_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"Media Publication #{pub_id} not found")
+
+    for field in ("platform", "external_id", "title", "source_name", "published_date",
+                  "content_url", "article_body", "is_relevant", "is_reviewed",
+                  "is_pushed_to_wp", "wp_post_id", "notes"):
+        val = getattr(pub_in, field)
+        if val is not None:
+            setattr(db_obj, field, val)
+
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def delete_media_publication(db: Session, pub_id: int) -> None:
+    db_obj = get_media_publication(db, pub_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"Media Publication #{pub_id} not found")
+
+    # Only delete if no related sub-entities exist
+    if db_obj.person_roles:
+        raise Exception("Cannot delete media publication with linked person roles")
+
+    db.delete(db_obj)
+    db.commit()
+
+
+# </editor-fold>
+
+# <editor-fold desc="Media Publication relationships functions">
+# --- people roles for a media publication ---
+
+def get_media_publication_person_roles(db: Session, pub_id: int) -> List[models.MediaPublicationPersonRole]:
+    # Ensure publication exists
+    pub = get_media_publication(db, pub_id)
+    if not pub:
+        raise EntityNotFoundError(f"Media Publication #{pub_id} not found")
+
+    q = (
+        db.query(models.MediaPublicationPersonRole)
+        # Eager load the PersonRole and the actual Person for the schema/UI
+        .options(
+            joinedload(models.MediaPublicationPersonRole.person_role).joinedload(models.PersonRole.person),
+            joinedload(models.MediaPublicationPersonRole.person_role).joinedload(models.PersonRole.role)
+        )
+        .filter_by(media_publication_id=pub_id)
+    )
+
+    return q.all()  # type: ignore
+
+
+def add_person_role_to_media_publication(
+        db: Session, pub_id: int, in_data: schemas.MediaPublicationPersonRoleLink
+) -> models.MediaPublicationPersonRole:
+    # Look up both ends
+    pub = get_media_publication(db, pub_id)
+    if not pub:
+        raise EntityNotFoundError(f"Media Publication #{pub_id} not found")
+    # Assuming get_person_role is defined previously in the file
+    person_role = get_person_role(db, in_data.person_role_id)
+    if not person_role:
+        raise EntityNotFoundError(f"Person role #{in_data.person_role_id} not found")
+
+    # Prevent dupes
+    exists = db.query(models.MediaPublicationPersonRole).filter_by(
+        media_publication_id=pub_id, person_role_id=in_data.person_role_id
+    ).first()
+    if exists:
+        raise Exception(f"Person role #{in_data.person_role_id} already linked to Media Publication #{pub_id}")
+
+    link = models.MediaPublicationPersonRole(
+        media_publication_id=pub_id,
+        person_role_id=in_data.person_role_id
+    )
+    db.add(link)
+    db.commit()
+    db.refresh(link)
+    return link
+
+
+def remove_person_role_from_media_publication(db: Session, pub_id: int, person_role_id: int) -> None:
+    link = db.query(models.MediaPublicationPersonRole).filter_by(
+        media_publication_id=pub_id, person_role_id=person_role_id
+    ).first()
+    if not link:
+        raise EntityNotFoundError(f"Person role #{person_role_id} not linked to Media Publication #{pub_id}")
+    db.delete(link)
+    db.commit()
+
+
+# </editor-fold>
+
+# <editor-fold desc="Academic Publication-related functions">
+# ---------- Academic Publication ----------
+
+def get_academic_publication(db: Session, pub_id: int) -> Optional[models.AcademicPublication]:
+    return db.query(models.AcademicPublication).filter_by(id=pub_id).first()
+
+
+def get_academic_by_swepub_id(db: Session, swepub_id: str) -> Optional[models.AcademicPublication]:
+    return db.query(models.AcademicPublication).filter_by(swepub_id=swepub_id).first()
+
+
+def list_academic_publications(
+        db: Session,
+        published_year: Optional[int] = None,
+        is_relevant: Optional[bool] = None,
+        is_reviewed: Optional[bool] = None,
+        is_pushed_to_wp: Optional[bool] = None,
+        search: Optional[str] = None
+) -> List[models.AcademicPublication]:
+    q = db.query(models.AcademicPublication)
+
+    if published_year is not None:
+        q = q.filter_by(published_year=published_year)
+    if is_relevant is not None:
+        q = q.filter_by(is_relevant=is_relevant)
+    if is_reviewed is not None:
+        q = q.filter_by(is_reviewed=is_reviewed)
+    if is_pushed_to_wp is not None:
+        q = q.filter_by(is_pushed_to_wp=is_pushed_to_wp)
+
+    if search:
+        term = f"%{search}%"
+        q = q.filter(
+            or_(
+                models.AcademicPublication.title.ilike(term),
+                models.AcademicPublication.journal_name.ilike(term)
+            )
+        )
+
+    q = q.order_by(desc(models.AcademicPublication.published_year),
+                   desc(models.AcademicPublication.published_date))
+
+    return q.all()  # type: ignore
+
+
+def create_academic_publication(db: Session, pub_in: schemas.AcademicPublicationCreate) -> models.AcademicPublication:
+    # Guard against duplicates based on swepub_id
+    if pub_in.swepub_id:
+        dup_q = get_academic_by_swepub_id(db, swepub_id=pub_in.swepub_id)
+        if dup_q:
+            raise Exception(f"Academic publication with swepub_id {pub_in.swepub_id} already exists")
+
+    db_obj = models.AcademicPublication(**pub_in.model_dump())
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def update_academic_publication(db: Session, pub_id: int,
+                                pub_in: schemas.AcademicPublicationUpdate) -> models.AcademicPublication:
+    db_obj = get_academic_publication(db, pub_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"Academic Publication #{pub_id} not found")
+
+    for field in ("swepub_id", "doi", "title", "abstract", "publication_type",
+                  "journal_name", "published_year", "published_date", "authors_raw",
+                  "funding_info", "is_relevant", "is_reviewed", "is_pushed_to_wp",
+                  "wp_post_id", "notes"):
+        val = getattr(pub_in, field)
+        if val is not None:
+            setattr(db_obj, field, val)
+
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def delete_academic_publication(db: Session, pub_id: int) -> None:
+    db_obj = get_academic_publication(db, pub_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"Academic Publication #{pub_id} not found")
+
+    if db_obj.person_roles:
+        raise Exception("Cannot delete academic publication with linked person roles")
+
+    db.delete(db_obj)
+    db.commit()
+
+
+# </editor-fold>
+
+# <editor-fold desc="Academic Publication relationships functions">
+# --- people roles for an academic publication ---
+
+def get_academic_publication_person_roles(db: Session, pub_id: int) -> List[models.AcademicPublicationPersonRole]:
+    pub = get_academic_publication(db, pub_id)
+    if not pub:
+        raise EntityNotFoundError(f"Academic Publication #{pub_id} not found")
+
+    q = (
+        db.query(models.AcademicPublicationPersonRole)
+        .options(
+            joinedload(models.AcademicPublicationPersonRole.person_role).joinedload(models.PersonRole.person),
+            joinedload(models.AcademicPublicationPersonRole.person_role).joinedload(models.PersonRole.role)
+        )
+        .filter_by(academic_publication_id=pub_id)
+    )
+
+    return q.all()  # type: ignore
+
+
+def add_person_role_to_academic_publication(
+        db: Session, pub_id: int, in_data: schemas.AcademicPublicationPersonRoleLink
+) -> models.AcademicPublicationPersonRole:
+    pub = get_academic_publication(db, pub_id)
+    if not pub:
+        raise EntityNotFoundError(f"Academic Publication #{pub_id} not found")
+    person_role = get_person_role(db, in_data.person_role_id)
+    if not person_role:
+        raise EntityNotFoundError(f"Person role #{in_data.person_role_id} not found")
+
+    exists = db.query(models.AcademicPublicationPersonRole).filter_by(
+        academic_publication_id=pub_id, person_role_id=in_data.person_role_id
+    ).first()
+    if exists:
+        raise Exception(f"Person role #{in_data.person_role_id} already linked to Academic Publication #{pub_id}")
+
+    link = models.AcademicPublicationPersonRole(
+        academic_publication_id=pub_id,
+        person_role_id=in_data.person_role_id
+    )
+    db.add(link)
+    db.commit()
+    db.refresh(link)
+    return link
+
+
+def remove_person_role_from_academic_publication(db: Session, pub_id: int, person_role_id: int) -> None:
+    link = db.query(models.AcademicPublicationPersonRole).filter_by(
+        academic_publication_id=pub_id, person_role_id=person_role_id
+    ).first()
+    if not link:
+        raise EntityNotFoundError(f"Person role #{person_role_id} not linked to Academic Publication #{pub_id}")
+    db.delete(link)
+    db.commit()
+
+# </editor-fold>
+
+# <editor-fold desc="Automation Log-related functions">
+# ---------- Automation Log ----------
+
+def get_automation_log(db: Session, log_id: int) -> Optional[models.AutomationLog]:
+    return db.query(models.AutomationLog).options(
+        joinedload(models.AutomationLog.user)
+    ).filter_by(id=log_id).first()
+
+
+def get_latest_automation_log(
+        db: Session,
+        action_type: models.ActionType,
+        status: Optional[models.ActionStatus] = None
+) -> Optional[models.AutomationLog]:
+    """Fetches the most recent log for a specific action (useful for the dashboard)."""
+    q = db.query(models.AutomationLog).options(joinedload(models.AutomationLog.user))
+    q = q.filter_by(action_type=action_type)
+
+    if status is not None:
+        q = q.filter_by(status=status)
+
+    return q.order_by(desc(models.AutomationLog.timestamp)).first()
+
+
+def list_automation_logs(
+        db: Session,
+        action_type: Optional[models.ActionType] = None,
+        trigger_source: Optional[models.TriggerSource] = None,
+        status: Optional[models.ActionStatus] = None,
+        user_id: Optional[int] = None
+) -> List[models.AutomationLog]:
+    q = db.query(models.AutomationLog).options(joinedload(models.AutomationLog.user))
+
+    if action_type is not None:
+        q = q.filter_by(action_type=action_type)
+    if trigger_source is not None:
+        q = q.filter_by(trigger_source=trigger_source)
+    if status is not None:
+        q = q.filter_by(status=status)
+    if user_id is not None:
+        q = q.filter_by(user_id=user_id)
+
+    # Order by newest first
+    return q.order_by(desc(models.AutomationLog.timestamp)).all()  # type: ignore
+
+
+def create_automation_log(db: Session, log_in: schemas.AutomationLogCreate) -> models.AutomationLog:
+    db_obj = models.AutomationLog(**log_in.model_dump())
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def update_automation_log(db: Session, log_id: int, log_in: schemas.AutomationLogUpdate) -> models.AutomationLog:
+    db_obj = get_automation_log(db, log_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"Automation Log #{log_id} not found")
+
+    for field in ("action_type", "trigger_source", "status", "user_id", "items_processed", "error_message"):
+        val = getattr(log_in, field)
+        if val is not None:
+            setattr(db_obj, field, val)
+
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+def delete_automation_log(db: Session, log_id: int) -> None:
+    db_obj = get_automation_log(db, log_id)
+    if not db_obj:
+        raise EntityNotFoundError(f"Automation Log #{log_id} not found")
+
+    db.delete(db_obj)
+    db.commit()
+
+# </editor-fold>
