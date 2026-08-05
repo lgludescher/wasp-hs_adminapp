@@ -952,3 +952,20 @@ class AutomationLogUpdate(BaseModel):
 
 
 # </editor-fold>
+
+# <editor-fold desc="Action & Summary Schemas">
+# ---------- Action & Summary ----------
+
+class MediaUploadSummary(BaseModel):
+    status: str
+    filename: str
+    platform: MediaPlatform
+    total_parsed: int
+    new_saved: int
+    duplicates_skipped: int
+    errors: int
+    error_details: List[str]
+    dry_run: bool
+
+
+# </editor-fold>

@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import List, Optional, Any
 from fastapi import APIRouter, Depends, HTTPException, Response, Query, UploadFile, File
 
 from sqlalchemy.orm import Session
@@ -157,16 +157,118 @@ def remove_media_publication_person_role(
 # <editor-fold desc="Media Publication Automation & Actions endpoints">
 # --- Automation Actions (Placeholders) ---
 
-@router.post("/media-publications/actions/upload")
-def upload_media_file(
-    file: UploadFile = File(...),
-    platform: models.MediaPlatform = Query(...),
-    db: Session = Depends(dependencies.get_db),
-    current_user=Depends(dependencies.get_current_user)
+@router.post("/media-publications/actions/upload", response_model=schemas.MediaUploadSummary)
+async def upload_media_file(
+        file: UploadFile = File(...),
+        dry_run: bool = Query(False, description="Parse and check duplicates without saving to DB"),
+        db: Session = Depends(dependencies.get_db),
+        current_user=Depends(dependencies.get_current_user)
 ):
-    """Placeholder: Parse CSV/Excel from Retriever or Factiva."""
-    logger.info(f"{current_user.username} triggered file upload for platform {platform}")
-    return {"status": "Not implemented", "filename": file.filename, "platform": platform}
+    logger.info(f"{current_user.username} triggered file upload for {file.filename} (dry_run={dry_run})")
+
+    # 1. Read file content
+    content = await file.read()
+
+    # 2. Parse file
+    try:
+        from ..services.media_parser import parse_uploaded_file
+        parsed_items = parse_uploaded_file(content, file.filename)
+    except Exception as e:
+        logger.error(f"Failed to parse file: {e}")
+        # Log failure if not a dry run
+        if not dry_run:
+            # Infer the attempted platform from the file extension since parsing failed
+            is_factiva = file.filename and file.filename.lower().endswith('.rtf')
+            action_type = (models.ActionType.MEDIA_INGESTION_FACTIVA
+                           if is_factiva
+                           else models.ActionType.MEDIA_INGESTION_RETRIEVER)
+
+            log_in = schemas.AutomationLogCreate(
+                action_type=action_type,
+                trigger_source=models.TriggerSource.MANUAL,
+                status=models.ActionStatus.FAILED,
+                user_id=current_user.id,
+                items_processed=0,
+                error_message=f"Parsing failed: {str(e)}"
+            )
+            crud.create_automation_log(db, log_in)
+
+        raise HTTPException(400, f"File parsing failed: {str(e)}")
+
+    if not parsed_items:
+        raise HTTPException(400, "The file was parsed successfully, but no valid articles were found.")
+
+    # Dynamically grab the platform from the parser's output
+    detected_platform = parsed_items[0].platform
+
+    # 3. Process Items
+    new_saved = 0
+    duplicates = 0
+    errors = 0
+    error_details = []
+
+    for item in parsed_items:
+        # Type 1 Duplicate Check (Exact Ingestion Duplicate)
+        is_dup = False
+        if item.external_id:
+            existing = db.query(models.MediaPublication).filter(
+                models.MediaPublication.external_id == item.external_id
+            ).first()
+            if existing:
+                is_dup = True
+
+        if is_dup:
+            duplicates += 1
+            continue
+
+        if dry_run:
+            new_saved += 1  # Count what *would* be saved
+            continue
+
+        # Attempt to save to DB (Option B: Partial Saves)
+        try:
+            crud.create_media_publication(db, item)
+            new_saved += 1
+        except Exception as e:
+            logger.warning(f"Failed to save item '{item.title}': {e}")
+            errors += 1
+            error_details.append(f"Item '{item.title[:30]}...': {str(e)}")
+            # Crucial: Rollback the session so the loop can safely continue
+            # without carrying the broken transaction forward.
+            db.rollback()
+
+    # 4. Create Automation Log
+    if not dry_run:
+        action_status = models.ActionStatus.SUCCESS
+        if errors > 0:
+            action_status = models.ActionStatus.PARTIAL if new_saved > 0 else models.ActionStatus.FAILED
+
+        action_type = (models.ActionType.MEDIA_INGESTION_FACTIVA
+                       if detected_platform == models.MediaPlatform.FACTIVA
+                       else models.ActionType.MEDIA_INGESTION_RETRIEVER)
+
+        log_in = schemas.AutomationLogCreate(
+            action_type=action_type,
+            trigger_source=models.TriggerSource.MANUAL,
+            status=action_status,
+            user_id=current_user.id,
+            items_processed=new_saved,
+            # Truncate error message to avoid overflowing DB text limits
+            error_message="; ".join(error_details)[:2000] if error_details else None
+        )
+        crud.create_automation_log(db, log_in)
+
+    return schemas.MediaUploadSummary(
+        status="success" if errors == 0 else "partial_success",
+        filename=file.filename,
+        platform=detected_platform,
+        total_parsed=len(parsed_items),
+        new_saved=new_saved,
+        duplicates_skipped=duplicates,
+        errors=errors,
+        error_details=error_details,
+        dry_run=dry_run
+    )
 
 
 @router.post("/media-publications/actions/process-pending")
