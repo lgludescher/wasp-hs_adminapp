@@ -781,6 +781,7 @@ class MediaPublicationBase(BaseModel):
     published_date: datetime
     content_url:    Optional[str] = None
     article_body:   Optional[str] = None
+    is_duplicate:   Optional[bool] = None
     is_relevant:    Optional[bool] = None
     is_reviewed:    bool = False
     is_pushed_to_wp: bool = False
@@ -807,6 +808,7 @@ class MediaPublicationUpdate(BaseModel):
     published_date: Optional[datetime] = None
     content_url:    Optional[str] = None
     article_body:   Optional[str] = None
+    is_duplicate:   Optional[bool] = None
     is_relevant:    Optional[bool] = None
     is_reviewed:    Optional[bool] = None
     is_pushed_to_wp: Optional[bool] = None
@@ -853,6 +855,7 @@ class AcademicPublicationBase(BaseModel):
     published_date:   Optional[datetime] = None
     authors_raw:      Optional[str] = None
     funding_info:     Optional[str] = None
+    is_duplicate:     Optional[bool] = None
     is_relevant:      Optional[bool] = None
     is_reviewed:      bool = False
     is_pushed_to_wp:  bool = False
@@ -882,6 +885,7 @@ class AcademicPublicationUpdate(BaseModel):
     published_date:   Optional[datetime] = None
     authors_raw:      Optional[str] = None
     funding_info:     Optional[str] = None
+    is_duplicate:     Optional[bool] = None
     is_relevant:      Optional[bool] = None
     is_reviewed:      Optional[bool] = None
     is_pushed_to_wp:  Optional[bool] = None

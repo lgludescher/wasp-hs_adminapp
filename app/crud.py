@@ -3082,6 +3082,7 @@ def get_media_by_external_id(db: Session, platform: models.MediaPlatform, extern
 def list_media_publications(
         db: Session,
         platform: Optional[models.MediaPlatform] = None,
+        is_duplicate: Optional[bool] = None,
         is_relevant: Optional[bool] = None,
         is_reviewed: Optional[bool] = None,
         is_pushed_to_wp: Optional[bool] = None,
@@ -3091,6 +3092,8 @@ def list_media_publications(
 
     if platform is not None:
         q = q.filter_by(platform=platform)
+    if is_duplicate is not None:
+        q = q.filter_by(is_duplicate=is_duplicate)
     if is_relevant is not None:
         q = q.filter_by(is_relevant=is_relevant)
     if is_reviewed is not None:
@@ -3132,7 +3135,7 @@ def update_media_publication(db: Session, pub_id: int,
         raise EntityNotFoundError(f"Media Publication #{pub_id} not found")
 
     for field in ("platform", "external_id", "title", "source_name", "published_date",
-                  "content_url", "article_body", "is_relevant", "is_reviewed",
+                  "content_url", "article_body", "is_duplicate", "is_relevant", "is_reviewed",
                   "is_pushed_to_wp", "wp_post_id", "notes"):
         val = getattr(pub_in, field)
         if val is not None:
@@ -3235,6 +3238,7 @@ def get_academic_by_swepub_id(db: Session, swepub_id: str) -> Optional[models.Ac
 def list_academic_publications(
         db: Session,
         published_year: Optional[int] = None,
+        is_duplicate: Optional[bool] = None,
         is_relevant: Optional[bool] = None,
         is_reviewed: Optional[bool] = None,
         is_pushed_to_wp: Optional[bool] = None,
@@ -3244,6 +3248,8 @@ def list_academic_publications(
 
     if published_year is not None:
         q = q.filter_by(published_year=published_year)
+    if is_duplicate is not None:
+        q = q.filter_by(is_duplicate=is_duplicate)
     if is_relevant is not None:
         q = q.filter_by(is_relevant=is_relevant)
     if is_reviewed is not None:
@@ -3288,7 +3294,7 @@ def update_academic_publication(db: Session, pub_id: int,
 
     for field in ("swepub_id", "doi", "title", "abstract", "publication_type",
                   "journal_name", "published_year", "published_date", "authors_raw",
-                  "funding_info", "is_relevant", "is_reviewed", "is_pushed_to_wp",
+                  "funding_info", "is_duplicate", "is_relevant", "is_reviewed", "is_pushed_to_wp",
                   "wp_post_id", "notes"):
         val = getattr(pub_in, field)
         if val is not None:

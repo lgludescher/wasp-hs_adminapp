@@ -613,6 +613,7 @@ class MediaPublication(Base):
     article_body = Column(Text, nullable=True)  # Using Text for long article content
 
     # --- Workflow & Automation Flags ---
+    is_duplicate = Column(Boolean, default=None, nullable=True)
     is_relevant = Column(Boolean, default=None,
                          nullable=True)  # True = Approved, False = Rejected, None = Pending Review
     is_reviewed = Column(Boolean, default=False, nullable=False)
@@ -659,6 +660,7 @@ class AcademicPublication(Base):
     funding_info = Column(Text, nullable=True)        # Funder / Grant / Acknowledgements info
 
     # --- Workflow & Automation Flags ---
+    is_duplicate = Column(Boolean, default=None, nullable=True)
     is_relevant = Column(Boolean, default=None, nullable=True)  # True = Approved, False = Rejected, None = Pending Review
     is_reviewed = Column(Boolean, default=False, nullable=False)
     is_pushed_to_wp = Column(Boolean, default=False, nullable=False)
@@ -699,6 +701,7 @@ class ActionType(str, PyEnum):
     MEDIA_PUBLISH = "media_publish"
     ACADEMIC_SYNC = "academic_sync"
     ACADEMIC_PROCESSING = "academic_processing"
+    ACADEMIC_PUBLISH = "academic_publish"
 
 
 class TriggerSource(str, PyEnum):
@@ -710,6 +713,7 @@ class ActionStatus(str, PyEnum):
     SUCCESS = "success"
     PARTIAL = "partial"
     FAILED = "failed"
+    IN_PROGRESS = "in_progress"
 
 
 # ----------------------------------------------------------------------

@@ -1,10 +1,12 @@
 import logging
 from typing import List, Optional, Any
 from fastapi import APIRouter, Depends, HTTPException, Response, Query, UploadFile, File
+from fastapi import status, BackgroundTasks
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
-from .. import crud, schemas, dependencies, models
+from .. import crud, schemas, dependencies, models, tasks
 from ..crud import EntityNotFoundError
 from ..excel_utils import generate_excel_response
 from fastapi.responses import StreamingResponse
@@ -34,6 +36,7 @@ def read_media_publication(
 @router.get("/media-publications/", response_model=List[schemas.MediaPublicationRead])
 def list_media_publications(
     platform:        Optional[models.MediaPlatform] = Query(None),
+    is_duplicate:    Optional[bool] = Query(None),
     is_relevant:     Optional[bool] = Query(None),
     is_reviewed:     Optional[bool] = Query(None),
     is_pushed_to_wp: Optional[bool] = Query(None),
@@ -42,11 +45,12 @@ def list_media_publications(
     current_user=Depends(dependencies.get_current_user)
 ):
     logger.info(f"{current_user.username} listed media publications (platform={platform}, "
-                f"is_relevant={is_relevant}, is_reviewed={is_reviewed}, "
+                f"is_duplicate={is_duplicate}, is_relevant={is_relevant}, is_reviewed={is_reviewed}, "
                 f"is_pushed_to_wp={is_pushed_to_wp}, search={search!r})")
     return crud.list_media_publications(
         db,
         platform=platform,
+        is_duplicate=is_duplicate,
         is_relevant=is_relevant,
         is_reviewed=is_reviewed,
         is_pushed_to_wp=is_pushed_to_wp,
@@ -271,24 +275,74 @@ async def upload_media_file(
     )
 
 
-@router.post("/media-publications/actions/process-pending")
+@router.post("/media-publications/actions/process-pending", status_code=status.HTTP_202_ACCEPTED)
 def process_pending_media(
-    db: Session = Depends(dependencies.get_db),
-    current_user=Depends(dependencies.get_current_user)
+        background_tasks: BackgroundTasks,
+        db: Session = Depends(dependencies.get_db),
+        current_user=Depends(dependencies.get_current_user)
 ):
-    """Placeholder: Trigger Azure OpenAI to evaluate is_relevant for unreviewed items."""
-    logger.info(f"{current_user.username} triggered LLM processing for pending media")
-    return {"status": "Not implemented", "message": "Will process unreviewed articles"}
+    """Trigger background processing (Scrape, Deduplicate, LLM) for pending media."""
+
+    # 1. Synchronous lock check for immediate UI feedback
+    active_job = db.query(models.AutomationLog).filter(
+        models.AutomationLog.action_type == models.ActionType.MEDIA_PROCESSING,
+        models.AutomationLog.status == models.ActionStatus.IN_PROGRESS
+    ).first()
+
+    if active_job:
+        # Check if the lock is actually active (less than 2 hours old)
+        now = datetime.now(timezone.utc)
+        job_time = active_job.timestamp if active_job.timestamp.tzinfo else active_job.timestamp.replace(
+            tzinfo=timezone.utc)
+
+        if (now - job_time) < timedelta(hours=2):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A media processing job is already running."
+            )
+        # If it's older than 2 hours, we let the tasks.py TTL logic safely clear it out.
+
+    # 2. Hand off to the background task orchestrator
+    background_tasks.add_task(tasks.process_pending_media_task, user_id=current_user.id)
+
+    logger.info(f"User {current_user.username} triggered media processing (spawned in background).")
+
+    return {"message": "Media processing started in the background."}
 
 
-@router.post("/media-publications/actions/push-to-wp")
+@router.post("/media-publications/actions/push-to-wp", status_code=status.HTTP_202_ACCEPTED)
 def push_approved_media_to_wp(
-    db: Session = Depends(dependencies.get_db),
-    current_user=Depends(dependencies.get_current_user)
+        background_tasks: BackgroundTasks,
+        db: Session = Depends(dependencies.get_db),
+        current_user=Depends(dependencies.get_current_user)
 ):
-    """Placeholder: Push approved articles to WordPress."""
-    logger.info(f"{current_user.username} triggered WP push for approved media")
-    return {"status": "Not implemented", "message": "Will push relevant items to WP"}
+    """Trigger background push of approved media articles to WordPress."""
+
+    # 1. Synchronous lock check for immediate UI feedback
+    active_job = db.query(models.AutomationLog).filter(
+        models.AutomationLog.action_type == models.ActionType.MEDIA_PUBLISH,
+        models.AutomationLog.status == models.ActionStatus.IN_PROGRESS
+    ).first()
+
+    if active_job:
+        # Check if the lock is actually active (less than 2 hours old)
+        now = datetime.now(timezone.utc)
+        job_time = active_job.timestamp if active_job.timestamp.tzinfo else active_job.timestamp.replace(
+            tzinfo=timezone.utc)
+
+        if (now - job_time) < timedelta(hours=2):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A WordPress push job for media is already running."
+            )
+        # If it's older than 2 hours, tasks.py TTL logic will safely clear it.
+
+    # 2. Hand off to the background task orchestrator
+    background_tasks.add_task(tasks.push_approved_media_task, user_id=current_user.id)
+
+    logger.info(f"User {current_user.username} triggered media WordPress push (spawned in background).")
+
+    return {"message": "WordPress push for media started in the background."}
 
 # </editor-fold>
 
