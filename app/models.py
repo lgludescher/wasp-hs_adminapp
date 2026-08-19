@@ -597,6 +597,12 @@ class MediaPlatform(str, PyEnum):
     FACTIVA = "factiva"
 
 
+class AIRecommendation(str, PyEnum):
+    RELEVANT = "relevant"
+    IRRELEVANT = "irrelevant"
+    UNCERTAIN = "uncertain"
+
+
 class MediaPublication(Base):
     __tablename__ = "media_publications"
     __table_args__ = (
@@ -613,12 +619,20 @@ class MediaPublication(Base):
     article_body = Column(Text, nullable=True)  # Using Text for long article content
 
     # --- Workflow & Automation Flags ---
+    is_scraped = Column(Boolean, default=False, nullable=False) # Tracks if scraper ran, even if body is empty
     is_duplicate = Column(Boolean, default=None, nullable=True)
+    ai_recommendation = Column(SQLEnum(AIRecommendation), nullable=True) # LLM's raw output
     is_relevant = Column(Boolean, default=None,
                          nullable=True)  # True = Approved, False = Rejected, None = Pending Review
     is_reviewed = Column(Boolean, default=False, nullable=False)
-    is_pushed_to_wp = Column(Boolean, default=False, nullable=False)
+    entities_matched = Column(Boolean, default=None,
+                              nullable=True)  # True=Matched, False=Zero entities, None=Pending
+    # is_pushed_to_wp = Column(Boolean, default=False, nullable=False)
     wp_post_id = Column(Integer, nullable=True)
+
+    # --- Error & Quarantine Handling ---
+    has_processing_error = Column(Boolean, default=False, nullable=False)  # Prevents infinite retry loops
+    processing_error_msg = Column(Text, nullable=True)  # Explains why it was quarantined
 
     # --- System Audit Metadata ---
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
@@ -661,10 +675,17 @@ class AcademicPublication(Base):
 
     # --- Workflow & Automation Flags ---
     is_duplicate = Column(Boolean, default=None, nullable=True)
+    ai_recommendation = Column(SQLEnum(AIRecommendation), nullable=True)  # LLM's raw output
     is_relevant = Column(Boolean, default=None, nullable=True)  # True = Approved, False = Rejected, None = Pending Review
     is_reviewed = Column(Boolean, default=False, nullable=False)
-    is_pushed_to_wp = Column(Boolean, default=False, nullable=False)
+    entities_matched = Column(Boolean, default=None,
+                              nullable=True)  # True=Matched, False=Zero entities, None=Pending
+    # is_pushed_to_wp = Column(Boolean, default=False, nullable=False)
     wp_post_id = Column(Integer, nullable=True)
+
+    # --- Error & Quarantine Handling ---
+    has_processing_error = Column(Boolean, default=False, nullable=False)  # Prevents infinite retry loops
+    processing_error_msg = Column(Text, nullable=True)  # Explains why it was quarantined
 
     # --- System Audit Metadata ---
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)

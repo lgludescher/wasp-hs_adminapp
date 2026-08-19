@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict
 from enum import Enum as PyEnum
 from decimal import Decimal
 from .models import (GradeType, EntityType, RoleType, ActivityType, MediaPlatform,
-                     ActionType, TriggerSource, ActionStatus)
+                     ActionType, TriggerSource, ActionStatus, AIRecommendation)
 
 
 # <editor-fold desc="User-related entities">
@@ -781,11 +781,21 @@ class MediaPublicationBase(BaseModel):
     published_date: datetime
     content_url:    Optional[str] = None
     article_body:   Optional[str] = None
+
+    # --- Workflow & Automation Flags ---
+    is_scraped:     bool = False
     is_duplicate:   Optional[bool] = None
+    ai_recommendation: Optional[AIRecommendation] = None
     is_relevant:    Optional[bool] = None
     is_reviewed:    bool = False
-    is_pushed_to_wp: bool = False
+    entities_matched: Optional[bool] = None
+    # is_pushed_to_wp: bool = False
     wp_post_id:     Optional[int] = None
+
+    # --- Error & Quarantine Handling ---
+    has_processing_error: bool = False
+    processing_error_msg: Optional[str] = None
+
     notes:          Optional[str] = None
 
 
@@ -808,11 +818,21 @@ class MediaPublicationUpdate(BaseModel):
     published_date: Optional[datetime] = None
     content_url:    Optional[str] = None
     article_body:   Optional[str] = None
+
+    # --- Workflow & Automation Flags ---
+    is_scraped:     Optional[bool] = None
     is_duplicate:   Optional[bool] = None
+    ai_recommendation: Optional[AIRecommendation] = None
     is_relevant:    Optional[bool] = None
     is_reviewed:    Optional[bool] = None
-    is_pushed_to_wp: Optional[bool] = None
+    entities_matched: Optional[bool] = None
+    # is_pushed_to_wp: Optional[bool] = None
     wp_post_id:     Optional[int] = None
+
+    # --- Error & Quarantine Handling ---
+    has_processing_error: Optional[bool] = None
+    processing_error_msg: Optional[str] = None
+
     notes:          Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -855,11 +875,20 @@ class AcademicPublicationBase(BaseModel):
     published_date:   Optional[datetime] = None
     authors_raw:      Optional[str] = None
     funding_info:     Optional[str] = None
+
+    # --- Workflow & Automation Flags ---
     is_duplicate:     Optional[bool] = None
+    ai_recommendation: Optional[AIRecommendation] = None
     is_relevant:      Optional[bool] = None
     is_reviewed:      bool = False
-    is_pushed_to_wp:  bool = False
+    entities_matched: Optional[bool] = None
+    # is_pushed_to_wp: bool = False
     wp_post_id:       Optional[int] = None
+
+    # --- Error & Quarantine Handling ---
+    has_processing_error: bool = False
+    processing_error_msg: Optional[str] = None
+
     notes:            Optional[str] = None
 
 
@@ -885,11 +914,20 @@ class AcademicPublicationUpdate(BaseModel):
     published_date:   Optional[datetime] = None
     authors_raw:      Optional[str] = None
     funding_info:     Optional[str] = None
+
+    # --- Workflow & Automation Flags ---
     is_duplicate:     Optional[bool] = None
+    ai_recommendation: Optional[AIRecommendation] = None
     is_relevant:      Optional[bool] = None
     is_reviewed:      Optional[bool] = None
-    is_pushed_to_wp:  Optional[bool] = None
+    entities_matched: Optional[bool] = None
+    # is_pushed_to_wp: Optional[bool] = None
     wp_post_id:       Optional[int] = None
+
+    # --- Error & Quarantine Handling ---
+    has_processing_error: Optional[bool] = None
+    processing_error_msg: Optional[str] = None
+
     notes:            Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

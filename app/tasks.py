@@ -83,9 +83,14 @@ def sync_swepub_task(user_id: int):
     try:
         job_log = _manage_job_lock(db, models.ActionType.ACADEMIC_SYNC, user_id)
 
-        # TODO: Phase 1 - Fetch from SwePub API
+        # MODIFICATION: Implemented Delta Sync lookup. We query the automation log
+        # for the last successful sync timestamp so we don't fetch the whole DB.
+        last_sync = crud.get_latest_automation_log(db, models.ActionType.ACADEMIC_SYNC, models.ActionStatus.SUCCESS)
+        last_sync_time = last_sync.timestamp if last_sync else None
+
+        # TODO: Phase 1 - Fetch from SwePub API (pass last_sync_time as parameter)
         # from app.services.swepub import fetch_recent_publications
-        # raw_data = fetch_recent_publications()
+        # raw_data = fetch_recent_publications(since=last_sync_time)
 
         # TODO: Phase 2 - Save to DB (checking for Type 1 exact ingestion duplicates)
         # items_saved = save_swepub_to_db(db, raw_data)
@@ -119,9 +124,13 @@ def process_pending_media_task(user_id: int):
         # ---------------------------------------------------------
         # PHASE 1: SCRAPER (Missing Body & Has URL)
         # ---------------------------------------------------------
+        # MODIFICATION: Added `is_scraped == False` to prevent empty-body infinite loops.
+        # Added `has_processing_error == False` to ignore quarantined items.
         items_to_scrape = db.query(models.MediaPublication).filter(
             models.MediaPublication.content_url.isnot(None),
-            models.MediaPublication.article_body.is_(None)
+            models.MediaPublication.article_body.is_(None),
+            models.MediaPublication.is_scraped == False,
+            models.MediaPublication.has_processing_error == False
         ).all()
 
         if items_to_scrape:
@@ -132,9 +141,11 @@ def process_pending_media_task(user_id: int):
         # ---------------------------------------------------------
         # PHASE 2: DEDUPLICATION (Body Exists & Duplication Unknown)
         # ---------------------------------------------------------
+        # MODIFICATION: Added quarantine guard.
         items_to_dedup = db.query(models.MediaPublication).filter(
             models.MediaPublication.article_body.isnot(None),
-            models.MediaPublication.is_duplicate.is_(None)
+            models.MediaPublication.is_duplicate.is_(None),
+            models.MediaPublication.has_processing_error == False
         ).all()
 
         if items_to_dedup:
@@ -145,9 +156,12 @@ def process_pending_media_task(user_id: int):
         # ---------------------------------------------------------
         # PHASE 3: LLM EVALUATION (Not a Duplicate & Evaluation Unknown)
         # ---------------------------------------------------------
+        # MODIFICATION: Changed trigger to `ai_recommendation` (to avoid overriding human review)
+        # and added quarantine guard.
         items_to_eval = db.query(models.MediaPublication).filter(
             models.MediaPublication.is_duplicate == False,
-            models.MediaPublication.is_relevant.is_(None)
+            models.MediaPublication.ai_recommendation.is_(None),
+            models.MediaPublication.has_processing_error == False
         ).all()
 
         if items_to_eval:
@@ -158,11 +172,15 @@ def process_pending_media_task(user_id: int):
         # ---------------------------------------------------------
         # PHASE 4: ENTITY MATCHING (Is Relevant & Not Yet Matched)
         # ---------------------------------------------------------
+        # MODIFICATION: Changed to Post-Review trigger to save API calls.
+        # It only runs if a human has reviewed it, it's relevant, and not matched yet.
         """
         # Placeholder for future implementation
         items_to_match = db.query(models.MediaPublication).filter(
+            models.MediaPublication.is_reviewed == True,
             models.MediaPublication.is_relevant == True,
-            models.MediaPublication.entities_matched.is_(None)
+            models.MediaPublication.entities_matched.is_(None),
+            models.MediaPublication.has_processing_error == False
         ).all()
 
         if items_to_match:
@@ -200,8 +218,10 @@ def process_pending_academic_task(user_id: int):
         # ---------------------------------------------------------
         # PHASE 1: DEDUPLICATION (No scraper needed for SwePub)
         # ---------------------------------------------------------
+        # MODIFICATION: Added quarantine guard.
         items_to_dedup = db.query(models.AcademicPublication).filter(
-            models.AcademicPublication.is_duplicate.is_(None)
+            models.AcademicPublication.is_duplicate.is_(None),
+            models.AcademicPublication.has_processing_error == False
         ).all()
 
         if items_to_dedup:
@@ -212,9 +232,11 @@ def process_pending_academic_task(user_id: int):
         # ---------------------------------------------------------
         # PHASE 2: LLM EVALUATION
         # ---------------------------------------------------------
+        # MODIFICATION: Changed trigger to `ai_recommendation` and added quarantine guard.
         items_to_eval = db.query(models.AcademicPublication).filter(
             models.AcademicPublication.is_duplicate == False,
-            models.AcademicPublication.is_relevant.is_(None)
+            models.AcademicPublication.ai_recommendation.is_(None),
+            models.AcademicPublication.has_processing_error == False
         ).all()
 
         if items_to_eval:
@@ -225,11 +247,14 @@ def process_pending_academic_task(user_id: int):
         # ---------------------------------------------------------
         # PHASE 3: ENTITY MATCHING
         # ---------------------------------------------------------
+        # MODIFICATION: Changed to Post-Review trigger to save API calls.
         """
         # Placeholder for future implementation
         items_to_match = db.query(models.AcademicPublication).filter(
+            models.AcademicPublication.is_reviewed == True,
             models.AcademicPublication.is_relevant == True,
-            models.AcademicPublication.entities_matched.is_(None)
+            models.AcademicPublication.entities_matched.is_(None),
+            models.AcademicPublication.has_processing_error == False
         ).all()
 
         if items_to_match:
@@ -264,9 +289,13 @@ def push_approved_media_task(user_id: int):
     try:
         job_log = _manage_job_lock(db, models.ActionType.MEDIA_PUBLISH, user_id)
 
+        # MODIFICATION: Added `is_reviewed == True` as the absolute human-in-the-loop gatekeeper.
+        # Added quarantine guard.
         media_to_push = db.query(models.MediaPublication).filter(
+            models.MediaPublication.is_reviewed == True,
             models.MediaPublication.is_relevant == True,
-            models.MediaPublication.wp_post_id.is_(None)
+            models.MediaPublication.wp_post_id.is_(None),
+            models.MediaPublication.has_processing_error == False
         ).all()
 
         # TODO: from app.services.wordpress import push_media_to_wordpress
@@ -294,9 +323,12 @@ def push_approved_academic_task(user_id: int):
     try:
         job_log = _manage_job_lock(db, models.ActionType.ACADEMIC_PUBLISH, user_id)
 
+        # MODIFICATION: Added `is_reviewed == True` and quarantine guard.
         academic_to_push = db.query(models.AcademicPublication).filter(
+            models.AcademicPublication.is_reviewed == True,
             models.AcademicPublication.is_relevant == True,
-            models.AcademicPublication.wp_post_id.is_(None)
+            models.AcademicPublication.wp_post_id.is_(None),
+            models.AcademicPublication.has_processing_error == False
         ).all()
 
         # TODO: from app.services.wordpress import push_academic_to_wordpress

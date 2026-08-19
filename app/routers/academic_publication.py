@@ -37,23 +37,31 @@ def read_academic_publication(
 def list_academic_publications(
     published_year:  Optional[int] = Query(None),
     is_duplicate:    Optional[bool] = Query(None),
+    ai_recommendation: Optional[models.AIRecommendation] = Query(None),
     is_relevant:     Optional[bool] = Query(None),
     is_reviewed:     Optional[bool] = Query(None),
-    is_pushed_to_wp: Optional[bool] = Query(None),
+    # is_pushed_to_wp: Optional[bool] = Query(None),
+    is_published_to_wp: Optional[bool] = Query(None),
+    has_processing_error: Optional[bool] = Query(None),
     search:          Optional[str] = Query(None, description="Substring search on title or journal"),
     db: Session = Depends(dependencies.get_db),
     current_user=Depends(dependencies.get_current_user)
 ):
     logger.info(f"{current_user.username} listed academic publications (year={published_year}, "
-                f"is_duplicate={is_duplicate}, is_relevant={is_relevant}, is_reviewed={is_reviewed}, "
-                f"is_pushed_to_wp={is_pushed_to_wp}, search={search!r})")
+                f"is_duplicate={is_duplicate}, ai_recommendation={ai_recommendation}, "
+                f"is_relevant={is_relevant}, is_reviewed={is_reviewed}, "
+                f"is_published_to_wp={is_published_to_wp}, "
+                f"has_processing_error={has_processing_error}, search={search!r})")
     return crud.list_academic_publications(
         db,
         published_year=published_year,
         is_duplicate=is_duplicate,
+        ai_recommendation=ai_recommendation,
         is_relevant=is_relevant,
         is_reviewed=is_reviewed,
-        is_pushed_to_wp=is_pushed_to_wp,
+        # is_pushed_to_wp=is_pushed_to_wp,
+        is_published_to_wp=is_published_to_wp,
+        has_processing_error=has_processing_error,
         search=search
     )
 
