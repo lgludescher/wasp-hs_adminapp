@@ -1,0 +1,398 @@
+/* ==========================================================================
+   Page Header & Activity Bar
+   ========================================================================== */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.page-title {
+  margin-bottom: 0;
+  font-size: 1.5rem;
+}
+
+.title-count {
+  color: #777;
+  font-weight: normal;
+  font-size: 0.75em;
+  margin-left: 0.5rem;
+}
+
+/* New: Muted banner for automation logs */
+.activity-bar {
+  background-color: var(--color-surface, #f5f5f5);
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  color: #555;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.activity-bar em {
+  font-style: normal;
+  font-weight: 500;
+  color: #333;
+}
+
+/* ==========================================================================
+   Tab Navigation
+   ========================================================================== */
+.tab-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--color-surface, #eee);
+  padding-bottom: 0;
+}
+
+.tab-btn {
+  background: transparent;
+  color: var(--color-text);
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 4px 4px 0 0;
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  opacity: 1;
+  background: var(--color-surface);
+}
+
+.tab-btn.active {
+  opacity: 1;
+  color: var(--color-primary);
+  border-bottom-color: var(--color-accent);
+  background: transparent;
+}
+
+.tab-pane {
+  display: block;
+  animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   Search Generator Card (Tab 1)
+   ========================================================================== */
+.search-generator-card {
+  background: var(--color-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.search-generator-card summary {
+  padding: 0.75rem 1rem;
+  background: var(--color-surface);
+  cursor: pointer;
+  user-select: none;
+}
+
+.search-generator-card summary:hover {
+  background: #ebebeb;
+}
+
+.search-generator-content {
+  padding: 1rem;
+  border-top: 1px solid #ddd;
+}
+
+.help-text {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 0.75rem;
+}
+
+.search-generator-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  max-width: 800px;
+}
+
+.search-generator-actions input {
+  flex: 1;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9rem;
+  background-color: #f9f9f9;
+}
+
+.btn-icon {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  background-color: #f0f0f0;
+  border-color: #999;
+}
+
+/* ==========================================================================
+   Data Tables & Badges
+   ========================================================================== */
+.tab-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.list-container {
+  background: var(--color-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin-bottom: 4rem; /* Leave space for floating bulk bar */
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.6rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.data-table th {
+  background: var(--color-surface);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cell-center {
+  text-align: center !important;
+}
+
+.cell-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.cell-actions .btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  margin-left: 0.25rem;
+}
+
+/* Badges / Pills */
+.status-pill {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.pill-relevant { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+.pill-irrelevant { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+.pill-uncertain { background: #fff3e0; color: #ef6c00; border: 1px solid #ffe0b2; }
+.pill-published { background: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; }
+.pill-internal { background: #f5f5f5; color: #616161; border: 1px solid #e0e0e0; }
+
+.error-text {
+  color: #c62828;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* ==========================================================================
+   Expanded Preview Row (Tab 2)
+   ========================================================================== */
+.expand-btn {
+  width: 2rem;
+  text-align: center;
+  padding: 0.25rem;
+  margin-right: 0.5rem;
+}
+
+.expanded-row .expanded-content {
+  padding: 1rem;
+  background: #fcfcfc;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+  margin: 0.5rem 0;
+}
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1.5rem;
+}
+
+.preview-section h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.preview-section p {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #444;
+  white-space: pre-wrap;
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+/* ==========================================================================
+   Floating Bulk Action Bar
+   ========================================================================== */
+.bulk-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #333;
+  color: #fff;
+  padding: 1rem 2rem;
+  z-index: 1000;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+  transition: transform 0.3s ease;
+}
+
+.bulk-action-bar.hidden {
+  display: none !important;
+}
+
+.bulk-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+#bulk-count {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.bulk-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* ==========================================================================
+   Modals & Forms
+   ========================================================================== */
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.modal-content {
+  background: var(--color-bg);
+  padding: 1.5rem;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Form Styles */
+.form-create fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.form-create legend {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: var(--color-primary);
+}
+
+.form-create label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-create input[type="text"],
+.form-create input[type="url"],
+.form-create input[type="datetime-local"],
+.form-create select {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.95rem;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  margin-top: 0.25rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.grid-2-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+/* Override secondary buttons in modals for better contrast if needed */
+:root {
+  --color-secondary: #6c757d;
+}
+.btn-secondary {
+  background: var(--color-secondary);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.btn-secondary:hover {
+  opacity: 0.9;
+}

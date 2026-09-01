@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/media_automation.css') }}" />
+  <script type="module" src="{{ url_for('static', path='js/media_automation.js') }}"></script>
+{% endblock %}
+
+{% block body %}
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">
+      Media Automation Pipeline
+      <span id="system-status" class="title-count" title="System Status"></span>
+    </h1>
+    <button id="btn-add-record" class="btn">Add Record Manually</button>
+  </div>
+
+  <!-- Activity Log Bar -->
+  <div id="activity-bar" class="activity-bar">
+    <span id="activity-ingest-retriever">Retriever Upload: <em>Loading...</em></span> |
+    <span id="activity-ingest-factiva">Factiva Upload: <em>Loading...</em></span> |
+    <span id="activity-processing">Processing: <em>Loading...</em></span> |
+    <span id="activity-publish">WP Push: <em>Loading...</em></span>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="actions-bar tab-nav">
+    <button class="btn tab-btn active" data-tab="tab-ingestion">1. Ingestion & Pending</button>
+    <button class="btn tab-btn" data-tab="tab-review">2. Needs Review</button>
+    <button class="btn tab-btn" data-tab="tab-publish">3. Ready to Publish</button>
+    <button class="btn tab-btn" data-tab="tab-quarantine">4. Quarantine / Errors</button>
+    <button class="btn tab-btn" data-tab="tab-archive">5. Archive / History</button>
+  </div>
+
+  <!-- ==========================================
+       TAB 1: INGESTION & PENDING
+       ========================================== -->
+  <section id="tab-ingestion" class="tab-pane">
+    <!-- Search String Generator -->
+    <details class="search-generator-card">
+      <summary><strong>Search String Generator</strong> (Factiva/Retriever)</summary>
+      <div class="search-generator-content">
+        <p class="help-text">Generate a boolean search string containing active WASP-HS members.</p>
+        <div class="search-generator-actions">
+          <button id="btn-generate-search" class="btn btn-secondary">Generate String</button>
+          <input id="search-string-output" type="text" readonly placeholder="String will appear here..." />
+          <button id="btn-copy-search" class="btn btn-icon" title="Copy to Clipboard">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </details>
+
+    <div class="actions-bar tab-actions">
+      <button id="btn-show-upload" class="btn">Upload File (.txt, .rtf)</button>
+      <button id="btn-process-pending" class="btn">Process Pending Media</button>
+    </div>
+
+    <div class="list-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-ingestion" /></th>
+            <th>Title</th>
+            <th>Publisher</th>
+            <th>Platform</th>
+            <th>Published Date</th>
+            <th class="cell-actions"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-ingestion"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       TAB 2: NEEDS REVIEW
+       ========================================== -->
+  <section id="tab-review" class="tab-pane hidden">
+    <div class="list-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-review" /></th>
+            <th class="cell-center">AI Recommendation</th>
+            <th>Title</th>
+            <th>Publisher</th>
+            <th>Published Date</th>
+            <th class="cell-actions"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-review"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       TAB 3: READY TO PUBLISH
+       ========================================== -->
+  <section id="tab-publish" class="tab-pane hidden">
+    <div class="actions-bar tab-actions">
+      <button id="btn-push-all-wp" class="btn">Push Queue to WordPress</button>
+    </div>
+
+    <div class="list-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-publish" /></th>
+            <th>Title</th>
+            <th>Publisher</th>
+            <th>Published Date</th>
+            <th class="cell-actions"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-publish"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       TAB 4: QUARANTINE / ERRORS
+       ========================================== -->
+  <section id="tab-quarantine" class="tab-pane hidden">
+    <div class="list-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-quarantine" /></th>
+            <th>Title</th>
+            <th>Error Message</th>
+            <th class="cell-actions"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-quarantine"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       TAB 5: ARCHIVE / HISTORY
+       ========================================== -->
+  <section id="tab-archive" class="tab-pane hidden">
+    <div class="list-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Publisher</th>
+            <th class="cell-center">Final Status</th>
+            <th class="cell-center">WP Link</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-archive"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       FLOATING BULK ACTION BAR
+       ========================================== -->
+  <div id="bulk-action-bar" class="bulk-action-bar hidden">
+    <div class="bulk-content">
+      <span id="bulk-count">0 items selected</span>
+      <div id="bulk-buttons" class="bulk-buttons">
+        <!-- Buttons injected by JS based on active tab -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: FILE UPLOAD
+       ========================================== -->
+  <div id="modal-upload" class="modal hidden">
+    <div class="modal-content form-create" style="max-width: 450px;">
+      <form id="form-upload">
+        <fieldset>
+          <legend><strong>Upload Media File</strong></legend>
+
+          <div style="margin-bottom: 1rem; padding: 0.75rem; background-color: var(--color-surface); border: 1px solid #eee; border-radius: 4px; font-size: 0.85rem; color: #555;">
+            <strong>Expected Formats:</strong><br/>
+            &bull; Retriever files should be in <strong>.txt</strong> format.<br/>
+            &bull; Factiva files should be in <strong>.rtf</strong> format.
+          </div>
+
+          <label>File:
+            <input type="file" name="file" accept=".txt,.rtf" required />
+          </label>
+          <div class="form-actions" style="margin-top: 1rem;">
+            <button type="submit" class="btn save-btn">Upload</button>
+            <button type="button" id="btn-cancel-upload" class="btn cancel-btn">Cancel</button>
+          </div>
+        </fieldset>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: ADD / EDIT PUBLICATION
+       ========================================== -->
+  <div id="modal-publication-form" class="modal hidden">
+    <div class="modal-content form-create" style="max-width: 800px; width: 90%;">
+      <form id="form-publication">
+        <fieldset>
+          <legend><strong id="publication-form-title">Add Media Publication</strong></legend>
+
+          <div class="grid-2-col">
+            <label>Title:
+              <input name="title" type="text" required />
+            </label>
+            <label>Publisher (Source Name):
+              <input name="source_name" type="text" required />
+            </label>
+
+            <label>Platform:
+              <select name="platform" required>
+                <option value="retriever">Retriever</option>
+                <option value="factiva">Factiva</option>
+              </select>
+            </label>
+            <label>Published Date:
+              <input name="published_date" type="datetime-local" required />
+            </label>
+
+            <label>Content URL:
+              <input name="content_url" type="url" />
+            </label>
+            <label>External ID:
+              <input name="external_id" type="text" />
+            </label>
+          </div>
+
+          <label style="margin-top: 0.5rem;">Article Body:
+            <textarea name="article_body" rows="10" style="width: 100%; padding: 0.5rem; font-family: inherit; border: 1px solid #ccc; border-radius: 3px;"></textarea>
+          </label>
+
+          <label style="margin-top: 0.5rem;">Notes:
+            <input name="notes" type="text" />
+          </label>
+
+          <div class="form-actions" style="margin-top: 1rem;">
+            <button type="submit" class="btn save-btn">Save Record</button>
+            <button type="button" id="btn-cancel-publication" class="btn cancel-btn">Cancel</button>
+          </div>
+        </fieldset>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: GENERAL CONFIRM / ERROR
+       ========================================== -->
+  <div id="modal-confirm" class="modal hidden">
+    <div class="modal-content">
+      <p id="modal-text"></p>
+      <div class="modal-actions">
+        <button id="modal-confirm-btn" class="btn">Confirm</button>
+        <button id="modal-cancel-btn" class="btn cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}
