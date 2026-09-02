@@ -7,8 +7,9 @@ pydantic-settings
 python-dotenv
 alembic
 pytest
-httpx
+httpx[http2]
 openpyxl
 python-multipart
 dateparser
 striprtf
+trafilatura

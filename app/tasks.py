@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 # Adjust imports based on your actual project structure
 from app.database import SessionLocal
 from app import models, schemas, crud
+from app.services.scraper import scrape_urls
 
 logger = logging.getLogger(__name__)
 
@@ -134,9 +135,10 @@ def process_pending_media_task(user_id: int):
         ).all()
 
         if items_to_scrape:
-            # TODO: from app.services.scraper import scrape_urls
-            # items_processed += scrape_urls(db, items_to_scrape)
-            pass
+            scraped_count = scrape_urls(db, items_to_scrape)
+            items_processed += scraped_count
+            logger.info(
+                f"Scraper phase completed. Attempted: {len(items_to_scrape)}, Successful text extracted: {scraped_count}")
 
         # ---------------------------------------------------------
         # PHASE 2: DEDUPLICATION (Body Exists & Duplication Unknown)
