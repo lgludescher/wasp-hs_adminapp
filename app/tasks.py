@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app import models, schemas, crud
 from app.services.scraper import scrape_urls
+from app.services.swepub import fetch_recent_publications, save_swepub_to_db
 
 logger = logging.getLogger(__name__)
 
@@ -89,12 +90,11 @@ def sync_swepub_task(user_id: int):
         last_sync = crud.get_latest_automation_log(db, models.ActionType.ACADEMIC_SYNC, models.ActionStatus.SUCCESS)
         last_sync_time = last_sync.timestamp if last_sync else None
 
-        # TODO: Phase 1 - Fetch from SwePub API (pass last_sync_time as parameter)
-        # from app.services.swepub import fetch_recent_publications
-        # raw_data = fetch_recent_publications(since=last_sync_time)
+        # Phase 1 - Fetch from SwePub API (pass last_sync_time as parameter)
+        raw_data = fetch_recent_publications(db, since=last_sync_time)
 
-        # TODO: Phase 2 - Save to DB (checking for Type 1 exact ingestion duplicates)
-        # items_saved = save_swepub_to_db(db, raw_data)
+        # Phase 2 - Save to DB (checking for Type 1 exact ingestion duplicates)
+        items_saved = save_swepub_to_db(db, raw_data)
 
         _finalize_job(db, job_log.id, models.ActionStatus.SUCCESS, items_saved)
 
