@@ -287,10 +287,11 @@ async def upload_media_file(
 @router.post("/media-publications/actions/process-pending", status_code=status.HTTP_202_ACCEPTED)
 def process_pending_media(
         background_tasks: BackgroundTasks,
+        payload: Optional[schemas.ProcessPendingRequest] = None,
         db: Session = Depends(dependencies.get_db),
         current_user=Depends(dependencies.get_current_user)
 ):
-    """Trigger background processing (Scrape, Deduplicate, LLM) for pending media."""
+    """Trigger background processing (Scrape, Deduplicate, LLM) for pending media (optionally filtered by IDs)."""
 
     # 1. Synchronous lock check for immediate UI feedback
     active_job = db.query(models.AutomationLog).filter(
@@ -311,12 +312,16 @@ def process_pending_media(
             )
         # If it's older than 2 hours, we let the tasks.py TTL logic safely clear it out.
 
+    # Extract the IDs (if any were provided)
+    pub_ids = payload.publication_ids if payload else None
+
     # 2. Hand off to the background task orchestrator
-    background_tasks.add_task(tasks.process_pending_media_task, user_id=current_user.id)
+    background_tasks.add_task(tasks.process_pending_media_task, user_id=current_user.id, publication_ids=pub_ids)
 
-    logger.info(f"User {current_user.username} triggered media processing (spawned in background).")
+    msg = f"Processing started for {len(pub_ids)} selected items." if pub_ids else "Processing started for all pending items."
+    logger.info(f"User {current_user.username} triggered media processing (spawned in background): {msg}.")
 
-    return {"message": "Media processing started in the background."}
+    return {"message": f"Media processing started in the background ({msg})."}
 
 
 @router.post("/media-publications/actions/push-to-wp", status_code=status.HTTP_202_ACCEPTED)

@@ -343,7 +343,11 @@ function updateBulkActionBar() {
   bulkButtons.innerHTML = '';
 
   if (currentTab === 'tab-ingestion') {
-    bulkButtons.innerHTML = `<button id="bulk-delete" class="btn" style="background: #c62828;">Delete Selected</button>`;
+    bulkButtons.innerHTML = `
+      <button id="bulk-process" class="btn" style="background: var(--color-primary);">Process Selected</button>
+      <button id="bulk-delete" class="btn" style="background: #c62828;">Delete Selected</button>
+    `;
+    document.getElementById('bulk-process').onclick = () => triggerProcessing(checked);
     document.getElementById('bulk-delete').onclick = () => bulkUpdate(checked, { action: 'delete' });
   }
   else if (currentTab === 'tab-review') {
@@ -509,13 +513,25 @@ function openEditModal(item) {
 // Global Actions (Triggers)
 // ============================================================================
 function setupGlobalActions() {
-  btnProcessPending.onclick = async () => {
-    try {
-      await apiFetch('/media-publications/actions/process-pending', { method: 'POST' });
-      showSystemStatus('AI Processing Started...');
-      loadActivityLogs(); // Instantly fetch the new IN_PROGRESS log
-      setTimeout(loadCurrentTab, 3000); // Wait a bit then refresh table
-    } catch (err) { showError(err); }
+  btnProcessPending.onclick = () => {
+    const tbody = document.getElementById('tbody-ingestion');
+    if (!tbody) return;
+
+    // Find all checkboxes and see which ones are checked
+    const allCheckboxes = Array.from(tbody.querySelectorAll('.row-checkbox'));
+    const checkedBoxes = allCheckboxes.filter(cb => cb.checked);
+
+    // If none are checked, we process ALL of them for consistency. Otherwise, just the checked ones.
+    const idsToProcess = checkedBoxes.length > 0
+      ? checkedBoxes.map(cb => parseInt(cb.value))
+      : allCheckboxes.map(cb => parseInt(cb.value));
+
+    if (idsToProcess.length === 0) {
+      showModal('There are no pending items to process.');
+      return;
+    }
+
+    triggerProcessing(idsToProcess);
   };
 
   btnPushAllWp.onclick = async () => {
@@ -587,6 +603,22 @@ function setupSearchGenerator() {
 // ============================================================================
 // Utilities & UI Helpers
 // ============================================================================
+async function triggerProcessing(ids) {
+  try {
+    await apiFetch('/media-publications/actions/process-pending', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ publication_ids: ids })
+    });
+    showSystemStatus('AI Processing Started...');
+    loadActivityLogs();
+    resetBulkSelection();
+    setTimeout(loadCurrentTab, 3000);
+  } catch (err) {
+    showError(err);
+  }
+}
+
 async function loadActivityLogs() {
   const elRetriever = document.getElementById('activity-ingest-retriever');
   const elFactiva = document.getElementById('activity-ingest-factiva');

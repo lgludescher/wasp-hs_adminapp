@@ -113,7 +113,7 @@ def sync_swepub_task(user_id: int):
 # 2. MEDIA PROCESSING ORCHESTRATOR
 # ==========================================
 
-def process_pending_media_task(user_id: int):
+def process_pending_media_task(user_id: int, publication_ids: list[int] = None):
     """Background task: Scrapes URLs, Deduplicates, AI Evaluation, Entity Matching."""
     db = SessionLocal()
     job_log = None
@@ -122,17 +122,24 @@ def process_pending_media_task(user_id: int):
     try:
         job_log = _manage_job_lock(db, models.ActionType.MEDIA_PROCESSING, user_id)
 
+        # Helper function to apply the ID filter cleanly across all queries
+        def apply_id_filter(query):
+            if publication_ids:
+                return query.filter(models.MediaPublication.id.in_(publication_ids))
+            return query
+
         # ---------------------------------------------------------
         # PHASE 1: SCRAPER (Missing Body & Has URL)
         # ---------------------------------------------------------
         # MODIFICATION: Added `is_scraped == False` to prevent empty-body infinite loops.
         # Added `has_processing_error == False` to ignore quarantined items.
-        items_to_scrape = db.query(models.MediaPublication).filter(
+        base_scrape_query = db.query(models.MediaPublication).filter(
             models.MediaPublication.content_url.isnot(None),
             models.MediaPublication.article_body.is_(None),
             models.MediaPublication.is_scraped == False,
             models.MediaPublication.has_processing_error == False
-        ).all()
+        )
+        items_to_scrape = apply_id_filter(base_scrape_query).all()
 
         if items_to_scrape:
             scraped_count = scrape_urls(db, items_to_scrape)
@@ -144,15 +151,22 @@ def process_pending_media_task(user_id: int):
         # PHASE 2: DEDUPLICATION (Body Exists & Duplication Unknown)
         # ---------------------------------------------------------
         # MODIFICATION: Added quarantine guard.
-        items_to_dedup = db.query(models.MediaPublication).filter(
+        base_dedup_query = db.query(models.MediaPublication).filter(
             models.MediaPublication.article_body.isnot(None),
             models.MediaPublication.is_duplicate.is_(None),
             models.MediaPublication.has_processing_error == False
-        ).all()
+        )
+        items_to_dedup = apply_id_filter(base_dedup_query).all()
 
         if items_to_dedup:
             # TODO: from app.services.deduplicator import flag_duplicates
             # flag_duplicates(db, items_to_dedup)
+
+            # TEMPORARY: For testing purposes
+            for item in items_to_dedup:
+                item.is_duplicate = False
+                db.commit()
+
             pass
 
         # ---------------------------------------------------------
@@ -160,15 +174,22 @@ def process_pending_media_task(user_id: int):
         # ---------------------------------------------------------
         # MODIFICATION: Changed trigger to `ai_recommendation` (to avoid overriding human review)
         # and added quarantine guard.
-        items_to_eval = db.query(models.MediaPublication).filter(
+        base_eval_query = db.query(models.MediaPublication).filter(
             models.MediaPublication.is_duplicate == False,
             models.MediaPublication.ai_recommendation.is_(None),
             models.MediaPublication.has_processing_error == False
-        ).all()
+        )
+        items_to_eval = apply_id_filter(base_eval_query).all()
 
         if items_to_eval:
             # TODO: from app.services.llm import evaluate_media
             # evaluate_media(db, items_to_eval)
+
+            # TEMPORARY: For testing purposes
+            for item in items_to_eval:
+                item.ai_recommendation = models.AIRecommendation.RELEVANT
+                db.commit()
+
             items_processed += len(items_to_eval)
 
         # ---------------------------------------------------------
@@ -178,12 +199,13 @@ def process_pending_media_task(user_id: int):
         # It only runs if a human has reviewed it, it's relevant, and not matched yet.
         """
         # Placeholder for future implementation
-        items_to_match = db.query(models.MediaPublication).filter(
+        base_match_query = db.query(models.MediaPublication).filter(
             models.MediaPublication.is_reviewed == True,
             models.MediaPublication.is_relevant == True,
             models.MediaPublication.entities_matched.is_(None),
             models.MediaPublication.has_processing_error == False
-        ).all()
+        )
+        items_to_match = apply_id_filter(base_match_query).all()
 
         if items_to_match:
             # from app.services.entity_matcher import link_media_entities

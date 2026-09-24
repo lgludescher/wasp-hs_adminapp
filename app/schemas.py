@@ -1010,4 +1010,8 @@ class MediaUploadSummary(BaseModel):
     dry_run: bool
 
 
+class ProcessPendingRequest(BaseModel):
+    publication_ids: Optional[List[int]] = None
+
+
 # </editor-fold>
