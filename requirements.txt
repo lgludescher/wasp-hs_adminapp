@@ -13,3 +13,5 @@ python-multipart
 dateparser
 striprtf
 trafilatura
+openai
+tenacity

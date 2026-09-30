@@ -7,6 +7,7 @@ from app.database import SessionLocal
 from app import models, schemas, crud
 from app.services.scraper import scrape_urls
 from app.services.swepub import fetch_recent_publications, save_swepub_to_db
+from app.services.llm import evaluate_media
 
 logger = logging.getLogger(__name__)
 
@@ -182,13 +183,12 @@ def process_pending_media_task(user_id: int, publication_ids: list[int] = None):
         items_to_eval = apply_id_filter(base_eval_query).all()
 
         if items_to_eval:
-            # TODO: from app.services.llm import evaluate_media
-            # evaluate_media(db, items_to_eval)
+            evaluate_media(db, items_to_eval)
 
             # TEMPORARY: For testing purposes
-            for item in items_to_eval:
-                item.ai_recommendation = models.AIRecommendation.RELEVANT
-                db.commit()
+            # for item in items_to_eval:
+            #     item.ai_recommendation = models.AIRecommendation.RELEVANT
+            #     db.commit()
 
             items_processed += len(items_to_eval)
 
