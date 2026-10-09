@@ -158,17 +158,26 @@ async function loadCurrentTab() {
       const pubDate = item.published_date ? item.published_date.split('T')[0] : '';
       const platform = item.platform.charAt(0).toUpperCase() + item.platform.slice(1);
 
-      let html = `<td class="cell-center"><input type="checkbox" class="row-checkbox" value="${item.id}" /></td>`;
+      // Detection Logic
+      const isProtected = item.content_url && item.content_url.includes('ret.nu') && (!item.article_body || item.article_body.trim() === '');
+
+      let html = `<td class="cell-center"><input type="checkbox" class="row-checkbox" value="${item.id}" data-protected="${isProtected}" /></td>`;
 
       if (currentTab === 'tab-ingestion') {
+        const protectedBadge = isProtected ? `<span class="status-pill pill-warning" style="margin-right: 0.5rem;" title="Protected link. Requires manual URL resolution.">⚠️ Protected</span>` : '';
+        const actionBtns = isProtected
+          ? `<button class="btn btn-resolve" style="background: var(--color-accent); color: #fff;">Resolve Link</button>
+             <button class="btn btn-delete">Delete</button>`
+          : `<button class="btn btn-edit">Edit</button>
+             <button class="btn btn-delete">Delete</button>`;
+
         html += `
-          <td><strong>${titleStr}</strong></td>
+          <td>${protectedBadge}<strong>${titleStr}</strong></td>
           <td>${item.source_name || '-'}</td>
           <td>${platform}</td>
           <td>${pubDate}</td>
           <td class="cell-actions">
-            <button class="btn btn-edit">Edit</button>
-            <button class="btn btn-delete">Delete</button>
+            ${actionBtns}
           </td>`;
       }
       else if (currentTab === 'tab-review') {
@@ -181,8 +190,8 @@ async function loadCurrentTab() {
           <td>${item.source_name || '-'}</td>
           <td>${pubDate}</td>
           <td class="cell-actions">
-            <button class="btn btn-approve" style="background: #2e7d32; color: #fff;">Approve</button>
-            <button class="btn btn-reject" style="background: #c62828; color: #fff;">Reject</button>
+            <button class="btn btn-approve" style="background: #2e7d32; color: #fff;">Mark Relevant</button>
+            <button class="btn btn-reject" style="background: #c62828; color: #fff;">Mark Irrelevant</button>
           </td>`;
       }
       else if (currentTab === 'tab-publish') {
@@ -246,6 +255,11 @@ function attachRowHandlers(tr, item) {
   };
 
   bind('.btn-edit', openEditModal);
+  bind('.btn-resolve', (i) => {
+    window.open(i.content_url, '_blank'); // Opens link for the user to resolve
+    openEditModal(i);                     // Opens our standard edit form
+    setTimeout(() => formPub.content_url.focus(), 200); // Highlight where they need to paste it
+  });
   bind('.btn-delete', (i) => confirmAction(`Delete "${i.title}" permanently?`, () => deleteRecord(i.id)));
 
   bind('.expand-btn', togglePreviewRow);
@@ -274,29 +288,47 @@ function togglePreviewRow(item, tr) {
   const panel = document.createElement('tr');
   panel.classList.add('expanded-row');
 
-  // Clean up body text for preview
-  const rawBody = item.article_body || 'No full text available.';
-  const previewBody = rawBody.length > 1000 ? rawBody.substring(0, 1000) + '... (truncated)' : rawBody;
+  // Safe truncation for Title
+  const rawTitle = item.title || 'Untitled';
+  const safeTitle = rawTitle.length > 250 ? rawTitle.substring(0, 250) + '...' : rawTitle;
 
-  // Note: Assuming ai_summary or notes might exist, falling back if not.
-  const aiSummary = item.notes || 'No AI reasoning notes provided.';
+  // Full Body (No truncation, handled by CSS scroll)
+  const fullBody = item.article_body || 'No full text available.';
+
+  // AI Justification
+  const aiJustification = item.ai_justification || 'No AI justification provided.';
+
+  // External Link with disabled fallback
+  const linkHtml = item.content_url
+    ? `<a href="${item.content_url}" target="_blank" class="preview-link">🔗 Open Original Article</a>`
+    : `<span class="preview-link disabled" title="No URL provided for this item">🔗 No Original Link</span>`;
 
   panel.innerHTML = `
     <td colspan="6">
       <div class="expanded-content">
+        <div class="preview-header">
+          <h4 class="preview-title">${safeTitle}</h4>${linkHtml}
+        </div>
         <div class="preview-grid">
           <div class="preview-section">
-            <h4>AI Reasoning</h4>
-            <p style="background: #fff; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">${aiSummary}</p>
+            <h4>AI Justification</h4>
+            <div class="content-box"><p>${aiJustification}</p></div>
           </div>
           <div class="preview-section">
-            <h4>Original Text (Excerpt)</h4>
-            <p>${previewBody}</p>
+            <h4>Original Text (Full)</h4>
+            <div class="content-box"><p>${fullBody}</p></div>
           </div>
+        </div>
+        <div class="preview-actions">
+          <button class="btn btn-secondary btn-panel-edit">✏️ Edit Record</button>
         </div>
       </div>
     </td>
   `;
+
+  // Bind the inline Edit button
+  panel.querySelector('.btn-panel-edit').onclick = () => openEditModal(item);
+
   tr.after(panel);
 }
 
@@ -347,13 +379,30 @@ function updateBulkActionBar() {
       <button id="bulk-process" class="btn" style="background: var(--color-primary);">Process Selected</button>
       <button id="bulk-delete" class="btn" style="background: #c62828;">Delete Selected</button>
     `;
-    document.getElementById('bulk-process').onclick = () => triggerProcessing(checked);
+    document.getElementById('bulk-process').onclick = () => {
+      const allChecked = Array.from(tbody.querySelectorAll('.row-checkbox:checked'));
+      const validBoxes = allChecked.filter(cb => cb.dataset.protected !== "true");
+      const skippedCount = allChecked.length - validBoxes.length;
+
+      if (validBoxes.length === 0) {
+        showModal('Cannot process. All selected items are protected links that require manual resolution first.');
+        return;
+      }
+
+      if (skippedCount > 0) {
+        confirmAction(`${skippedCount} selected item(s) will be skipped due to protected links. Process the remaining ${validBoxes.length} item(s)?`, () => {
+          triggerProcessing(validBoxes.map(cb => parseInt(cb.value)));
+        });
+        return;
+      }
+      triggerProcessing(validBoxes.map(cb => parseInt(cb.value)));
+    };
     document.getElementById('bulk-delete').onclick = () => bulkUpdate(checked, { action: 'delete' });
   }
   else if (currentTab === 'tab-review') {
     bulkButtons.innerHTML = `
-      <button id="bulk-approve" class="btn" style="background: #2e7d32;">Approve Selected</button>
-      <button id="bulk-reject" class="btn" style="background: #c62828;">Reject Selected</button>
+      <button id="bulk-approve" class="btn" style="background: #2e7d32;">Mark Relevant</button>
+      <button id="bulk-reject" class="btn" style="background: #c62828;">Mark Irrelevant</button>
     `;
     document.getElementById('bulk-approve').onclick = () => bulkUpdate(checked, { is_reviewed: true, is_relevant: true });
     document.getElementById('bulk-reject').onclick = () => bulkUpdate(checked, { is_reviewed: true, is_relevant: false });
@@ -521,17 +570,28 @@ function setupGlobalActions() {
     const allCheckboxes = Array.from(tbody.querySelectorAll('.row-checkbox'));
     const checkedBoxes = allCheckboxes.filter(cb => cb.checked);
 
-    // If none are checked, we process ALL of them for consistency. Otherwise, just the checked ones.
-    const idsToProcess = checkedBoxes.length > 0
-      ? checkedBoxes.map(cb => parseInt(cb.value))
-      : allCheckboxes.map(cb => parseInt(cb.value));
+    const targetBoxes = checkedBoxes.length > 0 ? checkedBoxes : allCheckboxes;
 
-    if (idsToProcess.length === 0) {
-      showModal('There are no pending items to process.');
+    const validBoxes = targetBoxes.filter(cb => cb.dataset.protected !== "true");
+    const skippedCount = targetBoxes.length - validBoxes.length;
+
+    if (validBoxes.length === 0) {
+      if (skippedCount > 0) {
+        showModal('Cannot process. The targeted items are protected links that require manual resolution first.');
+      } else {
+        showModal('There are no pending items to process.');
+      }
       return;
     }
 
-    triggerProcessing(idsToProcess);
+    if (skippedCount > 0) {
+      confirmAction(`${skippedCount} item(s) will be skipped because they have protected links. Process the remaining ${validBoxes.length} item(s)?`, () => {
+        triggerProcessing(validBoxes.map(cb => parseInt(cb.value)));
+      });
+      return;
+    }
+
+    triggerProcessing(validBoxes.map(cb => parseInt(cb.value)));
   };
 
   btnPushAllWp.onclick = async () => {

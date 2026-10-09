@@ -622,6 +622,7 @@ class MediaPublication(Base):
     is_scraped = Column(Boolean, default=False, nullable=False) # Tracks if scraper ran, even if body is empty
     is_duplicate = Column(Boolean, default=None, nullable=True)
     ai_recommendation = Column(SQLEnum(AIRecommendation), nullable=True) # LLM's raw output
+    ai_justification = Column(Text, nullable=True) # LLM's justification for the recommendation
     is_relevant = Column(Boolean, default=None,
                          nullable=True)  # True = Approved, False = Rejected, None = Pending Review
     is_reviewed = Column(Boolean, default=False, nullable=False)
@@ -676,6 +677,7 @@ class AcademicPublication(Base):
     # --- Workflow & Automation Flags ---
     is_duplicate = Column(Boolean, default=None, nullable=True)
     ai_recommendation = Column(SQLEnum(AIRecommendation), nullable=True)  # LLM's raw output
+    ai_justification = Column(Text, nullable=True)  # LLM's justification for the recommendation
     is_relevant = Column(Boolean, default=None, nullable=True)  # True = Approved, False = Rejected, None = Pending Review
     is_reviewed = Column(Boolean, default=False, nullable=False)
     entities_matched = Column(Boolean, default=None,

@@ -220,6 +220,7 @@ def evaluate_media(db: Session, items_to_eval: List[models.MediaPublication]) ->
 
             # 4. Map States to SQLAlchemy Model
             item.ai_recommendation = result.decision
+            item.ai_justification = result.justification
 
             if result.decision == models.AIRecommendation.RELEVANT:
                 item.is_relevant = True
@@ -310,6 +311,7 @@ def evaluate_academic(db: Session, items_to_eval: List[models.AcademicPublicatio
 
             # 4. Map States to SQLAlchemy Model
             item.ai_recommendation = result.decision
+            item.ai_justification = result.justification
 
             if result.decision == models.AIRecommendation.RELEVANT:
                 item.is_relevant = True

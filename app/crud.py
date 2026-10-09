@@ -3150,7 +3150,7 @@ def update_media_publication(db: Session, pub_id: int,
 
     for field in ("platform", "external_id", "title", "source_name", "published_date",
                   "content_url", "article_body", "is_scraped", "is_duplicate", "ai_recommendation",
-                  "is_relevant", "is_reviewed", "entities_matched", "wp_post_id",
+                  "ai_justification", "is_relevant", "is_reviewed", "entities_matched", "wp_post_id",
                   "has_processing_error", "processing_error_msg", "notes"):
         val = getattr(pub_in, field)
         if val is not None:
@@ -3319,8 +3319,8 @@ def update_academic_publication(db: Session, pub_id: int,
         raise EntityNotFoundError(f"Academic Publication #{pub_id} not found")
 
     for field in ("swepub_id", "doi", "title", "abstract", "publication_type",
-                  "journal_name", "published_year", "published_date", "authors_raw",
-                  "funding_info", "is_duplicate", "ai_recommendation", "is_relevant", "is_reviewed",
+                  "journal_name", "published_year", "published_date", "authors_raw", "funding_info",
+                  "is_duplicate", "ai_recommendation", "ai_justification", "is_relevant", "is_reviewed",
                   "entities_matched", "wp_post_id", "has_processing_error", "processing_error_msg", "notes"):
         val = getattr(pub_in, field)
         if val is not None:

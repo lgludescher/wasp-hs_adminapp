@@ -786,6 +786,7 @@ class MediaPublicationBase(BaseModel):
     is_scraped:     bool = False
     is_duplicate:   Optional[bool] = None
     ai_recommendation: Optional[AIRecommendation] = None
+    ai_justification: Optional[str] = None
     is_relevant:    Optional[bool] = None
     is_reviewed:    bool = False
     entities_matched: Optional[bool] = None
@@ -823,6 +824,7 @@ class MediaPublicationUpdate(BaseModel):
     is_scraped:     Optional[bool] = None
     is_duplicate:   Optional[bool] = None
     ai_recommendation: Optional[AIRecommendation] = None
+    ai_justification: Optional[str] = None
     is_relevant:    Optional[bool] = None
     is_reviewed:    Optional[bool] = None
     entities_matched: Optional[bool] = None
@@ -879,6 +881,7 @@ class AcademicPublicationBase(BaseModel):
     # --- Workflow & Automation Flags ---
     is_duplicate:     Optional[bool] = None
     ai_recommendation: Optional[AIRecommendation] = None
+    ai_justification: Optional[str] = None
     is_relevant:      Optional[bool] = None
     is_reviewed:      bool = False
     entities_matched: Optional[bool] = None
@@ -918,6 +921,7 @@ class AcademicPublicationUpdate(BaseModel):
     # --- Workflow & Automation Flags ---
     is_duplicate:     Optional[bool] = None
     ai_recommendation: Optional[AIRecommendation] = None
+    ai_justification: Optional[str] = None
     is_relevant:      Optional[bool] = None
     is_reviewed:      Optional[bool] = None
     entities_matched: Optional[bool] = None
