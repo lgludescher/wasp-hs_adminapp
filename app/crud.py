@@ -3071,7 +3071,9 @@ def get_student_courses(db: Session, phd_student_id: int) -> List[models.PhDStud
 # ---------- Media Publication ----------
 
 def get_media_publication(db: Session, pub_id: int) -> Optional[models.MediaPublication]:
-    return db.query(models.MediaPublication).filter_by(id=pub_id).first()
+    return db.query(models.MediaPublication).options(
+        selectinload(models.MediaPublication.duplicates)
+    ).filter_by(id=pub_id).first()
 
 
 def get_media_by_external_id(db: Session, platform: models.MediaPlatform, external_id: str) -> Optional[
@@ -3084,6 +3086,7 @@ def list_media_publications(
         platform: Optional[models.MediaPlatform] = None,
         is_scraped: Optional[bool] = None,
         is_duplicate: Optional[bool] = None,
+        duplicate_of_id: Optional[int] = None,
         ai_recommendation: Optional[models.AIRecommendation] = None,
         is_relevant: Optional[bool] = None,
         is_reviewed: Optional[bool] = None,
@@ -3092,7 +3095,9 @@ def list_media_publications(
         has_processing_error: Optional[bool] = None,
         search: Optional[str] = None
 ) -> List[models.MediaPublication]:
-    q = db.query(models.MediaPublication)
+    q = db.query(models.MediaPublication).options(
+        selectinload(models.MediaPublication.duplicates)
+    )
 
     if platform is not None:
         q = q.filter_by(platform=platform)
@@ -3100,6 +3105,8 @@ def list_media_publications(
         q = q.filter_by(is_scraped=is_scraped)
     if is_duplicate is not None:
         q = q.filter_by(is_duplicate=is_duplicate)
+    if duplicate_of_id is not None:
+        q = q.filter_by(duplicate_of_id=duplicate_of_id)
     if ai_recommendation is not None:
         q = q.filter_by(ai_recommendation=ai_recommendation)
     if is_relevant is not None:
@@ -3148,8 +3155,8 @@ def update_media_publication(db: Session, pub_id: int,
     if not db_obj:
         raise EntityNotFoundError(f"Media Publication #{pub_id} not found")
 
-    for field in ("platform", "external_id", "title", "source_name", "published_date",
-                  "content_url", "article_body", "is_scraped", "is_duplicate", "ai_recommendation",
+    for field in ("platform", "external_id", "title", "source_name", "published_date", "content_url",
+                  "article_body", "is_scraped", "is_duplicate", "duplicate_of_id", "ai_recommendation",
                   "ai_justification", "is_relevant", "is_reviewed", "entities_matched", "wp_post_id",
                   "has_processing_error", "processing_error_msg", "notes"):
         val = getattr(pub_in, field)
@@ -3243,7 +3250,9 @@ def remove_person_role_from_media_publication(db: Session, pub_id: int, person_r
 # ---------- Academic Publication ----------
 
 def get_academic_publication(db: Session, pub_id: int) -> Optional[models.AcademicPublication]:
-    return db.query(models.AcademicPublication).filter_by(id=pub_id).first()
+    return db.query(models.AcademicPublication).options(
+        selectinload(models.AcademicPublication.duplicates)
+    ).filter_by(id=pub_id).first()
 
 
 def get_academic_by_swepub_id(db: Session, swepub_id: str) -> Optional[models.AcademicPublication]:
@@ -3254,6 +3263,7 @@ def list_academic_publications(
         db: Session,
         published_year: Optional[int] = None,
         is_duplicate: Optional[bool] = None,
+        duplicate_of_id: Optional[int] = None,
         ai_recommendation: Optional[models.AIRecommendation] = None,
         is_relevant: Optional[bool] = None,
         is_reviewed: Optional[bool] = None,
@@ -3262,12 +3272,16 @@ def list_academic_publications(
         has_processing_error: Optional[bool] = None,
         search: Optional[str] = None
 ) -> List[models.AcademicPublication]:
-    q = db.query(models.AcademicPublication)
+    q = db.query(models.AcademicPublication).options(
+        selectinload(models.AcademicPublication.duplicates)
+    )
 
     if published_year is not None:
         q = q.filter_by(published_year=published_year)
     if is_duplicate is not None:
         q = q.filter_by(is_duplicate=is_duplicate)
+    if duplicate_of_id is not None:
+        q = q.filter_by(duplicate_of_id=duplicate_of_id)
     if ai_recommendation is not None:
         q = q.filter_by(ai_recommendation=ai_recommendation)
     if is_relevant is not None:
@@ -3318,9 +3332,9 @@ def update_academic_publication(db: Session, pub_id: int,
     if not db_obj:
         raise EntityNotFoundError(f"Academic Publication #{pub_id} not found")
 
-    for field in ("swepub_id", "doi", "title", "abstract", "publication_type",
-                  "journal_name", "published_year", "published_date", "authors_raw", "funding_info",
-                  "is_duplicate", "ai_recommendation", "ai_justification", "is_relevant", "is_reviewed",
+    for field in ("swepub_id", "doi", "title", "abstract", "publication_type", "journal_name",
+                  "published_year", "published_date", "authors_raw", "funding_info", "is_duplicate",
+                  "duplicate_of_id", "ai_recommendation", "ai_justification", "is_relevant", "is_reviewed",
                   "entities_matched", "wp_post_id", "has_processing_error", "processing_error_msg", "notes"):
         val = getattr(pub_in, field)
         if val is not None:

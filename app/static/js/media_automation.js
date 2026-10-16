@@ -37,7 +37,7 @@ const searchOutput = document.getElementById('search-string-output');
 const btnCopySearch = document.getElementById('btn-copy-search');
 
 // Actions
-const btnProcessPending = document.getElementById('btn-process-pending');
+const btnProcessAll = document.getElementById('btn-process-all');
 const btnPushAllWp = document.getElementById('btn-push-all-wp');
 
 // ============================================================================
@@ -127,24 +127,44 @@ async function loadCurrentTab() {
     // 2. Fetch Data
     let list = await apiFetch(`/media-publications/?${params.toString()}`);
 
-    // Tab-specific local filtering if needed (e.g., separating Ingestion from Review based on AI)
-    if (currentTab === 'tab-ingestion') {
-      list = list.filter(item => !item.ai_recommendation); // Only items with no AI yet
-    } else if (currentTab === 'tab-review') {
-      list = list.filter(item => item.ai_recommendation); // Only items processed by AI
-    } else if (currentTab === 'tab-archive') {
-      // Terminal states: Published OR explicitly Rejected OR Kept Internal
-      list = list.filter(item =>
-        item.is_published_to_wp === true ||
-        item.is_relevant === false ||
-        item.wp_post_id === -1
-      );
-    }
+    // Unified Routing & Filtering Logic (The "Golden Rule")
+    list = list.filter(item => {
+      // 1. Quarantine Tab Logic
+      if (currentTab === 'tab-quarantine') {
+        if (!item.has_processing_error) return false;
+        // If it's a duplicate, ghost it if the primary has already been reviewed
+        if (item.is_duplicate) {
+          const primary = list.find(p => p.id === item.duplicate_of_id);
+          if (primary && primary.is_reviewed) return false;
+        }
+        return true;
+      }
+
+      // 2. Hide errors from all normal pipeline tabs
+      if (item.has_processing_error) return false;
+
+      // 3. GOLDEN RULE: Hide all duplicates from normal pipeline tabs
+      if (item.is_duplicate === true) return false;
+
+      // 4. Normal Pipeline Routing (for Primary Items and un-evaluated items)
+      if (currentTab === 'tab-ingestion') return !item.is_reviewed && !item.ai_recommendation;
+      if (currentTab === 'tab-review') return !item.is_reviewed && item.ai_recommendation;
+      if (currentTab === 'tab-publish') return item.is_reviewed && item.is_relevant && !item.wp_post_id;
+      if (currentTab === 'tab-archive') return item.is_reviewed && (!item.is_relevant || item.wp_post_id);
+
+      return false;
+    });
 
     currentListData = list;
 
     // 3. Render Data
     tbody.innerHTML = '';
+
+    // Disable the "Process All" button if there's nothing to process
+    if (currentTab === 'tab-ingestion' && btnProcessAll) {
+      btnProcessAll.disabled = list.length === 0;
+    }
+
     if (list.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="cell-center" style="padding: 2rem; color: #666;">No publications found for this stage.</td></tr>';
       return;
@@ -158,21 +178,26 @@ async function loadCurrentTab() {
       const pubDate = item.published_date ? item.published_date.split('T')[0] : '';
       const platform = item.platform.charAt(0).toUpperCase() + item.platform.slice(1);
 
-      // Detection Logic
+      // Detection & Badges Logic
       const isProtected = item.content_url && item.content_url.includes('ret.nu') && (!item.article_body || item.article_body.trim() === '');
+      const protectedBadge = isProtected ? `<span class="status-pill pill-warning" style="margin-right: 0.5rem;" title="Protected link. Requires manual URL resolution.">⚠️ Protected</span>` : '';
+
+      const duplicatesCount = (item.duplicates && item.duplicates.length > 0) ? item.duplicates.length : 0;
+      const clusterBadge = duplicatesCount > 0
+        ? `<span class="status-pill cluster-badge" title="This cluster contains ${duplicatesCount} alternate version(s)">🔗 ${duplicatesCount} Alt Versions</span>`
+        : '';
 
       let html = `<td class="cell-center"><input type="checkbox" class="row-checkbox" value="${item.id}" data-protected="${isProtected}" /></td>`;
 
       if (currentTab === 'tab-ingestion') {
-        const protectedBadge = isProtected ? `<span class="status-pill pill-warning" style="margin-right: 0.5rem;" title="Protected link. Requires manual URL resolution.">⚠️ Protected</span>` : '';
         const actionBtns = isProtected
-          ? `<button class="btn btn-resolve" style="background: var(--color-accent); color: #fff;">Resolve Link</button>
+          ? `<button class="btn btn-resolve" style="background: var(--color-accent); color: #fff;">⚠️ Resolve Link</button>
              <button class="btn btn-delete">Delete</button>`
           : `<button class="btn btn-edit">Edit</button>
              <button class="btn btn-delete">Delete</button>`;
 
         html += `
-          <td>${protectedBadge}<strong>${titleStr}</strong></td>
+          <td>${protectedBadge}${clusterBadge}<strong>${titleStr}</strong></td>
           <td>${item.source_name || '-'}</td>
           <td>${platform}</td>
           <td>${pubDate}</td>
@@ -186,7 +211,7 @@ async function loadCurrentTab() {
         const aiText = item.ai_recommendation ? item.ai_recommendation.toUpperCase() : 'UNKNOWN';
         html += `
           <td class="cell-center"><span class="status-pill ${pillClass}">${aiText}</span></td>
-          <td><button class="btn expand-btn" title="Preview Summary">+</button> <strong>${titleStr}</strong></td>
+          <td><button class="btn expand-btn" title="Preview Summary">+</button> ${protectedBadge}${clusterBadge}<strong>${titleStr}</strong></td>
           <td>${item.source_name || '-'}</td>
           <td>${pubDate}</td>
           <td class="cell-actions">
@@ -319,6 +344,35 @@ function togglePreviewRow(item, tr) {
             <div class="content-box"><p>${fullBody}</p></div>
           </div>
         </div>
+        
+        ${item.duplicates && item.duplicates.length > 0 ? `
+        <div class="duplicates-section">
+          <h4 style="margin-bottom: 0.75rem; color: #333;">Alternate Versions</h4>
+          <div class="duplicates-list">
+            ${item.duplicates.map(dup => {
+              const dupDate = dup.published_date ? dup.published_date.split('T')[0] : '';
+              const dupLink = dup.content_url 
+                ? `<a href="${dup.content_url}" target="_blank" class="preview-link" style="margin-left:0.5rem; font-size:0.8rem;">🔗 Open</a>`
+                : `<span class="preview-link disabled" style="margin-left:0.5rem; font-size:0.8rem;" title="No URL">🔗 No Link</span>`;
+              
+              const promoteAction = dup.has_processing_error 
+                ? `<span class="status-pill pill-warning" style="font-size:0.75rem;">⚠️ Fix in Quarantine</span>`
+                : `<button class="btn btn-promote" data-id="${dup.id}">⭐ Promote to Main</button>`;
+                
+              return `
+                <div class="duplicate-item">
+                  <div class="dup-info">
+                    <strong>${dup.source_name || '-'}</strong> | ${dupDate} ${dupLink}<br/>
+                    <span style="font-size: 0.85rem; color: #555;">${dup.title}</span>
+                  </div>
+                  <div class="dup-action">${promoteAction}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+        ` : ''}
+        
         <div class="preview-actions">
           <button class="btn btn-secondary btn-panel-edit">✏️ Edit Record</button>
         </div>
@@ -328,6 +382,11 @@ function togglePreviewRow(item, tr) {
 
   // Bind the inline Edit button
   panel.querySelector('.btn-panel-edit').onclick = () => openEditModal(item);
+
+  // Bind the promote buttons
+  panel.querySelectorAll('.btn-promote').forEach(btn => {
+    btn.onclick = () => promoteDuplicate(btn.getAttribute('data-id'));
+  });
 
   tr.after(panel);
 }
@@ -376,9 +435,10 @@ function updateBulkActionBar() {
 
   if (currentTab === 'tab-ingestion') {
     bulkButtons.innerHTML = `
-      <button id="bulk-process" class="btn" style="background: var(--color-primary);">Process Selected</button>
-      <button id="bulk-delete" class="btn" style="background: #c62828;">Delete Selected</button>
+      <button id="bulk-process" class="btn" style="background: var(--color-primary); color: #fff;">Process Selected</button>
+      <button id="bulk-delete" class="btn" style="background: #c62828; color: #fff;">Delete Selected</button>
     `;
+
     document.getElementById('bulk-process').onclick = () => {
       const allChecked = Array.from(tbody.querySelectorAll('.row-checkbox:checked'));
       const validBoxes = allChecked.filter(cb => cb.dataset.protected !== "true");
@@ -389,15 +449,15 @@ function updateBulkActionBar() {
         return;
       }
 
-      if (skippedCount > 0) {
-        confirmAction(`${skippedCount} selected item(s) will be skipped due to protected links. Process the remaining ${validBoxes.length} item(s)?`, () => {
-          triggerProcessing(validBoxes.map(cb => parseInt(cb.value)));
-        });
-        return;
-      }
-      triggerProcessing(validBoxes.map(cb => parseInt(cb.value)));
+      const skipMsg = skippedCount > 0 ? `\n\n(${skippedCount} item(s) will be skipped due to protected links).` : '';
+      confirmAction(`Send ${validBoxes.length} selected item(s) to AI Processing?${skipMsg}`, () => {
+        triggerProcessing(validBoxes.map(cb => parseInt(cb.value)));
+      });
     };
-    document.getElementById('bulk-delete').onclick = () => bulkUpdate(checked, { action: 'delete' });
+
+    document.getElementById('bulk-delete').onclick = () => {
+      confirmAction(`Permanently delete ${checked.length} selected item(s)?`, () => bulkUpdate(checked, { action: 'delete' }));
+    };
   }
   else if (currentTab === 'tab-review') {
     bulkButtons.innerHTML = `
@@ -562,36 +622,32 @@ function openEditModal(item) {
 // Global Actions (Triggers)
 // ============================================================================
 function setupGlobalActions() {
-  btnProcessPending.onclick = () => {
+  btnProcessAll.onclick = () => {
     const tbody = document.getElementById('tbody-ingestion');
     if (!tbody) return;
 
-    // Find all checkboxes and see which ones are checked
+    // 1. Process ALL items, strictly ignoring user selections
     const allCheckboxes = Array.from(tbody.querySelectorAll('.row-checkbox'));
-    const checkedBoxes = allCheckboxes.filter(cb => cb.checked);
 
-    const targetBoxes = checkedBoxes.length > 0 ? checkedBoxes : allCheckboxes;
+    if (allCheckboxes.length === 0) {
+      showModal('There are no pending items to process.');
+      return;
+    }
 
-    const validBoxes = targetBoxes.filter(cb => cb.dataset.protected !== "true");
-    const skippedCount = targetBoxes.length - validBoxes.length;
+    // 2. Filter out protected links
+    const validBoxes = allCheckboxes.filter(cb => cb.dataset.protected !== "true");
+    const skippedCount = allCheckboxes.length - validBoxes.length;
 
     if (validBoxes.length === 0) {
-      if (skippedCount > 0) {
-        showModal('Cannot process. The targeted items are protected links that require manual resolution first.');
-      } else {
-        showModal('There are no pending items to process.');
-      }
+      showModal('Cannot process. All pending items are protected links that require manual resolution first.');
       return;
     }
 
-    if (skippedCount > 0) {
-      confirmAction(`${skippedCount} item(s) will be skipped because they have protected links. Process the remaining ${validBoxes.length} item(s)?`, () => {
-        triggerProcessing(validBoxes.map(cb => parseInt(cb.value)));
-      });
-      return;
-    }
-
-    triggerProcessing(validBoxes.map(cb => parseInt(cb.value)));
+    // 3. Demand confirmation for sending ALL items
+    const skipMsg = skippedCount > 0 ? `\n\nNote: ${skippedCount} protected item(s) will be skipped until their links are resolved.` : '';
+    confirmAction(`Are you sure you want to send ALL ${validBoxes.length} item(s) to AI Processing?${skipMsg}`, () => {
+      triggerProcessing(validBoxes.map(cb => parseInt(cb.value)));
+    });
   };
 
   btnPushAllWp.onclick = async () => {
@@ -677,6 +733,19 @@ async function triggerProcessing(ids) {
   } catch (err) {
     showError(err);
   }
+}
+
+async function promoteDuplicate(duplicateId) {
+  confirmAction('Promote this alternate version to become the Primary article for this cluster?', async () => {
+    try {
+      await apiFetch(`/media-publications/${duplicateId}/actions/promote`, { method: 'POST' });
+      showSystemStatus('Item successfully promoted to Primary.');
+      loadActivityLogs(); // Update the log bar
+      loadCurrentTab();   // Refresh the table UI
+    } catch (err) {
+      showError(err);
+    }
+  });
 }
 
 async function loadActivityLogs() {

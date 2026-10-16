@@ -8,6 +8,7 @@ from app import models, schemas, crud
 from app.services.scraper import scrape_urls
 from app.services.swepub import fetch_recent_publications, save_swepub_to_db
 from app.services.llm import evaluate_media
+from app.services.deduplicator import flag_media_duplicates
 
 logger = logging.getLogger(__name__)
 
@@ -160,15 +161,14 @@ def process_pending_media_task(user_id: int, publication_ids: list[int] = None):
         items_to_dedup = apply_id_filter(base_dedup_query).all()
 
         if items_to_dedup:
-            # TODO: from app.services.deduplicator import flag_duplicates
-            # flag_duplicates(db, items_to_dedup)
+            flag_media_duplicates(db, items_to_dedup)
 
             # TEMPORARY: For testing purposes
-            for item in items_to_dedup:
-                item.is_duplicate = False
-                db.commit()
-
-            pass
+            # for item in items_to_dedup:
+            #     item.is_duplicate = False
+            #     db.commit()
+            #
+            # pass
 
         # ---------------------------------------------------------
         # PHASE 3: LLM EVALUATION (Not a Duplicate & Evaluation Unknown)

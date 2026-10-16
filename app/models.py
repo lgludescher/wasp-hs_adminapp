@@ -621,6 +621,19 @@ class MediaPublication(Base):
     # --- Workflow & Automation Flags ---
     is_scraped = Column(Boolean, default=False, nullable=False) # Tracks if scraper ran, even if body is empty
     is_duplicate = Column(Boolean, default=None, nullable=True)
+    # --- Deduplication Linking ---
+    duplicate_of_id = Column(Integer, ForeignKey("media_publications.id"), nullable=True)
+    # Relationship to easily access the primary record or all child duplicates
+    primary_publication = relationship(
+        "MediaPublication",
+        remote_side="MediaPublication.id",
+        back_populates="duplicates"
+    )
+    duplicates = relationship(
+        "MediaPublication",
+        back_populates="primary_publication",
+        cascade="all, delete-orphan"
+    )
     ai_recommendation = Column(SQLEnum(AIRecommendation), nullable=True) # LLM's raw output
     ai_justification = Column(Text, nullable=True) # LLM's justification for the recommendation
     is_relevant = Column(Boolean, default=None,
@@ -676,6 +689,19 @@ class AcademicPublication(Base):
 
     # --- Workflow & Automation Flags ---
     is_duplicate = Column(Boolean, default=None, nullable=True)
+    # --- Deduplication Linking ---
+    duplicate_of_id = Column(Integer, ForeignKey("academic_publications.id"), nullable=True)
+    # Relationship to easily access the primary record or all child duplicates
+    primary_publication = relationship(
+        "AcademicPublication",
+        remote_side="AcademicPublication.id",
+        back_populates="duplicates"
+    )
+    duplicates = relationship(
+        "AcademicPublication",
+        back_populates="primary_publication",
+        cascade="all, delete-orphan"
+    )
     ai_recommendation = Column(SQLEnum(AIRecommendation), nullable=True)  # LLM's raw output
     ai_justification = Column(Text, nullable=True)  # LLM's justification for the recommendation
     is_relevant = Column(Boolean, default=None, nullable=True)  # True = Approved, False = Rejected, None = Pending Review

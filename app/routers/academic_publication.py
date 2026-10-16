@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, Query
 from fastapi import status, BackgroundTasks
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from .. import crud, schemas, dependencies, models, tasks
 from ..crud import EntityNotFoundError
@@ -37,6 +37,7 @@ def read_academic_publication(
 def list_academic_publications(
     published_year:  Optional[int] = Query(None),
     is_duplicate:    Optional[bool] = Query(None),
+    duplicate_of_id: Optional[int] = Query(None, description="Filter by parent publication ID"),
     ai_recommendation: Optional[models.AIRecommendation] = Query(None),
     is_relevant:     Optional[bool] = Query(None),
     is_reviewed:     Optional[bool] = Query(None),
@@ -48,14 +49,15 @@ def list_academic_publications(
     current_user=Depends(dependencies.get_current_user)
 ):
     logger.info(f"{current_user.username} listed academic publications (year={published_year}, "
-                f"is_duplicate={is_duplicate}, ai_recommendation={ai_recommendation}, "
-                f"is_relevant={is_relevant}, is_reviewed={is_reviewed}, "
-                f"is_published_to_wp={is_published_to_wp}, "
+                f"is_duplicate={is_duplicate}, duplicate_of_id={duplicate_of_id}, "
+                f"ai_recommendation={ai_recommendation}, is_relevant={is_relevant}, "
+                f"is_reviewed={is_reviewed}, is_published_to_wp={is_published_to_wp}, "
                 f"has_processing_error={has_processing_error}, search={search!r})")
     return crud.list_academic_publications(
         db,
         published_year=published_year,
         is_duplicate=is_duplicate,
+        duplicate_of_id=duplicate_of_id,
         ai_recommendation=ai_recommendation,
         is_relevant=is_relevant,
         is_reviewed=is_reviewed,
@@ -237,6 +239,90 @@ def process_pending_academic(
     logger.info(f"User {current_user.username} triggered academic processing (spawned in background).")
 
     return {"message": "Academic processing started in the background."}
+
+
+@router.post("/academic-publications/{pub_id}/actions/promote", response_model=schemas.AcademicPublicationRead)
+def promote_academic_duplicate(
+        pub_id: int,
+        db: Session = Depends(dependencies.get_db),
+        current_user=Depends(dependencies.get_current_user)
+):
+    """
+    Promote a duplicate academic publication to be the primary publication of its cluster.
+    Only allowed if the current primary publication has not yet been reviewed.
+    """
+    # 1. Fetch the Target (the duplicate to be promoted)
+    target = db.query(models.AcademicPublication).filter(models.AcademicPublication.id == pub_id).first()
+
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Academic Publication #{pub_id} not found.")
+
+    if not target.is_duplicate or target.duplicate_of_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This publication is already a primary publication or has not been processed."
+        )
+
+    # 2. Fetch the Current Primary
+    current_primary = db.query(models.AcademicPublication).filter(
+        models.AcademicPublication.id == target.duplicate_of_id
+    ).first()
+
+    if not current_primary:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database integrity error: Current primary publication not found."
+        )
+
+    # 3. The Guard: Block promotion if the primary is already reviewed
+    if current_primary.is_reviewed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot promote duplicate: the current primary publication has already been reviewed."
+        )
+
+    # 4. State Inheritance: Copy AI results from Current Primary to Target
+    target.ai_recommendation = current_primary.ai_recommendation
+    target.ai_justification = current_primary.ai_justification
+    target.is_relevant = current_primary.is_relevant
+    target.entities_matched = current_primary.entities_matched
+
+    # (Optional but recommended) Clear state on the demoted item to keep DB clean
+    current_primary.ai_recommendation = None
+    current_primary.ai_justification = None
+    current_primary.is_relevant = None
+    current_primary.entities_matched = None
+
+    # 5. Sibling Re-parenting: Update any other duplicates in this cluster
+    # We do this before modifying target's IDs so we don't accidentally update target via the bulk query.
+    db.query(models.AcademicPublication).filter(
+        models.AcademicPublication.duplicate_of_id == current_primary.id,
+        models.AcademicPublication.id != target.id
+    ).update(
+        {"duplicate_of_id": target.id},
+        synchronize_session=False
+    )
+
+    # 6. The Great Swap
+    target.is_duplicate = False
+    target.duplicate_of_id = None
+
+    current_primary.is_duplicate = True
+    current_primary.duplicate_of_id = target.id
+
+    # 7. Commit changes
+    db.commit()
+
+    # 8. Fetch and return the updated Target with duplicates eagerly loaded
+    # to satisfy the nested schema without triggering N+1 warnings.
+    target_loaded = db.query(models.AcademicPublication).options(
+        selectinload(models.AcademicPublication.duplicates)
+    ).filter(models.AcademicPublication.id == target.id).first()
+
+    logger.info(
+        f"User {current_user.username} promoted Academic Publication #{pub_id} to primary. Demoted #{current_primary.id}.")
+
+    return target_loaded
 
 
 @router.post("/academic-publications/actions/push-to-wp", status_code=status.HTTP_202_ACCEPTED)

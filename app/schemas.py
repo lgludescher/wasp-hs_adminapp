@@ -785,6 +785,7 @@ class MediaPublicationBase(BaseModel):
     # --- Workflow & Automation Flags ---
     is_scraped:     bool = False
     is_duplicate:   Optional[bool] = None
+    duplicate_of_id: Optional[int] = None
     ai_recommendation: Optional[AIRecommendation] = None
     ai_justification: Optional[str] = None
     is_relevant:    Optional[bool] = None
@@ -804,9 +805,20 @@ class MediaPublicationCreate(MediaPublicationBase):
     pass
 
 
+class MediaPublicationNestedRead(MediaPublicationBase):
+    """A lightweight read schema to prevent infinite nesting recursion."""
+    id:         int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class MediaPublicationRead(MediaPublicationBase):
     id:         int
     created_at: datetime
+
+    # FastApi/Pydantic will automatically populate this from the SQLAlchemy backref!
+    duplicates: List[MediaPublicationNestedRead] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -823,6 +835,7 @@ class MediaPublicationUpdate(BaseModel):
     # --- Workflow & Automation Flags ---
     is_scraped:     Optional[bool] = None
     is_duplicate:   Optional[bool] = None
+    duplicate_of_id: Optional[int] = None
     ai_recommendation: Optional[AIRecommendation] = None
     ai_justification: Optional[str] = None
     is_relevant:    Optional[bool] = None
@@ -880,6 +893,7 @@ class AcademicPublicationBase(BaseModel):
 
     # --- Workflow & Automation Flags ---
     is_duplicate:     Optional[bool] = None
+    duplicate_of_id: Optional[int] = None
     ai_recommendation: Optional[AIRecommendation] = None
     ai_justification: Optional[str] = None
     is_relevant:      Optional[bool] = None
@@ -899,9 +913,20 @@ class AcademicPublicationCreate(AcademicPublicationBase):
     pass
 
 
+class AcademicPublicationNestedRead(AcademicPublicationBase):
+    """A lightweight read schema to prevent infinite nesting recursion."""
+    id:         int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AcademicPublicationRead(AcademicPublicationBase):
     id:         int
     created_at: datetime
+
+    # FastApi/Pydantic will automatically populate this from the SQLAlchemy backref!
+    duplicates: List[AcademicPublicationNestedRead] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -920,6 +945,7 @@ class AcademicPublicationUpdate(BaseModel):
 
     # --- Workflow & Automation Flags ---
     is_duplicate:     Optional[bool] = None
+    duplicate_of_id: Optional[int] = None
     ai_recommendation: Optional[AIRecommendation] = None
     ai_justification: Optional[str] = None
     is_relevant:      Optional[bool] = None
