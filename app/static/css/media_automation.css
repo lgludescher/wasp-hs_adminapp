@@ -40,6 +40,27 @@
   color: #333;
 }
 
+/* Update Banner */
+.update-banner {
+  background-color: #e3f2fd;
+  border: 1px solid #90caf9;
+  color: #0d47a1;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.update-banner.warning {
+  background-color: #fff8e1;
+  border-color: #ffe082;
+  color: #f57f17;
+}
+
 /* ==========================================================================
    Tab Navigation
    ========================================================================== */

@@ -36,6 +36,11 @@ const btnGenerateSearch = document.getElementById('btn-generate-search');
 const searchOutput = document.getElementById('search-string-output');
 const btnCopySearch = document.getElementById('btn-copy-search');
 
+// Banner
+const updateBanner = document.getElementById('update-banner');
+const updateBannerText = document.getElementById('update-banner-text');
+const btnRefreshData = document.getElementById('btn-refresh-data');
+
 // Actions
 const btnProcessAll = document.getElementById('btn-process-all');
 const btnPushAllWp = document.getElementById('btn-push-all-wp');
@@ -47,11 +52,19 @@ let currentTab = 'tab-ingestion';
 let expandedRow = null;
 let currentListData = []; // Store current tab's data for easy reference
 let pendingConfirmAction = null;
+let lastProcessingStatus = null; // Tracks background AI job
+let lastPublishStatus = null;    // Tracks background WP job
 
 // ============================================================================
 // Initialization
 // ============================================================================
 (async function init() {
+  // Bind the new refresh banner button
+  btnRefreshData.onclick = () => {
+    updateBanner.classList.add('hidden');
+    loadCurrentTab();
+  };
+
   setupTabs();
   setupModals();
   setupGlobalActions();
@@ -221,7 +234,7 @@ async function loadCurrentTab() {
       }
       else if (currentTab === 'tab-publish') {
         html += `
-          <td><strong>${titleStr}</strong></td>
+          <td><button class="btn expand-btn" title="Preview Article">+</button> <strong>${titleStr}</strong></td>
           <td>${item.source_name || '-'}</td>
           <td>${pubDate}</td>
           <td class="cell-actions">
@@ -334,18 +347,20 @@ function togglePreviewRow(item, tr) {
         <div class="preview-header">
           <h4 class="preview-title">${safeTitle}</h4>${linkHtml}
         </div>
-        <div class="preview-grid">
+        <div class="preview-grid" ${currentTab === 'tab-publish' ? 'style="grid-template-columns: 1fr;"' : ''}>
+          ${currentTab === 'tab-review' ? `
           <div class="preview-section">
             <h4>AI Justification</h4>
             <div class="content-box"><p>${aiJustification}</p></div>
           </div>
+          ` : ''}
           <div class="preview-section">
             <h4>Original Text (Full)</h4>
             <div class="content-box"><p>${fullBody}</p></div>
           </div>
         </div>
         
-        ${item.duplicates && item.duplicates.length > 0 ? `
+        ${item.duplicates && item.duplicates.length > 0 && currentTab !== 'tab-publish' ? `
         <div class="duplicates-section">
           <h4 style="margin-bottom: 0.75rem; color: #333;">Alternate Versions</h4>
           <div class="duplicates-list">
@@ -374,6 +389,7 @@ function togglePreviewRow(item, tr) {
         ` : ''}
         
         <div class="preview-actions">
+          ${currentTab === 'tab-publish' ? `<button class="btn btn-secondary btn-panel-demote" style="margin-right: 0.5rem; background: #c62828;">↩️ Send Back to Review</button>` : ''}
           <button class="btn btn-secondary btn-panel-edit">✏️ Edit Record</button>
         </div>
       </div>
@@ -382,6 +398,12 @@ function togglePreviewRow(item, tr) {
 
   // Bind the inline Edit button
   panel.querySelector('.btn-panel-edit').onclick = () => openEditModal(item);
+
+  // Bind the Demote button (if it exists)
+  const btnDemote = panel.querySelector('.btn-panel-demote');
+  if (btnDemote) {
+    btnDemote.onclick = () => confirmAction(`Send this article back to the Needs Review tab?`, () => updateRecord(item.id, { is_reviewed: false }));
+  }
 
   // Bind the promote buttons
   panel.querySelectorAll('.btn-promote').forEach(btn => {
@@ -654,8 +676,8 @@ function setupGlobalActions() {
     try {
       await apiFetch('/media-publications/actions/push-to-wp', { method: 'POST' });
       showSystemStatus('Pushing to WP...');
-      loadActivityLogs(); // Instantly fetch the new IN_PROGRESS log
-      setTimeout(loadCurrentTab, 3000); // Wait a bit then refresh table
+      loadActivityLogs();
+      // Removed the forced 3-second reload!
     } catch (err) { showError(err); }
   };
 }
@@ -727,9 +749,9 @@ async function triggerProcessing(ids) {
       body: JSON.stringify({ publication_ids: ids })
     });
     showSystemStatus('AI Processing Started...');
-    loadActivityLogs();
-    resetBulkSelection();
-    setTimeout(loadCurrentTab, 3000);
+    loadActivityLogs(); // Grabs the new IN_PROGRESS state instantly
+    resetBulkSelection(); // Instantly unchecks boxes for local UI feedback
+    // Removed the forced 3-second reload!
   } catch (err) {
     showError(err);
   }
@@ -760,6 +782,27 @@ async function loadActivityLogs() {
 
     // Helper to find the most recent log for a specific action type
     const getLatest = (type) => logs.find(log => log.action_type === type);
+
+    const procLog = getLatest('media_processing');
+    const pubLog = getLatest('media_publish');
+
+    // Detect if Processing just finished
+    if (procLog) {
+      if (lastProcessingStatus === 'in_progress' && procLog.status !== 'in_progress') {
+        const isWarning = procLog.status !== 'success';
+        showUpdateBanner(`✨ AI Processing concluded (${procLog.status.toUpperCase()}).`, isWarning);
+      }
+      lastProcessingStatus = procLog.status;
+    }
+
+    // Detect if WP Push just finished
+    if (pubLog) {
+      if (lastPublishStatus === 'in_progress' && pubLog.status !== 'in_progress') {
+        const isWarning = pubLog.status !== 'success';
+        showUpdateBanner(`✨ WordPress Push concluded (${pubLog.status.toUpperCase()}).`, isWarning);
+      }
+      lastPublishStatus = pubLog.status;
+    }
 
     // Helper to format the log into readable HTML
     const formatLog = (log) => {
@@ -830,4 +873,14 @@ function showModal(msg, isInfo = false) {
 function showError(err) {
   const msg = err instanceof Error ? err.message : String(err);
   showModal(`Error:\n${msg}`);
+}
+
+function showUpdateBanner(msg, isWarning = false) {
+  updateBannerText.textContent = msg;
+  if (isWarning) {
+    updateBanner.classList.add('warning');
+  } else {
+    updateBanner.classList.remove('warning');
+  }
+  updateBanner.classList.remove('hidden');
 }
