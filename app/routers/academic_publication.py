@@ -209,6 +209,7 @@ def sync_swepub(
 @router.post("/academic-publications/actions/process-pending", status_code=status.HTTP_202_ACCEPTED)
 def process_pending_academic(
         background_tasks: BackgroundTasks,
+        payload: Optional[schemas.ProcessPendingRequest] = None,
         db: Session = Depends(dependencies.get_db),
         current_user=Depends(dependencies.get_current_user)
 ):
@@ -233,12 +234,16 @@ def process_pending_academic(
             )
         # If it's older than 2 hours, tasks.py TTL logic will safely clear it.
 
+    # Extract the IDs (if any were provided)
+    pub_ids = payload.publication_ids if payload else None
+
     # 2. Hand off to the background task orchestrator
-    background_tasks.add_task(tasks.process_pending_academic_task, user_id=current_user.id)
+    background_tasks.add_task(tasks.process_pending_academic_task, user_id=current_user.id, publication_ids=pub_ids)
 
-    logger.info(f"User {current_user.username} triggered academic processing (spawned in background).")
+    msg = f"Processing started for {len(pub_ids)} selected items." if pub_ids else "Processing started for all pending items."
+    logger.info(f"User {current_user.username} triggered academic processing (spawned in background): {msg}.")
 
-    return {"message": "Academic processing started in the background."}
+    return {"message": f"Academic processing started in the background ({msg})."}
 
 
 @router.post("/academic-publications/{pub_id}/actions/promote", response_model=schemas.AcademicPublicationRead)
@@ -328,6 +333,7 @@ def promote_academic_duplicate(
 @router.post("/academic-publications/actions/push-to-wp", status_code=status.HTTP_202_ACCEPTED)
 def push_approved_academic_to_wp(
         background_tasks: BackgroundTasks,
+        payload: Optional[schemas.PushApprovedRequest] = None,
         db: Session = Depends(dependencies.get_db),
         current_user=Depends(dependencies.get_current_user)
 ):
@@ -352,12 +358,16 @@ def push_approved_academic_to_wp(
             )
         # If it's older than 2 hours, tasks.py TTL logic will safely clear it.
 
+    # Extract the IDs (if any were provided)
+    pub_ids = payload.publication_ids if payload else None
+
     # 2. Hand off to the background task orchestrator
-    background_tasks.add_task(tasks.push_approved_academic_task, user_id=current_user.id)
+    background_tasks.add_task(tasks.push_approved_academic_task, user_id=current_user.id, publication_ids=pub_ids)
 
-    logger.info(f"User {current_user.username} triggered academic WordPress push (spawned in background).")
+    msg = f"WordPress push started for {len(pub_ids)} selected items." if pub_ids else "WordPress push started for all approved items."
+    logger.info(f"User {current_user.username} triggered academic WordPress push (spawned in background): {msg}.")
 
-    return {"message": "WordPress push for academic publications started in the background."}
+    return {"message": f"WordPress push for academic publications started in the background ({msg})."}
 
 # </editor-fold>
 

@@ -1044,4 +1044,8 @@ class ProcessPendingRequest(BaseModel):
     publication_ids: Optional[List[int]] = None
 
 
+class PushApprovedRequest(BaseModel):
+    publication_ids: Optional[List[int]] = None
+
+
 # </editor-fold>

@@ -230,7 +230,7 @@ def process_pending_media_task(user_id: int, publication_ids: list[int] = None):
 # 3. ACADEMIC PROCESSING ORCHESTRATOR
 # ==========================================
 
-def process_pending_academic_task(user_id: int):
+def process_pending_academic_task(user_id: int, publication_ids: list[int] = None):
     """Background task: Deduplicates, AI Evaluation, Entity Matching for Academic data."""
     db = SessionLocal()
     job_log = None
@@ -239,14 +239,21 @@ def process_pending_academic_task(user_id: int):
     try:
         job_log = _manage_job_lock(db, models.ActionType.ACADEMIC_PROCESSING, user_id)
 
+        # Helper function to apply the ID filter cleanly across all queries
+        def apply_id_filter(query):
+            if publication_ids:
+                return query.filter(models.AcademicPublication.id.in_(publication_ids))
+            return query
+
         # ---------------------------------------------------------
         # PHASE 1: DEDUPLICATION (No scraper needed for SwePub)
         # ---------------------------------------------------------
         # MODIFICATION: Added quarantine guard.
-        items_to_dedup = db.query(models.AcademicPublication).filter(
+        base_dedup_query = db.query(models.AcademicPublication).filter(
             models.AcademicPublication.is_duplicate.is_(None),
             models.AcademicPublication.has_processing_error == False
         ).all()
+        items_to_dedup = apply_id_filter(base_dedup_query).all()
 
         if items_to_dedup:
             # TODO: from app.services.deduplicator import flag_academic_duplicates
@@ -257,11 +264,12 @@ def process_pending_academic_task(user_id: int):
         # PHASE 2: LLM EVALUATION
         # ---------------------------------------------------------
         # MODIFICATION: Changed trigger to `ai_recommendation` and added quarantine guard.
-        items_to_eval = db.query(models.AcademicPublication).filter(
+        base_eval_query = db.query(models.AcademicPublication).filter(
             models.AcademicPublication.is_duplicate == False,
             models.AcademicPublication.ai_recommendation.is_(None),
             models.AcademicPublication.has_processing_error == False
         ).all()
+        items_to_eval = apply_id_filter(base_eval_query).all()
 
         if items_to_eval:
             # TODO: from app.services.llm import evaluate_academic
@@ -274,12 +282,13 @@ def process_pending_academic_task(user_id: int):
         # MODIFICATION: Changed to Post-Review trigger to save API calls.
         """
         # Placeholder for future implementation
-        items_to_match = db.query(models.AcademicPublication).filter(
+        base_match_query = db.query(models.AcademicPublication).filter(
             models.AcademicPublication.is_reviewed == True,
             models.AcademicPublication.is_relevant == True,
             models.AcademicPublication.entities_matched.is_(None),
             models.AcademicPublication.has_processing_error == False
         ).all()
+        items_to_match = apply_id_filter(base_match_query).all()
 
         if items_to_match:
             # from app.services.entity_matcher import link_academic_entities
@@ -304,7 +313,7 @@ def process_pending_academic_task(user_id: int):
 # 4. WORDPRESS PUSH ORCHESTRATORS
 # ==========================================
 
-def push_approved_media_task(user_id: int):
+def push_approved_media_task(user_id: int, publication_ids: list[int] = None):
     """Background task: Finds evaluated & relevant MEDIA publications and pushes to WP."""
     db = SessionLocal()
     job_log = None
@@ -313,14 +322,21 @@ def push_approved_media_task(user_id: int):
     try:
         job_log = _manage_job_lock(db, models.ActionType.MEDIA_PUBLISH, user_id)
 
+        # Helper function to apply the ID filter cleanly across all queries
+        def apply_id_filter(query):
+            if publication_ids:
+                return query.filter(models.MediaPublication.id.in_(publication_ids))
+            return query
+
         # MODIFICATION: Added `is_reviewed == True` as the absolute human-in-the-loop gatekeeper.
         # Added quarantine guard.
-        media_to_push = db.query(models.MediaPublication).filter(
+        base_push_query = db.query(models.MediaPublication).filter(
             models.MediaPublication.is_reviewed == True,
             models.MediaPublication.is_relevant == True,
             models.MediaPublication.wp_post_id.is_(None),
             models.MediaPublication.has_processing_error == False
         ).all()
+        media_to_push = apply_id_filter(base_push_query).all()
 
         # TODO: from app.services.wordpress import push_media_to_wordpress
         # items_pushed = push_media_to_wordpress(db, media_to_push)
@@ -338,7 +354,7 @@ def push_approved_media_task(user_id: int):
         db.close()
 
 
-def push_approved_academic_task(user_id: int):
+def push_approved_academic_task(user_id: int, publication_ids: list[int] = None):
     """Background task: Finds evaluated & relevant ACADEMIC publications and pushes to WP."""
     db = SessionLocal()
     job_log = None
@@ -347,13 +363,20 @@ def push_approved_academic_task(user_id: int):
     try:
         job_log = _manage_job_lock(db, models.ActionType.ACADEMIC_PUBLISH, user_id)
 
+        # Helper function to apply the ID filter cleanly across all queries
+        def apply_id_filter(query):
+            if publication_ids:
+                return query.filter(models.AcademicPublication.id.in_(publication_ids))
+            return query
+
         # MODIFICATION: Added `is_reviewed == True` and quarantine guard.
-        academic_to_push = db.query(models.AcademicPublication).filter(
+        base_push_query = db.query(models.AcademicPublication).filter(
             models.AcademicPublication.is_reviewed == True,
             models.AcademicPublication.is_relevant == True,
             models.AcademicPublication.wp_post_id.is_(None),
             models.AcademicPublication.has_processing_error == False
         ).all()
+        academic_to_push = apply_id_filter(base_push_query).all()
 
         # TODO: from app.services.wordpress import push_academic_to_wordpress
         # items_pushed = push_academic_to_wordpress(db, academic_to_push)
