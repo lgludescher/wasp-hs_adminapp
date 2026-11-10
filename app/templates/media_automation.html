@@ -68,7 +68,7 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-ingestion" /></th>
+            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-ingestion" title="Select All / Deselect All" /></th>
             <th>Title</th>
             <th>Publisher</th>
             <th>Platform</th>
@@ -89,7 +89,7 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-review" /></th>
+            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-review" title="Select All / Deselect All" /></th>
             <th class="cell-center">AI Recommendation</th>
             <th>Title</th>
             <th>Publisher</th>
@@ -106,15 +106,11 @@
        TAB 3: READY TO PUBLISH
        ========================================== -->
   <section id="tab-publish" class="tab-pane hidden">
-    <div class="actions-bar tab-actions">
-      <button id="btn-push-all-wp" class="btn">Push Queue to WordPress</button>
-    </div>
-
     <div class="list-container">
       <table class="data-table">
         <thead>
           <tr>
-            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-publish" /></th>
+            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-publish" title="Select All / Deselect All" /></th>
             <th>Title</th>
             <th>Publisher</th>
             <th>Published Date</th>
@@ -134,7 +130,7 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-quarantine" /></th>
+            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-quarantine" title="Select All / Deselect All" /></th>
             <th>Title</th>
             <th>Error Message</th>
             <th class="cell-actions"></th>
@@ -155,6 +151,7 @@
           <tr>
             <th>Title</th>
             <th>Publisher</th>
+            <th>Published Date</th>
             <th class="cell-center">Final Status</th>
             <th class="cell-center">WP Link</th>
           </tr>

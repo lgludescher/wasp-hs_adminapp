@@ -43,7 +43,6 @@ const btnRefreshData = document.getElementById('btn-refresh-data');
 
 // Actions
 const btnProcessAll = document.getElementById('btn-process-all');
-const btnPushAllWp = document.getElementById('btn-push-all-wp');
 
 // ============================================================================
 // State Management
@@ -135,6 +134,11 @@ async function loadCurrentTab() {
       // Archive is a mix of terminal states. We fetch reviewed items and filter locally
       // if the backend doesn't support complex OR queries via URL params.
       params.set('is_reviewed', 'true');
+
+      // Calculate exactly one year ago, converted safely to ISO UTC format
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 2);
+      params.set('since_date', oneYearAgo.toISOString());
     }
 
     // 2. Fetch Data
@@ -204,7 +208,7 @@ async function loadCurrentTab() {
 
       if (currentTab === 'tab-ingestion') {
         const actionBtns = isProtected
-          ? `<button class="btn btn-resolve" style="background: var(--color-accent); color: #fff;">⚠️ Resolve Link</button>
+          ? `<button class="btn btn-resolve">⚠️ Resolve Link</button>
              <button class="btn btn-delete">Delete</button>`
           : `<button class="btn btn-edit">Edit</button>
              <button class="btn btn-delete">Delete</button>`;
@@ -238,17 +242,22 @@ async function loadCurrentTab() {
           <td>${item.source_name || '-'}</td>
           <td>${pubDate}</td>
           <td class="cell-actions">
-            <button class="btn btn-push-now">Push Now</button>
+            <button class="btn btn-push-wp" style="background: #0073aa; color: #fff;">Push to WP</button>
             <button class="btn btn-secondary btn-keep-internal">Keep Internal</button>
           </td>`;
       }
       else if (currentTab === 'tab-quarantine') {
+        // Truncate error message for the main table row
+        const errorMsg = item.processing_error_msg || 'Unknown error';
+        const safeError = errorMsg.length > 50 ? errorMsg.substring(0, 50) + '...' : errorMsg;
+
         html += `
-          <td><strong>${titleStr}</strong></td>
-          <td class="error-text">${item.processing_error_msg || 'Unknown error'}</td>
+          <td><button class="btn expand-btn" title="Preview Error">+</button> <strong>${titleStr}</strong></td>
+          <td class="error-text" style="color: #c62828;">${safeError}</td>
           <td class="cell-actions">
-            <button class="btn btn-edit">Edit & Retry</button>
-            <button class="btn btn-secondary btn-dismiss">Dismiss</button>
+            <button class="btn btn-requeue" style="background: var(--color-primary); color: #fff;">Requeue</button>
+            <button class="btn btn-edit">Edit</button>
+            <button class="btn btn-delete">Delete</button>
           </td>`;
       }
       else if (currentTab === 'tab-archive') {
@@ -262,8 +271,9 @@ async function loadCurrentTab() {
         const wpLink = item.wp_post_id > 0 ? `<a href="/wp-admin/post.php?post=${item.wp_post_id}&action=edit" target="_blank" style="color: var(--color-primary); text-decoration: underline;">View ID ${item.wp_post_id}</a>` : '-';
 
         html = `
-          <td><strong>${titleStr}</strong></td>
+          <td><button class="btn expand-btn" title="Preview Article">+</button> <strong>${titleStr}</strong></td>
           <td>${item.source_name || '-'}</td>
+          <td>${pubDate}</td>
           <td class="cell-center"><span class="status-pill ${pillClass}">${finalStatus}</span></td>
           <td class="cell-center">${wpLink}</td>`;
       }
@@ -302,13 +312,13 @@ function attachRowHandlers(tr, item) {
 
   bind('.expand-btn', togglePreviewRow);
 
-  bind('.btn-approve', (i) => updateRecord(i.id, { is_reviewed: true, is_relevant: true }));
-  bind('.btn-reject', (i) => updateRecord(i.id, { is_reviewed: true, is_relevant: false }));
+  bind('.btn-approve', (i) => updateRecord(i.id, { is_reviewed: true, is_relevant: true })); // Instant (Safe)
+  bind('.btn-reject', (i) => confirmAction(`Reject "${i.title}" and archive it as irrelevant?`, () => updateRecord(i.id, { is_reviewed: true, is_relevant: false }))); // Confirmed (Terminal)
 
-  bind('.btn-push-now', (i) => updateRecord(i.id, { is_published_to_wp: true, wp_post_id: 9999 })); // Mock WP ID for now, real implementation would trigger background task
-  bind('.btn-keep-internal', (i) => confirmAction(`Keep "${i.title}" internal (will not publish)?`, () => updateRecord(i.id, { wp_post_id: -1 })));
+  bind('.btn-push-wp', (i) => confirmAction(`Publish "${i.title}" to WordPress now?`, () => triggerWpPush([i.id])));
+  bind('.btn-keep-internal', (i) => confirmAction(`Archive "${i.title}" internally (will not publish)?`, () => updateRecord(i.id, { wp_post_id: -1 })));
 
-  bind('.btn-dismiss', (i) => confirmAction(`Dismiss error for "${i.title}"?`, () => updateRecord(i.id, { has_processing_error: false, processing_error_msg: null })));
+  bind('.btn-requeue', (i) => confirmAction(`Clear the error for "${i.title}" and return it to the processing pipeline?`, () => updateRecord(i.id, { has_processing_error: false, processing_error_msg: null })));
 }
 
 function togglePreviewRow(item, tr) {
@@ -347,7 +357,17 @@ function togglePreviewRow(item, tr) {
         <div class="preview-header">
           <h4 class="preview-title">${safeTitle}</h4>${linkHtml}
         </div>
-        <div class="preview-grid" ${currentTab === 'tab-publish' ? 'style="grid-template-columns: 1fr;"' : ''}>
+        <div class="preview-grid" ${(currentTab === 'tab-publish' || currentTab === 'tab-archive') ? 'style="grid-template-columns: 1fr;"' : ''}>
+          
+          ${currentTab === 'tab-quarantine' ? `
+          <div class="preview-section" style="grid-column: 1 / -1; margin-bottom: 1rem;">
+            <h4 style="color: #c62828;">Processing Error</h4>
+            <div class="content-box" style="border-left: 4px solid #c62828; background: #ffebee;">
+              <p style="color: #b71c1c; font-family: monospace; white-space: pre-wrap; margin: 0;">${item.processing_error_msg || 'Unknown error'}</p>
+            </div>
+          </div>
+          ` : ''}
+          
           ${currentTab === 'tab-review' ? `
           <div class="preview-section">
             <h4>AI Justification</h4>
@@ -360,7 +380,7 @@ function togglePreviewRow(item, tr) {
           </div>
         </div>
         
-        ${item.duplicates && item.duplicates.length > 0 && currentTab !== 'tab-publish' ? `
+        ${item.duplicates && item.duplicates.length > 0 && currentTab !== 'tab-publish' && currentTab !== 'tab-archive' ? `
         <div class="duplicates-section">
           <h4 style="margin-bottom: 0.75rem; color: #333;">Alternate Versions</h4>
           <div class="duplicates-list">
@@ -388,16 +408,21 @@ function togglePreviewRow(item, tr) {
         </div>
         ` : ''}
         
+        ${currentTab !== 'tab-archive' ? `
         <div class="preview-actions">
           ${currentTab === 'tab-publish' ? `<button class="btn btn-secondary btn-panel-demote" style="margin-right: 0.5rem; background: #c62828;">↩️ Send Back to Review</button>` : ''}
           <button class="btn btn-secondary btn-panel-edit">✏️ Edit Record</button>
         </div>
+        ` : ''}
       </div>
     </td>
   `;
 
-  // Bind the inline Edit button
-  panel.querySelector('.btn-panel-edit').onclick = () => openEditModal(item);
+  // Bind the inline Edit button (if it exists)
+  const btnEdit = panel.querySelector('.btn-panel-edit');
+  if (btnEdit) {
+    btnEdit.onclick = () => openEditModal(item);
+  }
 
   // Bind the Demote button (if it exists)
   const btnDemote = panel.querySelector('.btn-panel-demote');
@@ -442,7 +467,24 @@ function updateBulkActionBar() {
   const tbody = document.getElementById(`tbody-${currentTab.split('-')[1]}`);
   if (!tbody) return;
 
-  const checked = Array.from(tbody.querySelectorAll('.row-checkbox:checked')).map(cb => parseInt(cb.value));
+  const allBoxes = tbody.querySelectorAll('.row-checkbox');
+  const checkedBoxes = Array.from(allBoxes).filter(cb => cb.checked);
+  const checked = checkedBoxes.map(cb => parseInt(cb.value));
+
+  // Update the Select All checkbox state (Indeterminate logic)
+  const selectAllCb = document.querySelector(`.select-all[data-target="${tbody.id}"]`);
+  if (selectAllCb) {
+    if (checked.length === 0) {
+      selectAllCb.checked = false;
+      selectAllCb.indeterminate = false;
+    } else if (checked.length === allBoxes.length) {
+      selectAllCb.checked = true;
+      selectAllCb.indeterminate = false;
+    } else {
+      selectAllCb.checked = false;
+      selectAllCb.indeterminate = true; // Shows the '-' dash
+    }
+  }
 
   if (checked.length === 0) {
     bulkActionBar.classList.add('hidden');
@@ -483,16 +525,47 @@ function updateBulkActionBar() {
   }
   else if (currentTab === 'tab-review') {
     bulkButtons.innerHTML = `
-      <button id="bulk-approve" class="btn" style="background: #2e7d32;">Mark Relevant</button>
-      <button id="bulk-reject" class="btn" style="background: #c62828;">Mark Irrelevant</button>
+      <button id="bulk-approve" class="btn" style="background: #2e7d32; color: #fff;">Mark Relevant</button>
+      <button id="bulk-reject" class="btn" style="background: #c62828; color: #fff;">Mark Irrelevant</button>
     `;
-    document.getElementById('bulk-approve').onclick = () => bulkUpdate(checked, { is_reviewed: true, is_relevant: true });
-    document.getElementById('bulk-reject').onclick = () => bulkUpdate(checked, { is_reviewed: true, is_relevant: false });
+    document.getElementById('bulk-approve').onclick = () => {
+      confirmAction(`Mark ${checked.length} selected item(s) as Relevant and send to the publish queue?`, () => bulkUpdate(checked, { is_reviewed: true, is_relevant: true }));
+    };
+    document.getElementById('bulk-reject').onclick = () => {
+      confirmAction(`Reject and archive ${checked.length} selected item(s) as Irrelevant?`, () => bulkUpdate(checked, { is_reviewed: true, is_relevant: false }));
+    };
+  }
+  else if (currentTab === 'tab-publish') {
+    bulkButtons.innerHTML = `
+      <button id="bulk-push-wp" class="btn" style="background: #0073aa; color: #fff;">Push Selected to WP</button>
+      <button id="bulk-keep-internal" class="btn btn-secondary">Keep Selected Internal</button>
+    `;
+    document.getElementById('bulk-push-wp').onclick = () => {
+      confirmAction(`Publish ${checked.length} selected item(s) to WordPress?`, () => triggerWpPush(checked));
+    };
+    document.getElementById('bulk-keep-internal').onclick = () => {
+      confirmAction(`Archive ${checked.length} selected item(s) internally?`, () => bulkUpdate(checked, { wp_post_id: -1 }));
+    };
+  }
+  else if (currentTab === 'tab-quarantine') {
+    bulkButtons.innerHTML = `
+      <button id="bulk-requeue" class="btn" style="background: var(--color-primary); color: #fff;">Requeue Selected</button>
+      <button id="bulk-delete" class="btn" style="background: #c62828; color: #fff;">Delete Selected</button>
+    `;
+    document.getElementById('bulk-requeue').onclick = () => {
+      confirmAction(`Clear errors and return ${checked.length} selected item(s) to the pipeline?`, () => bulkUpdate(checked, { has_processing_error: false, processing_error_msg: null }));
+    };
+    document.getElementById('bulk-delete').onclick = () => {
+      confirmAction(`Permanently delete ${checked.length} selected error item(s)?`, () => bulkUpdate(checked, { action: 'delete' }));
+    };
   }
 }
 
 function resetBulkSelection() {
-  document.querySelectorAll('.select-all').forEach(cb => cb.checked = false);
+  document.querySelectorAll('.select-all').forEach(cb => {
+    cb.checked = false;
+    cb.indeterminate = false;
+  });
   document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
   bulkActionBar.classList.add('hidden');
 }
@@ -555,12 +628,6 @@ function setupModals() {
     try {
       const url = editId ? `/media-publications/${editId}` : '/media-publications/';
       const method = editId ? 'PUT' : 'POST';
-
-      // If editing a quarantined item, clear the error flag automatically
-      if (editId && currentTab === 'tab-quarantine') {
-        payload.has_processing_error = false;
-        payload.processing_error_msg = null;
-      }
 
       await apiFetch(url, {
         method: method,
@@ -671,15 +738,6 @@ function setupGlobalActions() {
       triggerProcessing(validBoxes.map(cb => parseInt(cb.value)));
     });
   };
-
-  btnPushAllWp.onclick = async () => {
-    try {
-      await apiFetch('/media-publications/actions/push-to-wp', { method: 'POST' });
-      showSystemStatus('Pushing to WP...');
-      loadActivityLogs();
-      // Removed the forced 3-second reload!
-    } catch (err) { showError(err); }
-  };
 }
 
 async function updateRecord(id, payload) {
@@ -752,6 +810,21 @@ async function triggerProcessing(ids) {
     loadActivityLogs(); // Grabs the new IN_PROGRESS state instantly
     resetBulkSelection(); // Instantly unchecks boxes for local UI feedback
     // Removed the forced 3-second reload!
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function triggerWpPush(ids) {
+  try {
+    await apiFetch('/media-publications/actions/push-to-wp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ publication_ids: ids })
+    });
+    showSystemStatus('WP Push Started...');
+    loadActivityLogs(); // Grabs the new IN_PROGRESS state instantly
+    resetBulkSelection(); // Instantly unchecks boxes for local UI feedback
   } catch (err) {
     showError(err);
   }

@@ -3093,6 +3093,7 @@ def list_media_publications(
         # is_pushed_to_wp: Optional[bool] = None,
         is_published_to_wp: Optional[bool] = None,
         has_processing_error: Optional[bool] = None,
+        since_date: Optional[datetime] = None,
         search: Optional[str] = None
 ) -> List[models.MediaPublication]:
     q = db.query(models.MediaPublication).options(
@@ -3121,6 +3122,9 @@ def list_media_publications(
         q = q.filter(models.MediaPublication.wp_post_id.is_(None))
     if has_processing_error is not None:
         q = q.filter_by(has_processing_error=has_processing_error)
+
+    if since_date is not None:
+        q = q.filter(models.MediaPublication.published_date >= since_date)
 
     if search:
         term = f"%{search}%"
@@ -3270,6 +3274,7 @@ def list_academic_publications(
         # is_pushed_to_wp: Optional[bool] = None,
         is_published_to_wp: Optional[bool] = None,
         has_processing_error: Optional[bool] = None,
+        since_date: Optional[datetime] = None,
         search: Optional[str] = None
 ) -> List[models.AcademicPublication]:
     q = db.query(models.AcademicPublication).options(
@@ -3296,6 +3301,33 @@ def list_academic_publications(
         q = q.filter(models.AcademicPublication.wp_post_id.is_(None))
     if has_processing_error is not None:
         q = q.filter_by(has_processing_error=has_processing_error)
+
+        # --- Added Cascading Date Filter ---
+        if since_date is not None:
+            since_year = since_date.year
+
+            q = q.filter(
+                or_(
+                    # Condition 1: published_date is available
+                    and_(
+                        models.AcademicPublication.published_date.isnot(None),
+                        models.AcademicPublication.published_date >= since_date
+                    ),
+                    # Condition 2: published_date is NULL, but published_year is available
+                    and_(
+                        models.AcademicPublication.published_date.is_(None),
+                        models.AcademicPublication.published_year.isnot(None),
+                        models.AcademicPublication.published_year >= since_year
+                    ),
+                    # Condition 3: Both are NULL, fallback to created_at
+                    and_(
+                        models.AcademicPublication.published_date.is_(None),
+                        models.AcademicPublication.published_year.is_(None),
+                        models.AcademicPublication.created_at >= since_date
+                    )
+                )
+            )
+        # -----------------------------------
 
     if search:
         term = f"%{search}%"

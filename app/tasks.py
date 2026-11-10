@@ -252,7 +252,7 @@ def process_pending_academic_task(user_id: int, publication_ids: list[int] = Non
         base_dedup_query = db.query(models.AcademicPublication).filter(
             models.AcademicPublication.is_duplicate.is_(None),
             models.AcademicPublication.has_processing_error == False
-        ).all()
+        )
         items_to_dedup = apply_id_filter(base_dedup_query).all()
 
         if items_to_dedup:
@@ -268,7 +268,7 @@ def process_pending_academic_task(user_id: int, publication_ids: list[int] = Non
             models.AcademicPublication.is_duplicate == False,
             models.AcademicPublication.ai_recommendation.is_(None),
             models.AcademicPublication.has_processing_error == False
-        ).all()
+        )
         items_to_eval = apply_id_filter(base_eval_query).all()
 
         if items_to_eval:
@@ -287,7 +287,7 @@ def process_pending_academic_task(user_id: int, publication_ids: list[int] = Non
             models.AcademicPublication.is_relevant == True,
             models.AcademicPublication.entities_matched.is_(None),
             models.AcademicPublication.has_processing_error == False
-        ).all()
+        )
         items_to_match = apply_id_filter(base_match_query).all()
 
         if items_to_match:
@@ -335,7 +335,7 @@ def push_approved_media_task(user_id: int, publication_ids: list[int] = None):
             models.MediaPublication.is_relevant == True,
             models.MediaPublication.wp_post_id.is_(None),
             models.MediaPublication.has_processing_error == False
-        ).all()
+        )
         media_to_push = apply_id_filter(base_push_query).all()
 
         # TODO: from app.services.wordpress import push_media_to_wordpress
@@ -375,7 +375,7 @@ def push_approved_academic_task(user_id: int, publication_ids: list[int] = None)
             models.AcademicPublication.is_relevant == True,
             models.AcademicPublication.wp_post_id.is_(None),
             models.AcademicPublication.has_processing_error == False
-        ).all()
+        )
         academic_to_push = apply_id_filter(base_push_query).all()
 
         # TODO: from app.services.wordpress import push_academic_to_wordpress

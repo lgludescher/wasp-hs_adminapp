@@ -228,6 +228,29 @@
   padding: 0.25rem 0.5rem;
   font-size: 0.85rem;
   margin-left: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* Enlarge standard checkboxes */
+.row-checkbox, .select-all {
+  width: 1.15rem;
+  height: 1.15rem;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+/* Match the Resolve button to the Warning Pill */
+.btn-resolve {
+  background: #fff8e1 !important;
+  color: #f57f17 !important;
+  border: 1px solid #ffe082 !important;
+}
+.btn-resolve:hover {
+  background: #ffe082 !important;
+  color: #d84315 !important;
 }
 
 /* Badges / Pills */

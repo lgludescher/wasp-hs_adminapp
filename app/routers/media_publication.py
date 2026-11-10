@@ -45,6 +45,7 @@ def list_media_publications(
     # is_pushed_to_wp: Optional[bool] = Query(None),
     is_published_to_wp: Optional[bool] = Query(None),
     has_processing_error: Optional[bool] = Query(None),
+    since_date:      Optional[datetime] = Query(None, description="Filter for items published on or after this date"),
     search:          Optional[str] = Query(None, description="Substring search on title or source"),
     db: Session = Depends(dependencies.get_db),
     current_user=Depends(dependencies.get_current_user)
@@ -53,7 +54,7 @@ def list_media_publications(
                 f"is_scraped={is_scraped}, is_duplicate={is_duplicate}, duplicate_of_id={duplicate_of_id}, "
                 f"ai_recommendation={ai_recommendation}, is_relevant={is_relevant}, "
                 f"is_reviewed={is_reviewed}, is_published_to_wp={is_published_to_wp}, "
-                f"has_processing_error={has_processing_error}, search={search!r})")
+                f"has_processing_error={has_processing_error}, since_date={since_date}, search={search!r})")
     return crud.list_media_publications(
         db,
         platform=platform,
@@ -66,6 +67,7 @@ def list_media_publications(
         # is_pushed_to_wp=is_pushed_to_wp,
         is_published_to_wp=is_published_to_wp,
         has_processing_error=has_processing_error,
+        since_date=since_date,
         search=search
     )
 
