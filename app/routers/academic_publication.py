@@ -41,8 +41,8 @@ def list_academic_publications(
     ai_recommendation: Optional[models.AIRecommendation] = Query(None),
     is_relevant:     Optional[bool] = Query(None),
     is_reviewed:     Optional[bool] = Query(None),
-    # is_pushed_to_wp: Optional[bool] = Query(None),
-    is_published_to_wp: Optional[bool] = Query(None),
+    is_pushed_to_wp: Optional[bool] = Query(None),
+    # is_published_to_wp: Optional[bool] = Query(None),
     has_processing_error: Optional[bool] = Query(None),
     since_date:      Optional[datetime] = Query(None, description="Filter for items published on or after this date (falls back to year or created_at)"),
     search:          Optional[str] = Query(None, description="Substring search on title or journal"),
@@ -52,7 +52,7 @@ def list_academic_publications(
     logger.info(f"{current_user.username} listed academic publications (year={published_year}, "
                 f"is_duplicate={is_duplicate}, duplicate_of_id={duplicate_of_id}, "
                 f"ai_recommendation={ai_recommendation}, is_relevant={is_relevant}, "
-                f"is_reviewed={is_reviewed}, is_published_to_wp={is_published_to_wp}, "
+                f"is_reviewed={is_reviewed}, is_pushed_to_wp={is_pushed_to_wp}, "
                 f"has_processing_error={has_processing_error}, since_date={since_date}, search={search!r})")
     return crud.list_academic_publications(
         db,
@@ -62,8 +62,8 @@ def list_academic_publications(
         ai_recommendation=ai_recommendation,
         is_relevant=is_relevant,
         is_reviewed=is_reviewed,
-        # is_pushed_to_wp=is_pushed_to_wp,
-        is_published_to_wp=is_published_to_wp,
+        is_pushed_to_wp=is_pushed_to_wp,
+        # is_published_to_wp=is_published_to_wp,
         has_processing_error=has_processing_error,
         since_date=since_date,
         search=search

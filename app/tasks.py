@@ -333,7 +333,8 @@ def push_approved_media_task(user_id: int, publication_ids: list[int] = None):
         base_push_query = db.query(models.MediaPublication).filter(
             models.MediaPublication.is_reviewed == True,
             models.MediaPublication.is_relevant == True,
-            models.MediaPublication.wp_post_id.is_(None),
+            models.MediaPublication.is_pushed_to_wp.is_(None),
+            # models.MediaPublication.wp_post_id.is_(None),
             models.MediaPublication.has_processing_error == False
         )
         media_to_push = apply_id_filter(base_push_query).all()
@@ -373,7 +374,8 @@ def push_approved_academic_task(user_id: int, publication_ids: list[int] = None)
         base_push_query = db.query(models.AcademicPublication).filter(
             models.AcademicPublication.is_reviewed == True,
             models.AcademicPublication.is_relevant == True,
-            models.AcademicPublication.wp_post_id.is_(None),
+            models.AcademicPublication.is_pushed_to_wp.is_(None),
+            # models.AcademicPublication.wp_post_id.is_(None),
             models.AcademicPublication.has_processing_error == False
         )
         academic_to_push = apply_id_filter(base_push_query).all()

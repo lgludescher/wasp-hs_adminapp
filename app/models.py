@@ -617,6 +617,7 @@ class MediaPublication(Base):
     published_date = Column(DateTime, nullable=False)
     content_url = Column(String, nullable=True)
     article_body = Column(Text, nullable=True)  # Using Text for long article content
+    cited_members_parsed = Column(Text, nullable=True)  # Cited WASP-HS members as identified by the LLM
 
     # --- Workflow & Automation Flags ---
     is_scraped = Column(Boolean, default=False, nullable=False) # Tracks if scraper ran, even if body is empty
@@ -641,7 +642,8 @@ class MediaPublication(Base):
     is_reviewed = Column(Boolean, default=False, nullable=False)
     entities_matched = Column(Boolean, default=None,
                               nullable=True)  # True=Matched, False=Zero entities, None=Pending
-    # is_pushed_to_wp = Column(Boolean, default=False, nullable=False)
+    is_pushed_to_wp = Column(Boolean, default=None,
+                             nullable=True) # True = Pushed, False = Kept Internal, None = Pending
     wp_post_id = Column(Integer, nullable=True)
 
     # --- Error & Quarantine Handling ---
@@ -708,7 +710,8 @@ class AcademicPublication(Base):
     is_reviewed = Column(Boolean, default=False, nullable=False)
     entities_matched = Column(Boolean, default=None,
                               nullable=True)  # True=Matched, False=Zero entities, None=Pending
-    # is_pushed_to_wp = Column(Boolean, default=False, nullable=False)
+    is_pushed_to_wp = Column(Boolean, default=None,
+                             nullable=True)  # True = Pushed, False = Kept Internal, None = Pending
     wp_post_id = Column(Integer, nullable=True)
 
     # --- Error & Quarantine Handling ---

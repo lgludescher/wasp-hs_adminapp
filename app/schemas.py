@@ -781,6 +781,7 @@ class MediaPublicationBase(BaseModel):
     published_date: datetime
     content_url:    Optional[str] = None
     article_body:   Optional[str] = None
+    cited_members_parsed: Optional[str] = None
 
     # --- Workflow & Automation Flags ---
     is_scraped:     bool = False
@@ -791,7 +792,7 @@ class MediaPublicationBase(BaseModel):
     is_relevant:    Optional[bool] = None
     is_reviewed:    bool = False
     entities_matched: Optional[bool] = None
-    # is_pushed_to_wp: bool = False
+    is_pushed_to_wp: Optional[bool] = None
     wp_post_id:     Optional[int] = None
 
     # --- Error & Quarantine Handling ---
@@ -831,6 +832,7 @@ class MediaPublicationUpdate(BaseModel):
     published_date: Optional[datetime] = None
     content_url:    Optional[str] = None
     article_body:   Optional[str] = None
+    cited_members_parsed: Optional[str] = None
 
     # --- Workflow & Automation Flags ---
     is_scraped:     Optional[bool] = None
@@ -841,7 +843,7 @@ class MediaPublicationUpdate(BaseModel):
     is_relevant:    Optional[bool] = None
     is_reviewed:    Optional[bool] = None
     entities_matched: Optional[bool] = None
-    # is_pushed_to_wp: Optional[bool] = None
+    is_pushed_to_wp: Optional[bool] = None
     wp_post_id:     Optional[int] = None
 
     # --- Error & Quarantine Handling ---
@@ -899,7 +901,7 @@ class AcademicPublicationBase(BaseModel):
     is_relevant:      Optional[bool] = None
     is_reviewed:      bool = False
     entities_matched: Optional[bool] = None
-    # is_pushed_to_wp: bool = False
+    is_pushed_to_wp:  Optional[bool] = None
     wp_post_id:       Optional[int] = None
 
     # --- Error & Quarantine Handling ---
@@ -951,7 +953,7 @@ class AcademicPublicationUpdate(BaseModel):
     is_relevant:      Optional[bool] = None
     is_reviewed:      Optional[bool] = None
     entities_matched: Optional[bool] = None
-    # is_pushed_to_wp: Optional[bool] = None
+    is_pushed_to_wp:  Optional[bool] = None
     wp_post_id:       Optional[int] = None
 
     # --- Error & Quarantine Handling ---

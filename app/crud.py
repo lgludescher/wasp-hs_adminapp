@@ -3090,8 +3090,8 @@ def list_media_publications(
         ai_recommendation: Optional[models.AIRecommendation] = None,
         is_relevant: Optional[bool] = None,
         is_reviewed: Optional[bool] = None,
-        # is_pushed_to_wp: Optional[bool] = None,
-        is_published_to_wp: Optional[bool] = None,
+        is_pushed_to_wp: Optional[bool] = None,
+        # is_published_to_wp: Optional[bool] = None,
         has_processing_error: Optional[bool] = None,
         since_date: Optional[datetime] = None,
         search: Optional[str] = None
@@ -3114,12 +3114,12 @@ def list_media_publications(
         q = q.filter_by(is_relevant=is_relevant)
     if is_reviewed is not None:
         q = q.filter_by(is_reviewed=is_reviewed)
-    # if is_pushed_to_wp is not None:
-    #     q = q.filter_by(is_pushed_to_wp=is_pushed_to_wp)
-    if is_published_to_wp is True:
-        q = q.filter(models.MediaPublication.wp_post_id.isnot(None))
-    elif is_published_to_wp is False:
-        q = q.filter(models.MediaPublication.wp_post_id.is_(None))
+    if is_pushed_to_wp is not None:
+        q = q.filter_by(is_pushed_to_wp=is_pushed_to_wp)
+    # if is_published_to_wp is True:
+    #     q = q.filter(models.MediaPublication.wp_post_id.isnot(None))
+    # elif is_published_to_wp is False:
+    #     q = q.filter(models.MediaPublication.wp_post_id.is_(None))
     if has_processing_error is not None:
         q = q.filter_by(has_processing_error=has_processing_error)
 
@@ -3160,9 +3160,9 @@ def update_media_publication(db: Session, pub_id: int,
         raise EntityNotFoundError(f"Media Publication #{pub_id} not found")
 
     for field in ("platform", "external_id", "title", "source_name", "published_date", "content_url",
-                  "article_body", "is_scraped", "is_duplicate", "duplicate_of_id", "ai_recommendation",
-                  "ai_justification", "is_relevant", "is_reviewed", "entities_matched", "wp_post_id",
-                  "has_processing_error", "processing_error_msg", "notes"):
+                  "article_body", "cited_members_parsed", "is_scraped", "is_duplicate", "duplicate_of_id",
+                  "ai_recommendation", "ai_justification", "is_relevant", "is_reviewed", "entities_matched",
+                  "is_pushed_to_wp", "wp_post_id", "has_processing_error", "processing_error_msg", "notes"):
         val = getattr(pub_in, field)
         if val is not None:
             setattr(db_obj, field, val)
@@ -3271,8 +3271,8 @@ def list_academic_publications(
         ai_recommendation: Optional[models.AIRecommendation] = None,
         is_relevant: Optional[bool] = None,
         is_reviewed: Optional[bool] = None,
-        # is_pushed_to_wp: Optional[bool] = None,
-        is_published_to_wp: Optional[bool] = None,
+        is_pushed_to_wp: Optional[bool] = None,
+        # is_published_to_wp: Optional[bool] = None,
         has_processing_error: Optional[bool] = None,
         since_date: Optional[datetime] = None,
         search: Optional[str] = None
@@ -3293,41 +3293,41 @@ def list_academic_publications(
         q = q.filter_by(is_relevant=is_relevant)
     if is_reviewed is not None:
         q = q.filter_by(is_reviewed=is_reviewed)
-    # if is_pushed_to_wp is not None:
-    #     q = q.filter_by(is_pushed_to_wp=is_pushed_to_wp)
-    if is_published_to_wp is True:
-        q = q.filter(models.AcademicPublication.wp_post_id.isnot(None))
-    elif is_published_to_wp is False:
-        q = q.filter(models.AcademicPublication.wp_post_id.is_(None))
+    if is_pushed_to_wp is not None:
+        q = q.filter_by(is_pushed_to_wp=is_pushed_to_wp)
+    # if is_published_to_wp is True:
+    #     q = q.filter(models.AcademicPublication.wp_post_id.isnot(None))
+    # elif is_published_to_wp is False:
+    #     q = q.filter(models.AcademicPublication.wp_post_id.is_(None))
     if has_processing_error is not None:
         q = q.filter_by(has_processing_error=has_processing_error)
 
-        # --- Added Cascading Date Filter ---
-        if since_date is not None:
-            since_year = since_date.year
+    # --- Added Cascading Date Filter ---
+    if since_date is not None:
+        since_year = since_date.year
 
-            q = q.filter(
-                or_(
-                    # Condition 1: published_date is available
-                    and_(
-                        models.AcademicPublication.published_date.isnot(None),
-                        models.AcademicPublication.published_date >= since_date
-                    ),
-                    # Condition 2: published_date is NULL, but published_year is available
-                    and_(
-                        models.AcademicPublication.published_date.is_(None),
-                        models.AcademicPublication.published_year.isnot(None),
-                        models.AcademicPublication.published_year >= since_year
-                    ),
-                    # Condition 3: Both are NULL, fallback to created_at
-                    and_(
-                        models.AcademicPublication.published_date.is_(None),
-                        models.AcademicPublication.published_year.is_(None),
-                        models.AcademicPublication.created_at >= since_date
-                    )
+        q = q.filter(
+            or_(
+                # Condition 1: published_date is available
+                and_(
+                    models.AcademicPublication.published_date.isnot(None),
+                    models.AcademicPublication.published_date >= since_date
+                ),
+                # Condition 2: published_date is NULL, but published_year is available
+                and_(
+                    models.AcademicPublication.published_date.is_(None),
+                    models.AcademicPublication.published_year.isnot(None),
+                    models.AcademicPublication.published_year >= since_year
+                ),
+                # Condition 3: Both are NULL, fallback to created_at
+                and_(
+                    models.AcademicPublication.published_date.is_(None),
+                    models.AcademicPublication.published_year.is_(None),
+                    models.AcademicPublication.created_at >= since_date
                 )
             )
-        # -----------------------------------
+        )
+    # -----------------------------------
 
     if search:
         term = f"%{search}%"
@@ -3367,7 +3367,8 @@ def update_academic_publication(db: Session, pub_id: int,
     for field in ("swepub_id", "doi", "title", "abstract", "publication_type", "journal_name",
                   "published_year", "published_date", "authors_raw", "funding_info", "is_duplicate",
                   "duplicate_of_id", "ai_recommendation", "ai_justification", "is_relevant", "is_reviewed",
-                  "entities_matched", "wp_post_id", "has_processing_error", "processing_error_msg", "notes"):
+                  "entities_matched", "is_pushed_to_wp", "wp_post_id",
+                  "has_processing_error", "processing_error_msg", "notes"):
         val = getattr(pub_in, field)
         if val is not None:
             setattr(db_obj, field, val)

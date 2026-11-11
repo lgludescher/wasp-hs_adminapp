@@ -124,7 +124,6 @@ async function loadCurrentTab() {
     else if (currentTab === 'tab-publish') {
       params.set('is_reviewed', 'true');
       params.set('is_relevant', 'true');
-      params.set('is_published_to_wp', 'false');
       params.set('has_processing_error', 'false');
     }
     else if (currentTab === 'tab-quarantine') {
@@ -166,8 +165,8 @@ async function loadCurrentTab() {
       // 4. Normal Pipeline Routing (for Primary Items and un-evaluated items)
       if (currentTab === 'tab-ingestion') return !item.is_reviewed && !item.ai_recommendation;
       if (currentTab === 'tab-review') return !item.is_reviewed && item.ai_recommendation;
-      if (currentTab === 'tab-publish') return item.is_reviewed && item.is_relevant && !item.wp_post_id;
-      if (currentTab === 'tab-archive') return item.is_reviewed && (!item.is_relevant || item.wp_post_id);
+      if (currentTab === 'tab-publish') return item.is_reviewed && item.is_relevant && item.is_pushed_to_wp === null;
+      if (currentTab === 'tab-archive') return item.is_reviewed && (!item.is_relevant || item.is_pushed_to_wp !== null);
 
       return false;
     });
@@ -264,9 +263,9 @@ async function loadCurrentTab() {
         let finalStatus = 'Unknown';
         let pillClass = 'pill-internal';
 
-        if (item.is_published_to_wp) { finalStatus = 'PUBLISHED'; pillClass = 'pill-published'; }
+        if (item.is_pushed_to_wp === true) { finalStatus = 'PUBLISHED'; pillClass = 'pill-published'; }
+        else if (item.is_pushed_to_wp === false) { finalStatus = 'KEPT INTERNAL'; pillClass = 'pill-internal'; }
         else if (item.is_relevant === false) { finalStatus = 'REJECTED'; pillClass = 'pill-irrelevant'; }
-        else if (item.wp_post_id === -1) { finalStatus = 'KEPT INTERNAL'; pillClass = 'pill-internal'; }
 
         const wpLink = item.wp_post_id > 0 ? `<a href="/wp-admin/post.php?post=${item.wp_post_id}&action=edit" target="_blank" style="color: var(--color-primary); text-decoration: underline;">View ID ${item.wp_post_id}</a>` : '-';
 
@@ -316,7 +315,7 @@ function attachRowHandlers(tr, item) {
   bind('.btn-reject', (i) => confirmAction(`Reject "${i.title}" and archive it as irrelevant?`, () => updateRecord(i.id, { is_reviewed: true, is_relevant: false }))); // Confirmed (Terminal)
 
   bind('.btn-push-wp', (i) => confirmAction(`Publish "${i.title}" to WordPress now?`, () => triggerWpPush([i.id])));
-  bind('.btn-keep-internal', (i) => confirmAction(`Archive "${i.title}" internally (will not publish)?`, () => updateRecord(i.id, { wp_post_id: -1 })));
+  bind('.btn-keep-internal', (i) => confirmAction(`Archive "${i.title}" internally (will not publish)?`, () => updateRecord(i.id, { is_pushed_to_wp: false })));
 
   bind('.btn-requeue', (i) => confirmAction(`Clear the error for "${i.title}" and return it to the processing pipeline?`, () => updateRecord(i.id, { has_processing_error: false, processing_error_msg: null })));
 }
@@ -544,7 +543,7 @@ function updateBulkActionBar() {
       confirmAction(`Publish ${checked.length} selected item(s) to WordPress?`, () => triggerWpPush(checked));
     };
     document.getElementById('bulk-keep-internal').onclick = () => {
-      confirmAction(`Archive ${checked.length} selected item(s) internally?`, () => bulkUpdate(checked, { wp_post_id: -1 }));
+      confirmAction(`Archive ${checked.length} selected item(s) internally?`, () => bulkUpdate(checked, { is_pushed_to_wp: false }));
     };
   }
   else if (currentTab === 'tab-quarantine') {
