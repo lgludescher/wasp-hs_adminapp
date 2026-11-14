@@ -271,6 +271,14 @@
 .pill-published { background: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; }
 .pill-warning { background: #fff8e1; color: #f57f17; border: 1px solid #ffe082; }
 .pill-internal { background: #f5f5f5; color: #616161; border: 1px solid #e0e0e0; }
+.pill-member {
+  background: #ede7f6;
+  color: #4527a0;
+  border: 1px solid #d1c4e9;
+  text-transform: none;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
 
 .error-text {
   color: #c62828;
@@ -304,7 +312,38 @@
   gap: 1rem;
   border-bottom: 1px solid #eee;
   padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.preview-members-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
   margin-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.members-bar-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.members-pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.no-members-text {
+  color: #777;
+  font-size: 0.85rem;
+  font-style: italic;
 }
 
 .preview-title {

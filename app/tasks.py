@@ -7,8 +7,8 @@ from app.database import SessionLocal
 from app import models, schemas, crud
 from app.services.scraper import scrape_urls
 from app.services.swepub import fetch_recent_publications, save_swepub_to_db
-from app.services.llm import evaluate_media
-from app.services.deduplicator import flag_media_duplicates
+from app.services.llm import evaluate_media, evaluate_academic
+from app.services.deduplicator import flag_media_duplicates, flag_academic_duplicates
 
 logger = logging.getLogger(__name__)
 
@@ -256,9 +256,7 @@ def process_pending_academic_task(user_id: int, publication_ids: list[int] = Non
         items_to_dedup = apply_id_filter(base_dedup_query).all()
 
         if items_to_dedup:
-            # TODO: from app.services.deduplicator import flag_academic_duplicates
-            # flag_academic_duplicates(db, items_to_dedup)
-            pass
+            flag_academic_duplicates(db, items_to_dedup)
 
         # ---------------------------------------------------------
         # PHASE 2: LLM EVALUATION
@@ -272,8 +270,7 @@ def process_pending_academic_task(user_id: int, publication_ids: list[int] = Non
         items_to_eval = apply_id_filter(base_eval_query).all()
 
         if items_to_eval:
-            # TODO: from app.services.llm import evaluate_academic
-            # evaluate_academic(db, items_to_eval)
+            evaluate_academic(db, items_to_eval)
             items_processed += len(items_to_eval)
 
         # ---------------------------------------------------------

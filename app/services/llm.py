@@ -43,79 +43,197 @@ def get_openai_client() -> OpenAI:
 # ---------------------------------------------------------------------------
 # Structured Output Schemas
 # ---------------------------------------------------------------------------
+# class MediaEvaluationResult(BaseModel):
+#     """
+#     Schema for Azure OpenAI structured output.
+#     Note: 'justification' must precede 'decision' to enforce Chain-of-Thought
+#     reasoning prior to the classification token emission.
+#     """
+#     justification: str = Field(
+#         description="1 to 3 concise sentences explaining whether the content aligns semantically with the WASP-HS scope."
+#     )
+#     decision: models.AIRecommendation = Field(
+#         description="Classification decision: 'relevant', 'irrelevant', or 'uncertain'."
+#     )
+#
+#
+# class AcademicEvaluationResult(BaseModel):
+#     """
+#     Schema for Academic Publication structured output.
+#     Note: 'justification' must precede 'decision' to enforce Chain-of-Thought
+#     reasoning prior to the classification token emission.
+#     """
+#     justification: str = Field(
+#         description="1 to 3 concise sentences explaining whether the scientific abstract or paper aligns semantically with the WASP-HS scope."
+#     )
+#     decision: models.AIRecommendation = Field(
+#         description="Classification decision: 'relevant', 'irrelevant', or 'uncertain'."
+#     )
+
+
 class MediaEvaluationResult(BaseModel):
     """
-    Schema for Azure OpenAI structured output.
-    Note: 'justification' must precede 'decision' to enforce Chain-of-Thought
-    reasoning prior to the classification token emission.
+    Schema for Azure OpenAI structured output on media publications.
+    Field order enforces English Chain-of-Thought reasoning and entity grounding
+    prior to emitting the classification token.
     """
     justification: str = Field(
-        description="1 to 3 concise sentences explaining whether the content aligns semantically with the WASP-HS scope."
+        description=(
+            "1 to 3 concise sentences written strictly in English: first summarizing "
+            "the article's core topic and any explicit program/researcher attribution, "
+            "then explaining how the content aligns with the WASP-HS evaluation rubric."
+        )
+    )
+    cited_members_parsed: Optional[str] = Field(
+        default=None,
+        description=(
+            "Semicolon-separated list ('First Middle Last; First Last') of academic "
+            "researchers/scholars (Professors, Lecturers, Docents, Postdocs, PhD students, "
+            "Researchers) cited or featured in the article who are either explicitly linked "
+            "to WASP-HS in the text OR actively contribute a societal/humanistic/legal/ethical "
+            "perspective on AI/autonomous systems. Strip all academic titles and use only name "
+            "parts present in the text. Return null (never an empty string or the word 'None') "
+            "if no qualifying scholar can be identified with certainty."
+        )
     )
     decision: models.AIRecommendation = Field(
-        description="Classification decision: 'relevant', 'irrelevant', or 'uncertain'."
+        description="Final classification decision: 'relevant', 'irrelevant', or 'uncertain'."
     )
 
 
 class AcademicEvaluationResult(BaseModel):
     """
     Schema for Academic Publication structured output.
-    Note: 'justification' must precede 'decision' to enforce Chain-of-Thought
-    reasoning prior to the classification token emission.
+    Field order enforces English Chain-of-Thought reasoning prior to emitting
+    the classification token.
     """
     justification: str = Field(
-        description="1 to 3 concise sentences explaining whether the scientific abstract or paper aligns semantically with the WASP-HS scope."
+        description=(
+            "1 to 3 concise sentences written strictly in English: first summarizing "
+            "the paper's core research inquiry and noting whether an abstract or explicit "
+            "WASP-HS funding/attribution is present, then explaining how it aligns with "
+            "the WASP-HS evaluation rubric."
+        )
     )
     decision: models.AIRecommendation = Field(
-        description="Classification decision: 'relevant', 'irrelevant', or 'uncertain'."
+        description="Final classification decision: 'relevant', 'irrelevant', or 'uncertain'."
     )
 
 
 # ---------------------------------------------------------------------------
 # System Prompts & Rubrics
 # ---------------------------------------------------------------------------
-SYSTEM_PROMPT = """You are an expert research analyst evaluating media publications for "WASP-HS" (The Wallenberg AI, Autonomous Systems and Software Program – Humanities and Society).
+# SYSTEM_PROMPT = """You are an expert research analyst evaluating media publications for "WASP-HS" (The Wallenberg AI, Autonomous Systems and Software Program – Humanities and Society).
+#
+# WASP-HS SCOPE AND OBJECTIVE:
+# WASP-HS investigates the challenges and impacts of Artificial Intelligence (AI), autonomous systems, and emerging software technologies on the humanities, culture, governance, labor, ethics, psychology, philosophy, and society at large.
+#
+# EVALUATION RUBRIC:
+# 1. RELEVANT ("relevant"):
+#    - The article discusses AI, machine learning, or autonomous systems specifically through a societal, humanistic, ethical, psychological, legal, cultural, or policy lens.
+#    - The article explicitly mentions the WASP-HS program, its leadership, funded research projects, conferences, or affiliated members discussing their WASP-HS research.
+#
+# 2. IRRELEVANT ("irrelevant"):
+#    - The article only mentions an affiliated researcher in an unrelated context (e.g., general university budget cuts, standard campus administration, unrelated historical linguistics, or non-AI disciplinary work).
+#    - The article discusses purely technical software/hardware engineering with no humanistic or societal context.
+#    - The article discusses non-AI topics entirely.
+#
+# 3. UNCERTAIN ("uncertain"):
+#    - The provided text (e.g., truncated text or title only) is too ambiguous to determine whether the article concerns AI's impact on society or an unrelated subject.
+#
+# INSTRUCTIONS:
+# - First, write a 1-3 sentence justification explaining your reasoning based on the rubric above.
+# - Second, output the final decision ('relevant', 'irrelevant', or 'uncertain')."""
 
-WASP-HS SCOPE AND OBJECTIVE:
-WASP-HS investigates the challenges and impacts of Artificial Intelligence (AI), autonomous systems, and emerging software technologies on the humanities, culture, governance, labor, ethics, psychology, philosophy, and society at large.
+SYSTEM_PROMPT = """You are an expert research analyst evaluating media publications for "WASP-HS" (The Wallenberg AI, Autonomous Systems and Software Program – Humanity and Society / Humanities and Society).
+
+WASP-HS SCOPE AND CALIBRATION:
+- Core Scope: WASP-HS investigates the interplay, opportunities, challenges, and consequences of Artificial Intelligence (AI), autonomous systems, and data-driven software in relation to humanity and society. This spans ethics, law, governance, policy, labor, economy, culture, media, psychology, philosophy, education, healthcare organization, and democratic values.
+- Interdisciplinary Research: WASP-HS includes computational and technical research when the inquiry genuinely addresses human or societal interaction (such as human-AI/robot interaction, explainable or trustworthy AI, algorithmic fairness, or socially aware systems).
+- Sibling Program Distinction: Distinguish WASP-HS from "WASP" (without "-HS"). Both share the prefix "Wallenberg AI, Autonomous Systems and Software Program", but WASP focuses on pure engineering, core algorithms, and hardware without a human or societal focus.
+- Missing Program Mentions: Relevant media articles frequently omit the "WASP-HS" acronym and only cite a researcher by their university role. Absence of "WASP-HS" is neutral; evaluate relevance based on thematic substance and context.
 
 EVALUATION RUBRIC:
 1. RELEVANT ("relevant"):
-   - The article discusses AI, machine learning, or autonomous systems specifically through a societal, humanistic, ethical, psychological, legal, cultural, or policy lens.
-   - The article explicitly mentions the WASP-HS program, its leadership, funded research projects, conferences, or affiliated members discussing their WASP-HS research.
+- Substantive Thematic Fit: The article—or a meaningful portion of it, such as an interview segment, op-ed, or expert commentary—examines AI, autonomous systems, or data-driven technology through a societal, humanistic, ethical, legal, cultural, organizational, economic, or policy lens.
+- Direct Program Coverage: The article directly reports on the WASP-HS program, its funded projects, events, or leadership in a substantive context.
 
 2. IRRELEVANT ("irrelevant"):
-   - The article only mentions an affiliated researcher in an unrelated context (e.g., general university budget cuts, standard campus administration, unrelated historical linguistics, or non-AI disciplinary work).
-   - The article discusses purely technical software/hardware engineering with no humanistic or societal context.
-   - The article discusses non-AI topics entirely.
+- Purely Technical or Non-AI: The article focuses exclusively on technical hardware/software engineering (including standard WASP research) with no substantive human or societal analysis, OR covers non-AI topics entirely.
+- Incidental / Biographical Noise: A researcher's WASP-HS affiliation is mentioned only in passing (e.g., in a byline, fact box / "faktaruta", or boilerplate bio) while the article's actual subject and the researcher's commentary concern an unrelated topic.
+- Unrelated Acronym Match: The character sequence "WASP" or "WASP-HS" refers to something unrelated to the Wallenberg research program.
 
 3. UNCERTAIN ("uncertain"):
-   - The provided text (e.g., truncated text or title only) is too ambiguous to determine whether the article concerns AI's impact on society or an unrelated subject.
+- Insufficient Information: The provided text (e.g., a heavily truncated snippet or ambiguous title) lacks enough context to determine whether the piece addresses AI and society.
+- Conflicting Signals: The article contains contradictory evidence requiring human review—such as an explicit claim of WASP-HS funding/focus paired with content that appears completely unrelated or purely technical, or a borderline topic where the societal angle is ambiguous.
 
-INSTRUCTIONS:
-- First, write a 1-3 sentence justification explaining your reasoning based on the rubric above.
-- Second, output the final decision ('relevant', 'irrelevant', or 'uncertain')."""
+CITED MEMBERS EXTRACTION (cited_members_parsed):
+Identify academic scholars (e.g., Professors, Lecturers / Lektorer, Docents, Postdocs, PhD students / Doktorander, Researchers / Forskare) named, quoted, interviewed, or authoring the article who meet EITHER criterion:
+(a) Explicit Link: They are explicitly connected to WASP-HS in the article text (extract them even if the article's overall decision is "irrelevant").
+(b) Thematic Academic Contributor: When "WASP-HS" is not explicitly linked to them, they are actively featured, interviewed, quoted, or authoring the piece as an academic scholar (typically affiliated with a Swedish university or research institute, or directly collaborating with one) discussing AI or autonomous systems from a societal, humanistic, legal, or ethical perspective.
+Exclusions:
+- Do NOT include journalists, politicians, union/industry representatives, non-academic commentators, or researchers explicitly linked only to technical WASP.
+- Do NOT include global tech figures or foreign academics casually name-dropped in passing who are not directly featured in the piece.
+- Do NOT include academics discussing unrelated non-AI topics unless they are explicitly linked to WASP-HS in the text.
+Formatting:
+- Strip all academic and professional titles (e.g., Prof., Dr., Docent, Doktorand).
+- Present each name in standard order ("First Middle Last" or "First Last", or a single surname if that is all the text provides), using ONLY name parts present in the text. Never guess or invent missing first or last names.
+- Separate multiple names with "; " (e.g., "Firstname Lastname; Firstname Middle Lastname").
+- If no qualifying scholar can be determined with certainty from the text, return null.
 
-ACADEMIC_SYSTEM_PROMPT = """You are an expert bibliometrician and research evaluator for "WASP-HS" (The Wallenberg AI, Autonomous Systems and Software Program – Humanities and Society).
+LANGUAGE AND OUTPUT INSTRUCTIONS:
+- Publications may be in Swedish, English, or occasionally other languages. Interpret the text within its original linguistic and journalistic context (accounting for Swedish concepts such as "humaniora och samhällsvetenskap", "tillit", "offentlig förvaltning", "arbetsmarknad", "rättsvetenskap", and fact boxes / "faktarutor"), but ALWAYS write your justification in English.
+- Step 1 (justification): Write 1 to 3 concise sentences in English. First, state what the article is concretely about and note any explicit program or researcher attribution; second, explain how the content aligns with the rubric (checking for consistency between attribution and theme).
+- Step 2 (cited_members_parsed): Extract qualifying WASP-HS / academic scholars separated by "; ", or return null.
+- Step 3 (decision): Output the final classification ('relevant', 'irrelevant', or 'uncertain')."""
 
-WASP-HS SCOPE AND OBJECTIVE:
-WASP-HS investigates the challenges and impacts of Artificial Intelligence (AI), autonomous systems, and emerging software technologies on the humanities, culture, governance, labor, ethics, psychology, philosophy, and society at large.
+# ACADEMIC_SYSTEM_PROMPT = """You are an expert bibliometrician and research evaluator for "WASP-HS" (The Wallenberg AI, Autonomous Systems and Software Program – Humanities and Society).
+#
+# WASP-HS SCOPE AND OBJECTIVE:
+# WASP-HS investigates the challenges and impacts of Artificial Intelligence (AI), autonomous systems, and emerging software technologies on the humanities, culture, governance, labor, ethics, psychology, philosophy, and society at large.
+#
+# EVALUATION RUBRIC:
+# 1. RELEVANT ("relevant"):
+#    - The abstract explicitly acknowledges "WASP-HS" funding or affiliation.
+#    - OR, the research clearly intersects AI, machine learning, or autonomous systems with a societal, humanistic, psychological, legal, cultural, or ethical domain.
+#
+# 2. IRRELEVANT ("irrelevant"):
+#    - The paper is purely technical/algorithmic (e.g., improving a neural network architecture, computer vision hardware) with no humanistic or societal analysis.
+#    - The paper is purely humanities/social science (e.g., historical linguistics, standard sociology) with absolutely no connection to AI or autonomous systems.
+#
+# 3. UNCERTAIN ("uncertain"):
+#    - The abstract is missing and the title is too ambiguous to classify securely.
+#
+# INSTRUCTIONS:
+# - First, write a 1-3 sentence justification explaining your reasoning based on the rubric above.
+# - Second, output the final decision ('relevant', 'irrelevant', or 'uncertain')."""
+
+ACADEMIC_SYSTEM_PROMPT = """You are an expert bibliometrician and research evaluator for "WASP-HS" (The Wallenberg AI, Autonomous Systems and Software Program – Humanity and Society / Humanities and Society).
+
+WASP-HS SCOPE AND CALIBRATION:
+- Core Scope: WASP-HS investigates the interplay, opportunities, challenges, and consequences of Artificial Intelligence (AI), autonomous systems, and data-driven software in relation to humanity and society. This spans ethics, law, governance, policy, labor, economy, culture, media, psychology, philosophy, education, healthcare organization, and democratic values.
+- Interdisciplinary Research: WASP-HS includes computational, statistical, and technical research when the core inquiry genuinely addresses human or societal dimensions (such as human-AI/robot interaction, explainable or trustworthy AI, algorithmic fairness, socially aware dialogue systems, or machine learning methods developed for social/humanistic analysis).
+- Sibling Program & Boilerplate Distinction: Distinguish WASP-HS from "WASP" (without "-HS"), which shares the "Wallenberg AI, Autonomous Systems and Software Program" prefix but focuses on pure engineering, core algorithms, and hardware. Be careful with purely technical papers that merely include a generic one-sentence societal motivation hook in the introduction or conclusion while the actual research inquiry and contribution remain strictly algorithmic or hardware-focused.
+- Incomplete Metadata: SwePub records frequently lack funding acknowledgments or abstracts even for core WASP-HS publications. Absence of "WASP-HS" in the metadata is neutral when evaluating thematic relevance.
 
 EVALUATION RUBRIC:
 1. RELEVANT ("relevant"):
-   - The abstract explicitly acknowledges "WASP-HS" funding or affiliation.
-   - OR, the research clearly intersects AI, machine learning, or autonomous systems with a societal, humanistic, psychological, legal, cultural, or ethical domain.
+- Substantive Thematic Fit: The research substantively investigates the intersection of AI, machine learning, autonomous systems, or data-driven technologies with human, societal, ethical, legal, cultural, psychological, organizational, economic, or philosophical questions.
+- Explicit Program Funding: The funding metadata or abstract explicitly credits "WASP-HS" (not merely "WASP") as funding or supporting the work, and the paper's content is consistent with academic research in the program's broad domain.
 
 2. IRRELEVANT ("irrelevant"):
-   - The paper is purely technical/algorithmic (e.g., improving a neural network architecture, computer vision hardware) with no humanistic or societal analysis.
-   - The paper is purely humanities/social science (e.g., historical linguistics, standard sociology) with absolutely no connection to AI or autonomous systems.
+- Purely Technical Engineering: The research is strictly algorithmic, mathematical, or hardware-focused (including standard WASP research) where societal impact is absent or mentioned only as superficial background motivation.
+- Purely Non-AI / Unrelated: The work lies entirely within the humanities, social sciences, or other disciplines with no connection to AI, autonomous systems, or emerging data-driven technologies.
+- Incidental Affiliation Noise: An author's biographical note mentions WASP-HS in passing, while the paper itself clearly investigates an unrelated non-AI topic or purely technical engineering without WASP-HS funding for the work.
 
 3. UNCERTAIN ("uncertain"):
-   - The abstract is missing and the title is too ambiguous to classify securely.
+- Insufficient Metadata: Both the abstract and explicit WASP-HS funding info are missing, and the title alone is too broad or ambiguous to confidently verify that the work connects AI/autonomous systems with a human or societal inquiry.
+- Conflicting Signals: The record contains contradictory evidence requiring human review—such as explicit WASP-HS funding attribution paired with an abstract that appears strictly unrelated or purely technical, or a borderline interdisciplinary topic where the human/societal dimension cannot be confirmed from the available text.
 
-INSTRUCTIONS:
-- First, write a 1-3 sentence justification explaining your reasoning based on the rubric above.
-- Second, output the final decision ('relevant', 'irrelevant', or 'uncertain')."""
+LANGUAGE AND OUTPUT INSTRUCTIONS:
+- Records may be in English, Swedish, or occasionally other languages. Evaluate the record within its original academic context (including Swedish terminology such as "humaniora och samhällsvetenskap", "tillit", "offentlig förvaltning", "arbetsmarknad", and "rättsvetenskap"), but ALWAYS write your justification in English.
+- Step 1 (justification): Write 1 to 3 concise sentences in English. First, summarize the paper's core research focus and state whether an abstract or explicit WASP-HS funding/attribution is present; second, explain your classification based on the rubric.
+- Step 2 (decision): Output the final classification ('relevant', 'irrelevant', or 'uncertain')."""
 
 # ---------------------------------------------------------------------------
 # API Invocation with Exponential Backoff
@@ -221,6 +339,7 @@ def evaluate_media(db: Session, items_to_eval: List[models.MediaPublication]) ->
             # 4. Map States to SQLAlchemy Model
             item.ai_recommendation = result.decision
             item.ai_justification = result.justification
+            item.cited_members_parsed = result.cited_members_parsed
 
             if result.decision == models.AIRecommendation.RELEVANT:
                 item.is_relevant = True

@@ -345,6 +345,18 @@ function togglePreviewRow(item, tr) {
   // AI Justification
   const aiJustification = item.ai_justification || 'No AI justification provided.';
 
+  // Cited Members (parsed from semicolon-separated string)
+  const memberList = (item.cited_members_parsed || '')
+    .split(';')
+    .map(m => m.trim())
+    .filter(Boolean);
+
+  const memberPillsHtml = memberList.length > 0
+    ? memberList.map(m => `<span class="status-pill pill-member">👤 ${m}</span>`).join('')
+    : `<span class="no-members-text">None identified</span>`;
+
+  const showHeaderMembers = currentTab === 'tab-publish' || currentTab === 'tab-archive' || (currentTab === 'tab-quarantine' && memberList.length > 0);
+
   // External Link with disabled fallback
   const linkHtml = item.content_url
     ? `<a href="${item.content_url}" target="_blank" class="preview-link">🔗 Open Original Article</a>`
@@ -356,6 +368,12 @@ function togglePreviewRow(item, tr) {
         <div class="preview-header">
           <h4 class="preview-title">${safeTitle}</h4>${linkHtml}
         </div>
+        ${showHeaderMembers ? `
+        <div class="preview-members-bar">
+          <span class="members-bar-label">Cited Members:</span>
+          <div class="members-pill-group">${memberPillsHtml}</div>
+        </div>
+        ` : ''}
         <div class="preview-grid" ${(currentTab === 'tab-publish' || currentTab === 'tab-archive') ? 'style="grid-template-columns: 1fr;"' : ''}>
           
           ${currentTab === 'tab-quarantine' ? `
@@ -369,6 +387,10 @@ function togglePreviewRow(item, tr) {
           
           ${currentTab === 'tab-review' ? `
           <div class="preview-section">
+            <h4>Cited Members (AI)</h4>
+            <div class="content-box" style="margin-bottom: 1rem;">
+              <div class="members-pill-group">${memberPillsHtml}</div>
+            </div>
             <h4>AI Justification</h4>
             <div class="content-box"><p>${aiJustification}</p></div>
           </div>
@@ -593,11 +615,14 @@ async function bulkUpdate(ids, payload) {
 // Modals & Forms (Upload & CRUD)
 // ============================================================================
 function setupModals() {
+  const citedMembersLabel = document.getElementById('label-cited-members');
+
   // Global Add Record
   btnAddRecord.onclick = () => {
     formPub.reset();
     delete formPub.dataset.editId;
     pubFormTitle.textContent = 'Add Media Publication';
+    if (citedMembersLabel) citedMembersLabel.classList.add('hidden');
     modalPub.classList.remove('hidden');
   };
   btnCancelPub.onclick = () => modalPub.classList.add('hidden');
@@ -620,6 +645,7 @@ function setupModals() {
       published_date: pubDate,
       content_url: formPub.content_url.value.trim() || null,
       external_id: formPub.external_id.value.trim() || null,
+      cited_members_parsed: formPub.cited_members_parsed.value.trim() || null,
       article_body: formPub.article_body.value.trim() || null,
       notes: formPub.notes.value.trim() || null
     };
@@ -689,6 +715,11 @@ function openEditModal(item) {
   formPub.dataset.editId = item.id;
   pubFormTitle.textContent = `Edit: ${item.title}`;
 
+  const citedMembersLabel = document.getElementById('label-cited-members');
+  if (citedMembersLabel) {
+    citedMembersLabel.classList.toggle('hidden', currentTab === 'tab-ingestion');
+  }
+
   formPub.title.value = item.title;
   formPub.source_name.value = item.source_name;
   formPub.platform.value = item.platform;
@@ -700,6 +731,7 @@ function openEditModal(item) {
 
   formPub.content_url.value = item.content_url || '';
   formPub.external_id.value = item.external_id || '';
+  formPub.cited_members_parsed.value = item.cited_members_parsed || '';
   formPub.article_body.value = item.article_body || '';
   formPub.notes.value = item.notes || '';
 

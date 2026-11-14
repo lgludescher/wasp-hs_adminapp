@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/academic_automation.css') }}" />
+  <script type="module" src="{{ url_for('static', path='js/academic_automation.js') }}"></script>
+{% endblock %}
+
+{% block body %}
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">
+      Academic Automation Pipeline
+      <span id="system-status" class="title-count" title="System Status"></span>
+    </h1>
+    <button id="btn-add-record" class="btn">Add Record Manually</button>
+  </div>
+
+  <!-- Activity Log Bar -->
+  <div id="activity-bar" class="activity-bar">
+    <span id="activity-sync">SwePub Sync: <em>Loading...</em></span> |
+    <span id="activity-processing">Processing: <em>Loading...</em></span> |
+    <span id="activity-publish">WP Push: <em>Loading...</em></span>
+  </div>
+
+  <!-- Update Banner (Hidden by default) -->
+  <div id="update-banner" class="update-banner hidden">
+    <span id="update-banner-text"></span>
+    <button id="btn-refresh-data" class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.85rem;">Refresh List</button>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="actions-bar tab-nav">
+    <button class="btn tab-btn active" data-tab="tab-ingestion">1. Ingestion & Pending</button>
+    <button class="btn tab-btn" data-tab="tab-review">2. Needs Review</button>
+    <button class="btn tab-btn" data-tab="tab-publish">3. Ready to Publish</button>
+    <button class="btn tab-btn" data-tab="tab-quarantine">4. Quarantine / Errors</button>
+    <button class="btn tab-btn" data-tab="tab-archive">5. Archive / History</button>
+  </div>
+
+  <!-- ==========================================
+       TAB 1: INGESTION & PENDING
+       ========================================== -->
+  <section id="tab-ingestion" class="tab-pane">
+    <div class="actions-bar tab-actions">
+      <button id="btn-sync-swepub" class="btn">Sync with SwePub</button>
+      <button id="btn-process-all" class="btn" style="background: var(--color-primary); color: #fff;">Process All Pending</button>
+    </div>
+
+    <div class="list-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-ingestion" title="Select All / Deselect All" /></th>
+            <th>Title</th>
+            <th>Authors</th>
+            <th>Journal / Venue</th>
+            <th>Type</th>
+            <th>Published&nbsp;&nbsp;&nbsp;</th>
+            <th class="cell-actions"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-ingestion"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       TAB 2: NEEDS REVIEW
+       ========================================== -->
+  <section id="tab-review" class="tab-pane hidden">
+    <div class="list-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-review" title="Select All / Deselect All" /></th>
+            <th class="cell-center">AI Recommendation</th>
+            <th>Title</th>
+            <th>Authors</th>
+            <th>Journal / Venue</th>
+            <th>Published&nbsp;&nbsp;&nbsp;</th>
+            <th class="cell-actions"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-review"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       TAB 3: READY TO PUBLISH
+       ========================================== -->
+  <section id="tab-publish" class="tab-pane hidden">
+    <div class="list-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-publish" title="Select All / Deselect All" /></th>
+            <th>Title</th>
+            <th>Authors</th>
+            <th>Journal / Venue</th>
+            <th>Published&nbsp;&nbsp;&nbsp;</th>
+            <th class="cell-actions"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-publish"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       TAB 4: QUARANTINE / ERRORS
+       ========================================== -->
+  <section id="tab-quarantine" class="tab-pane hidden">
+    <div class="list-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="cell-center"><input type="checkbox" class="select-all" data-target="tbody-quarantine" title="Select All / Deselect All" /></th>
+            <th>Title</th>
+            <th>Error Message</th>
+            <th class="cell-actions"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-quarantine"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       TAB 5: ARCHIVE / HISTORY
+       ========================================== -->
+  <section id="tab-archive" class="tab-pane hidden">
+    <div class="list-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Journal / Venue</th>
+            <th>Published&nbsp;&nbsp;&nbsp;</th>
+            <th class="cell-center">Final Status</th>
+            <th class="cell-center">WP Link</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-archive"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       FLOATING BULK ACTION BAR
+       ========================================== -->
+  <div id="bulk-action-bar" class="bulk-action-bar hidden">
+    <div class="bulk-content">
+      <span id="bulk-count">0 items selected</span>
+      <div id="bulk-buttons" class="bulk-buttons">
+        <!-- Buttons injected by JS based on active tab -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: ADD / EDIT PUBLICATION
+       ========================================== -->
+  <div id="modal-publication-form" class="modal hidden">
+    <div class="modal-content form-create" style="max-width: 800px; width: 90%;">
+      <form id="form-publication">
+        <fieldset>
+          <legend><strong id="publication-form-title">Add Academic Publication</strong></legend>
+
+          <div class="grid-2-col">
+            <label>Title:
+              <input name="title" type="text" required />
+            </label>
+            <label>Journal / Venue:
+              <input name="journal_name" type="text" />
+            </label>
+
+            <label>Authors (Raw):
+              <input name="authors_raw" type="text" placeholder="e.g. Smith, J.; Doe, A." />
+            </label>
+            <label>Publication Type:
+              <input name="publication_type" type="text" placeholder="e.g. Journal Article, Conference Paper" />
+            </label>
+
+            <label>Published Year:
+              <input name="published_year" type="number" min="1900" max="2100" step="1" />
+            </label>
+            <label>Published Date (Optional):
+              <input name="published_date" type="datetime-local" />
+            </label>
+
+            <label>DOI:
+              <input name="doi" type="text" placeholder="e.g. 10.1000/xyz123 or full URL" />
+            </label>
+            <label>SwePub ID:
+              <input name="swepub_id" type="text" />
+            </label>
+          </div>
+
+          <label style="margin-top: 0.5rem;">Funding Info:
+            <input name="funding_info" type="text" />
+          </label>
+
+          <label style="margin-top: 0.5rem;">Abstract:
+            <textarea name="abstract" rows="8" style="width: 100%; padding: 0.5rem; font-family: inherit; border: 1px solid #ccc; border-radius: 3px;"></textarea>
+          </label>
+
+          <label style="margin-top: 0.5rem;">Notes:
+            <input name="notes" type="text" />
+          </label>
+
+          <div class="form-actions" style="margin-top: 1rem;">
+            <button type="submit" class="btn save-btn">Save Record</button>
+            <button type="button" id="btn-cancel-publication" class="btn cancel-btn">Cancel</button>
+          </div>
+        </fieldset>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: GENERAL CONFIRM / ERROR
+       ========================================== -->
+  <div id="modal-confirm" class="modal hidden">
+    <div class="modal-content">
+      <p id="modal-text"></p>
+      <div class="modal-actions">
+        <button id="modal-confirm-btn" class="btn">Confirm</button>
+        <button id="modal-cancel-btn" class="btn cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}

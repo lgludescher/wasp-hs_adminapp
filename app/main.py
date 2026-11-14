@@ -391,6 +391,20 @@ async def media_automation_page(
     )
 
 
+@app.get("/publications/academic-automation/", response_class=HTMLResponse)
+async def academic_automation_page(
+    request: Request,
+    current_user=Depends(get_current_user)
+):
+    # Only admins may access
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="User not provisioned")
+    return templates.TemplateResponse(
+        "academic_automation.html",
+        {"request": request}
+    )
+
+
 app.include_router(user.router)
 app.include_router(institution.router)
 app.include_router(domain.router)

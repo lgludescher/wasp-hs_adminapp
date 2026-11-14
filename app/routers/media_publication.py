@@ -370,12 +370,14 @@ def promote_media_duplicate(
         )
 
     # 4. State Inheritance: Copy AI results from Current Primary to Target
+    target.cited_members_parsed = current_primary.cited_members_parsed
     target.ai_recommendation = current_primary.ai_recommendation
     target.ai_justification = current_primary.ai_justification
     target.is_relevant = current_primary.is_relevant
     target.entities_matched = current_primary.entities_matched
 
     # (Optional but recommended) Clear state on the demoted item to keep DB clean
+    current_primary.cited_members_parsed = None
     current_primary.ai_recommendation = None
     current_primary.ai_justification = None
     current_primary.is_relevant = None
