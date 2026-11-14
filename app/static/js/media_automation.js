@@ -32,9 +32,9 @@ const modalConfirmBtn = document.getElementById('modal-confirm-btn');
 const modalCancelBtn = document.getElementById('modal-cancel-btn');
 
 // Search Generator
+const searchFormatSelect = document.getElementById('search-format-select');
 const btnGenerateSearch = document.getElementById('btn-generate-search');
-const searchOutput = document.getElementById('search-string-output');
-const btnCopySearch = document.getElementById('btn-copy-search');
+const searchResultsContainer = document.getElementById('search-results-container');
 
 // Banner
 const updateBanner = document.getElementById('update-banner');
@@ -793,36 +793,116 @@ async function deleteRecord(id) {
 // Search String Generator
 // ============================================================================
 function setupSearchGenerator() {
+  const SEARCH_SUFFIX = ' AND ("Artificiell Intelligens" OR "Artificial Intelligence" OR "AI" OR "WASP-HS")';
+  const COPY_ICON_SVG = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+      <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+    </svg>`;
+
+  // Enable button on selection and clear previous output when switching formats
+  searchFormatSelect.onchange = () => {
+    btnGenerateSearch.disabled = !searchFormatSelect.value;
+    searchResultsContainer.innerHTML = '';
+    searchResultsContainer.classList.add('hidden');
+  };
+
   btnGenerateSearch.onclick = async () => {
+    const format = searchFormatSelect.value;
+    if (!format) return;
+
+    btnGenerateSearch.disabled = true;
     btnGenerateSearch.textContent = 'Generating...';
+
     try {
-      // Fetch active researchers
-      const researchers = await apiFetch('/researchers/?is_active=true');
+      const people = await apiFetch('/people/');
 
-      // Extract names and format
-      const names = researchers
-        .filter(r => r.person)
-        .map(r => `"${r.person.first_name} ${r.person.last_name}"`);
+      // Extract, trim, and deduplicate full names in O(n) time
+      const rawNames = people
+        .map(p => `${(p.first_name || '').trim()} ${(p.last_name || '').trim()}`.trim())
+        .filter(Boolean);
 
-      const boolString = `(${names.join(' OR ')})`;
-      searchOutput.value = boolString;
+      const uniqueQuotedNames = [...new Set(rawNames)].map(name => `"${name}"`);
+
+      if (uniqueQuotedNames.length === 0) {
+        showModal('No people found in the database to generate a search string.');
+        return;
+      }
+
+      // Build either a single full string or character-bounded chunks
+      const chunks = [];
+      if (format === 'full') {
+        chunks.push(`(${uniqueQuotedNames.join(' OR ')})${SEARCH_SUFFIX}`);
+      } else {
+        const maxChars = parseInt(format, 10);
+        const wrapperOverhead = 2 + SEARCH_SUFFIX.length; // "(" + ")" + suffix
+        let currentBatch = [];
+        let currentNamesLength = 0;
+
+        uniqueQuotedNames.forEach(quotedName => {
+          const separatorLength = currentBatch.length > 0 ? 4 : 0; // " OR "
+          const projectedLength = wrapperOverhead + currentNamesLength + separatorLength + quotedName.length;
+
+          if (currentBatch.length > 0 && projectedLength > maxChars) {
+            chunks.push(`(${currentBatch.join(' OR ')})${SEARCH_SUFFIX}`);
+            currentBatch = [quotedName];
+            currentNamesLength = quotedName.length;
+          } else {
+            currentBatch.push(quotedName);
+            currentNamesLength += separatorLength + quotedName.length;
+          }
+        });
+
+        if (currentBatch.length > 0) {
+          chunks.push(`(${currentBatch.join(' OR ')})${SEARCH_SUFFIX}`);
+        }
+      }
+
+      // Render rows
+      searchResultsContainer.innerHTML = '';
+      chunks.forEach((chunkStr, idx) => {
+        const row = document.createElement('div');
+        row.className = 'search-chunk-row';
+
+        const badgeLabel = chunks.length === 1
+          ? `Full (${chunkStr.length} chars)`
+          : `Part ${idx + 1}/${chunks.length} (${chunkStr.length} chars)`;
+
+        row.innerHTML = `
+          <span class="chunk-badge" data-default="${badgeLabel}">${badgeLabel}</span>
+          <input type="text" readonly />
+          <button type="button" class="btn btn-icon" title="Copy to Clipboard">${COPY_ICON_SVG}</button>
+        `;
+
+        const input = row.querySelector('input');
+        input.value = chunkStr;
+
+        const copyBtn = row.querySelector('button');
+        const badge = row.querySelector('.chunk-badge');
+
+        copyBtn.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(chunkStr);
+            row.classList.add('copied');
+            badge.textContent = chunks.length === 1 ? '✓ Copied' : `✓ Part ${idx + 1}/${chunks.length}`;
+            copyBtn.innerHTML = `<span style="font-size:0.75rem; font-weight:bold; color:#2e7d32;">OK</span>`;
+            setTimeout(() => {
+              copyBtn.innerHTML = COPY_ICON_SVG;
+            }, 1500);
+          } catch (err) {
+            alert('Could not copy text automatically.');
+          }
+        };
+
+        searchResultsContainer.appendChild(row);
+      });
+
+      searchResultsContainer.classList.remove('hidden');
 
     } catch (err) {
       showError('Failed to generate search string: ' + err.message);
     } finally {
+      btnGenerateSearch.disabled = !searchFormatSelect.value;
       btnGenerateSearch.textContent = 'Generate String';
-    }
-  };
-
-  btnCopySearch.onclick = async () => {
-    if (!searchOutput.value) return;
-    try {
-      await navigator.clipboard.writeText(searchOutput.value);
-      const orig = btnCopySearch.innerHTML;
-      btnCopySearch.innerHTML = `<span style="font-size:0.8rem; font-weight:bold;">Copied!</span>`;
-      setTimeout(() => btnCopySearch.innerHTML = orig, 2000);
-    } catch (err) {
-      alert('Could not copy text automatically.');
     }
   };
 }

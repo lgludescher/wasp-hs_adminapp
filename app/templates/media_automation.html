@@ -46,16 +46,17 @@
     <details class="search-generator-card">
       <summary><strong>Search String Generator</strong> (Factiva/Retriever)</summary>
       <div class="search-generator-content">
-        <p class="help-text">Generate a boolean search string containing active WASP-HS members.</p>
-        <div class="search-generator-actions">
-          <button id="btn-generate-search" class="btn btn-secondary">Generate String</button>
-          <input id="search-string-output" type="text" readonly placeholder="String will appear here..." />
-          <button id="btn-copy-search" class="btn btn-icon" title="Copy to Clipboard">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-              <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-            </svg>
-          </button>
+        <p class="help-text">Select a target platform format to generate boolean search strings for all registered people.</p>
+        <div class="search-generator-controls">
+          <select id="search-format-select">
+            <option value="" disabled selected>Select target format...</option>
+            <option value="full">Retriever (Single Full String)</option>
+            <option value="1800">Factiva Standard (Max 1,800 chars / chunk)</option>
+            <option value="1000">Factiva Compact (Max 1,000 chars / chunk)</option>
+          </select>
+          <button id="btn-generate-search" class="btn btn-secondary" disabled>Generate String</button>
         </div>
+        <div id="search-results-container" class="search-results-container hidden"></div>
       </div>
     </details>
 

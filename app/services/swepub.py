@@ -21,15 +21,24 @@ SWEPUB_BIBLIOMETRICS_URL = "https://bibliometri.swepub.kb.se/api/v2/bibliometric
 
 def _build_researcher_chunks(db: Session, chunk_size: int = 12) -> List[str]:
     """Builds chunked queries for active researchers to avoid URI Too Long errors."""
-    roles = crud.list_person_roles(db, active=True)
+    # roles = crud.list_person_roles(db, active=True)
+    #
+    # unique_names = set()
+    # for pr in roles:
+    #     if pr.person:
+    #         first = pr.person.first_name.strip()
+    #         last = pr.person.last_name.strip()
+    #         if first and last:
+    #             unique_names.add(f"{first} {last}")
+
+    persons = crud.list_persons(db)
 
     unique_names = set()
-    for pr in roles:
-        if pr.person:
-            first = pr.person.first_name.strip()
-            last = pr.person.last_name.strip()
-            if first and last:
-                unique_names.add(f"{first} {last}")
+    for p in persons:
+        first = p.first_name.strip()
+        last = p.last_name.strip()
+        if first and last:
+            unique_names.add(f"{first} {last}")
 
     names_list = list(unique_names)
     chunks = []

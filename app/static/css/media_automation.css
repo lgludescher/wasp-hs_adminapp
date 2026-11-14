@@ -141,21 +141,78 @@
   margin-bottom: 0.75rem;
 }
 
-.search-generator-actions {
+.search-generator-controls {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   gap: 0.5rem;
-  max-width: 800px;
+  max-width: 600px;
 }
 
-.search-generator-actions input {
+.search-generator-controls select {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+}
+
+.search-generator-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.search-results-container {
+  margin-top: 0.85rem;
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 900px;
+  padding-right: 0.25rem;
+}
+
+.search-chunk-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chunk-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #555;
+  background: #eee;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+  white-space: nowrap;
+  min-width: 135px;
+  text-align: center;
+}
+
+.search-chunk-row input {
   flex: 1;
   padding: 0.4rem 0.75rem;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-family: monospace;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   background-color: #f9f9f9;
+  color: #333;
+}
+
+.search-chunk-row.copied .chunk-badge {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-color: #c8e6c9;
+}
+
+.search-chunk-row.copied input {
+  background-color: #f1f8e9;
+  color: #666;
 }
 
 .btn-icon {
