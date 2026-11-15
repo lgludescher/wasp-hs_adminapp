@@ -691,7 +691,7 @@ function setupModals() {
       btn.textContent = 'Upload';
 
       // Show success modal with summary
-      const msg = `Upload Complete!\nPlatform: ${summary.platform}\nParsed: ${summary.total_parsed}\nSaved: ${summary.new_saved}\nSkipped (Duplicates): ${summary.duplicates_skipped}\nErrors: ${summary.errors}`;
+      const msg = `Upload Complete!\nPlatform: ${summary.platform}\nParsed: ${summary.total_parsed}\nSaved: ${summary.new_saved}\nSkipped (Duplicates): ${summary.duplicates_skipped}\nSkipped (Outdated): ${summary.outdated_skipped}\nErrors: ${summary.errors}`;
       showModal(msg, true);
 
       loadCurrentTab();

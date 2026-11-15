@@ -3209,6 +3209,73 @@ def get_media_publication_person_roles(db: Session, pub_id: int) -> List[models.
     return q.all()  # type: ignore
 
 
+def report_media_publications(
+        db: Session,
+        search: Optional[str] = None,
+        final_status: Optional[str] = None,
+        since_date: Optional[datetime] = None,
+        until_date: Optional[datetime] = None,
+) -> List[models.MediaPublication]:
+    q = db.query(models.MediaPublication).options(
+        selectinload(models.MediaPublication.duplicates)
+    )
+
+    # 1. Base Archive Constraints: Reviewed, no errors, and primary items only
+    q = q.filter_by(
+        is_reviewed=True,
+        has_processing_error=False
+    ).filter(
+        or_(
+            models.MediaPublication.is_duplicate.is_(False),
+            models.MediaPublication.is_duplicate.is_(None)
+        )
+    )
+
+    # 2. Final Status / Outcome Filter (excludes items still in 'Ready to Publish')
+    status = (final_status or "all").lower()
+    if status == "relevant":
+        q = q.filter(
+            models.MediaPublication.is_relevant.is_(True),
+            models.MediaPublication.is_pushed_to_wp.isnot(None)
+        )
+    elif status == "published":
+        q = q.filter(models.MediaPublication.is_pushed_to_wp.is_(True))
+    elif status == "internal":
+        q = q.filter(models.MediaPublication.is_pushed_to_wp.is_(False))
+    elif status == "rejected":
+        q = q.filter(models.MediaPublication.is_relevant.is_(False))
+    else:  # "all" archived items
+        q = q.filter(
+            or_(
+                models.MediaPublication.is_relevant.is_(False),
+                models.MediaPublication.is_pushed_to_wp.isnot(None)
+            )
+        )
+
+    # 3. Date Range Filters
+    if since_date is not None:
+        q = q.filter(models.MediaPublication.published_date >= since_date)
+
+    if until_date is not None:
+        # If a date-only midnight timestamp is passed, include the full end day
+        if until_date.hour == 0 and until_date.minute == 0 and until_date.second == 0:
+            until_date = until_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+        q = q.filter(models.MediaPublication.published_date <= until_date)
+
+    # 4. Text Search (Title, Publisher, or Cited Members)
+    if search:
+        term = f"%{search.strip()}%"
+        q = q.filter(
+            or_(
+                models.MediaPublication.title.ilike(term),
+                models.MediaPublication.source_name.ilike(term),
+                models.MediaPublication.cited_members_parsed.ilike(term)
+            )
+        )
+
+    return q.order_by(desc(models.MediaPublication.published_date)).all()  # type: ignore
+
+
 def add_person_role_to_media_publication(
         db: Session, pub_id: int, in_data: schemas.MediaPublicationPersonRoleLink
 ) -> models.MediaPublicationPersonRole:
@@ -3407,6 +3474,107 @@ def get_academic_publication_person_roles(db: Session, pub_id: int) -> List[mode
             joinedload(models.AcademicPublicationPersonRole.person_role).joinedload(models.PersonRole.role)
         )
         .filter_by(academic_publication_id=pub_id)
+    )
+
+    return q.all()  # type: ignore
+
+
+def report_academic_publications(
+        db: Session,
+        search: Optional[str] = None,
+        publication_type: Optional[str] = None,
+        final_status: Optional[str] = None,
+        since_date: Optional[datetime] = None,
+        until_date: Optional[datetime] = None,
+) -> List[models.AcademicPublication]:
+    q = db.query(models.AcademicPublication).options(
+        selectinload(models.AcademicPublication.duplicates)
+    )
+
+    # 1. Base Archive Constraints: Reviewed, no errors, and primary items only
+    q = q.filter_by(
+        is_reviewed=True,
+        has_processing_error=False
+    ).filter(
+        or_(
+            models.AcademicPublication.is_duplicate.is_(False),
+            models.AcademicPublication.is_duplicate.is_(None)
+        )
+    )
+
+    # 2. Final Status / Outcome Filter (excludes items still in 'Ready to Publish')
+    status = (final_status or "all").lower()
+    if status == "relevant":
+        q = q.filter(
+            models.AcademicPublication.is_relevant.is_(True),
+            models.AcademicPublication.is_pushed_to_wp.isnot(None)
+        )
+    elif status == "published":
+        q = q.filter(models.AcademicPublication.is_pushed_to_wp.is_(True))
+    elif status == "internal":
+        q = q.filter(models.AcademicPublication.is_pushed_to_wp.is_(False))
+    elif status == "rejected":
+        q = q.filter(models.AcademicPublication.is_relevant.is_(False))
+    else:  # "all" archived items
+        q = q.filter(
+            or_(
+                models.AcademicPublication.is_relevant.is_(False),
+                models.AcademicPublication.is_pushed_to_wp.isnot(None)
+            )
+        )
+
+    # 3. Date Range Filters (falls back to published_year when published_date is None)
+    if since_date is not None:
+        q = q.filter(
+            or_(
+                and_(
+                    models.AcademicPublication.published_date.isnot(None),
+                    models.AcademicPublication.published_date >= since_date
+                ),
+                and_(
+                    models.AcademicPublication.published_date.is_(None),
+                    models.AcademicPublication.published_year >= since_date.year
+                )
+            )
+        )
+
+    if until_date is not None:
+        # If a date-only midnight timestamp is passed, include the full end day
+        if until_date.hour == 0 and until_date.minute == 0 and until_date.second == 0:
+            until_date = until_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+        q = q.filter(
+            or_(
+                and_(
+                    models.AcademicPublication.published_date.isnot(None),
+                    models.AcademicPublication.published_date <= until_date
+                ),
+                and_(
+                    models.AcademicPublication.published_date.is_(None),
+                    models.AcademicPublication.published_year <= until_date.year
+                )
+            )
+        )
+
+    # 4. Publication Type Filter (Free-text substring match)
+    if publication_type and publication_type.strip():
+        type_term = f"%{publication_type.strip()}%"
+        q = q.filter(models.AcademicPublication.publication_type.ilike(type_term))
+
+    # 5. Text Search (Title, Authors, Journal, or DOI)
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        q = q.filter(
+            or_(
+                models.AcademicPublication.title.ilike(term),
+                models.AcademicPublication.authors_raw.ilike(term),
+                models.AcademicPublication.journal_name.ilike(term),
+                models.AcademicPublication.doi.ilike(term)
+            )
+        )
+
+    q = q.order_by(
+        desc(models.AcademicPublication.published_year),
+        desc(models.AcademicPublication.published_date)
     )
 
     return q.all()  # type: ignore

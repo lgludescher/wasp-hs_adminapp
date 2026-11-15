@@ -222,10 +222,16 @@ async def upload_media_file(
     # 3. Process Items
     new_saved = 0
     duplicates = 0
+    outdated_skipped = 0
     errors = 0
     error_details = []
 
     for item in parsed_items:
+        # Filter out old publications BEFORE hitting the database
+        if item.published_date.year < 2019:
+            outdated_skipped += 1
+            continue
+
         # Type 1 Duplicate Check (Exact Ingestion Duplicate)
         is_dup = False
         if item.external_id:
@@ -283,6 +289,7 @@ async def upload_media_file(
         total_parsed=len(parsed_items),
         new_saved=new_saved,
         duplicates_skipped=duplicates,
+        outdated_skipped=outdated_skipped,
         errors=errors,
         error_details=error_details,
         dry_run=dry_run

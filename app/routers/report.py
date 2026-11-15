@@ -15,7 +15,7 @@ router = APIRouter(tags=["reports"])
 logger = logging.getLogger(__name__)
 
 
-# <editor-fold desc="Report supervisions endpoints">
+# <editor-fold desc="Report Supervisions endpoints">
 # --- Supervisions ---
 
 @router.get(
@@ -568,6 +568,301 @@ def export_semester_abroad_to_excel(
 
     # filename = f"semester_abroad_report_{datetime.now().strftime('%Y%m%d')}.xlsx"
     filename = f"semester_abroad_report.xlsx"
+
+    return StreamingResponse(
+        excel_buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+
+# </editor-fold>
+
+# <editor-fold desc="Report Media Publications endpoints">
+# --- Media Publications ---
+
+@router.get(
+    "/reports/media-publications/",
+    response_model=List[schemas.MediaPublicationRead],
+    summary="Search and Filter Archived Media Publications for Reports"
+)
+def get_media_publications_report(
+        search: Optional[str] = Query(None, description="Search by title, publisher, or cited members"),
+        final_status: Optional[str] = Query(
+            None,
+            description="Filter by outcome (relevant, published, internal, rejected, all)"
+        ),
+        since_date: Optional[datetime] = Query(None, description="Filter publications from this date onwards"),
+        until_date: Optional[datetime] = Query(None, description="Filter publications up to this date"),
+
+        # Dependencies
+        db: Session = Depends(dependencies.get_db),
+        current_user=Depends(dependencies.get_current_user),
+):
+    """
+    Generates a list of archived Media Publications (primary items with nested duplicates).
+    """
+    logger.info(f"{current_user.username} accessing media publications report")
+
+    return crud.report_media_publications(
+        db,
+        search=search,
+        final_status=final_status,
+        since_date=since_date,
+        until_date=until_date
+    )
+
+
+@router.get("/reports/media-publications/export/excel")
+def export_media_publications_to_excel(
+        search: Optional[str] = Query(None),
+        final_status: Optional[str] = Query(None),
+        since_date: Optional[datetime] = Query(None),
+        until_date: Optional[datetime] = Query(None),
+
+        db: Session = Depends(dependencies.get_db),
+        current_user=Depends(dependencies.get_current_user),
+):
+    """
+    Export the Media Publications Report to Excel.
+    """
+    logger.info(f"{current_user.username} exporting media publications report to Excel")
+
+    # 1. Fetch Data
+    publications = crud.report_media_publications(
+        db,
+        search=search,
+        final_status=final_status,
+        since_date=since_date,
+        until_date=until_date
+    )
+
+    # 2. Build Filter Summary for Header
+    filter_info = []
+    if search:
+        filter_info.append(f"Search: {search}")
+
+    status_labels = {
+        "relevant": "All Relevant (Published & Internal)",
+        "published": "Published to WP Only",
+        "internal": "Kept Internal Only",
+        "rejected": "Rejected Only",
+        "all": "All Archived"
+    }
+    status_key = (final_status or "all").lower()
+    filter_info.append(f"Status: {status_labels.get(status_key, final_status)}")
+
+    if since_date:
+        filter_info.append(f"Published From: {since_date.strftime('%Y-%m-%d')}")
+    if until_date:
+        filter_info.append(f"Published To: {until_date.strftime('%Y-%m-%d')}")
+
+    # 3. Format Data for Excel
+    data_to_export = []
+    for item in publications:
+        if item.is_pushed_to_wp is True:
+            status_display = "Published"
+        elif item.is_pushed_to_wp is False:
+            status_display = "Kept Internal"
+        elif item.is_relevant is False:
+            status_display = "Rejected"
+        else:
+            status_display = "Unknown"
+
+        dup_count = len(item.duplicates) if item.duplicates else 0
+
+        data_to_export.append({
+            "Title": item.title or "",
+            "Publisher": item.source_name or "",
+            "Published Date": item.published_date.strftime("%Y-%m-%d") if item.published_date else "",
+            "Final Status": status_display,
+            "Cited Members": item.cited_members_parsed or "",
+            "Alternate Versions": dup_count,
+            "WP Post ID": item.wp_post_id if (item.wp_post_id and item.wp_post_id > 0) else "",
+            "Content URL": item.content_url or "",
+            "Notes": item.notes or ""
+        })
+
+    headers = [
+        "Title",
+        "Publisher",
+        "Published Date",
+        "Final Status",
+        "Cited Members",
+        "Alternate Versions",
+        "WP Post ID",
+        "Content URL",
+        "Notes"
+    ]
+
+    # 4. Generate and Return
+    excel_buffer = generate_excel_response(
+        data_to_export,
+        headers,
+        "Media Publications Report",
+        filter_info=filter_info
+    )
+
+    filename = "media_publications_report.xlsx"
+
+    return StreamingResponse(
+        excel_buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+
+# </editor-fold>
+
+# <editor-fold desc="Report Academic Publications endpoints">
+# --- Academic Publications ---
+
+@router.get(
+    "/reports/academic-publications/",
+    response_model=List[schemas.AcademicPublicationRead],
+    summary="Search and Filter Archived Academic Publications for Reports"
+)
+def get_academic_publications_report(
+        search: Optional[str] = Query(None, description="Search by title, authors, journal, or DOI"),
+        publication_type: Optional[str] = Query(None, description="Filter by publication type substring"),
+        final_status: Optional[str] = Query(
+            None,
+            description="Filter by outcome (relevant, published, internal, rejected, all)"
+        ),
+        since_date: Optional[datetime] = Query(None, description="Filter publications from this date onwards"),
+        until_date: Optional[datetime] = Query(None, description="Filter publications up to this date"),
+
+        # Dependencies
+        db: Session = Depends(dependencies.get_db),
+        current_user=Depends(dependencies.get_current_user),
+):
+    """
+    Generates a list of archived Academic Publications (primary items with nested duplicates).
+    """
+    logger.info(f"{current_user.username} accessing academic publications report")
+
+    return crud.report_academic_publications(
+        db,
+        search=search,
+        publication_type=publication_type,
+        final_status=final_status,
+        since_date=since_date,
+        until_date=until_date
+    )
+
+
+@router.get("/reports/academic-publications/export/excel")
+def export_academic_publications_to_excel(
+        search: Optional[str] = Query(None),
+        publication_type: Optional[str] = Query(None),
+        final_status: Optional[str] = Query(None),
+        since_date: Optional[datetime] = Query(None),
+        until_date: Optional[datetime] = Query(None),
+
+        db: Session = Depends(dependencies.get_db),
+        current_user=Depends(dependencies.get_current_user),
+):
+    """
+    Export the Academic Publications Report to Excel.
+    """
+    logger.info(f"{current_user.username} exporting academic publications report to Excel")
+
+    # 1. Fetch Data
+    publications = crud.report_academic_publications(
+        db,
+        search=search,
+        publication_type=publication_type,
+        final_status=final_status,
+        since_date=since_date,
+        until_date=until_date
+    )
+
+    # 2. Build Filter Summary for Header
+    filter_info = []
+    if search:
+        filter_info.append(f"Search: {search}")
+    if publication_type:
+        filter_info.append(f"Type: {publication_type}")
+
+    status_labels = {
+        "relevant": "All Relevant (Published & Internal)",
+        "published": "Published to WP Only",
+        "internal": "Kept Internal Only",
+        "rejected": "Rejected Only",
+        "all": "All Archived"
+    }
+    status_key = (final_status or "all").lower()
+    filter_info.append(f"Status: {status_labels.get(status_key, final_status)}")
+
+    if since_date:
+        filter_info.append(f"Published From: {since_date.strftime('%Y-%m-%d')}")
+    if until_date:
+        filter_info.append(f"Published To: {until_date.strftime('%Y-%m-%d')}")
+
+    # 3. Format Data for Excel
+    data_to_export = []
+    for item in publications:
+        if item.is_pushed_to_wp is True:
+            status_display = "Published"
+        elif item.is_pushed_to_wp is False:
+            status_display = "Kept Internal"
+        elif item.is_relevant is False:
+            status_display = "Rejected"
+        else:
+            status_display = "Unknown"
+
+        if item.published_date:
+            published_display = item.published_date.strftime("%Y-%m-%d")
+        elif item.published_year:
+            published_display = str(item.published_year)
+        else:
+            published_display = ""
+
+        dup_count = len(item.duplicates) if item.duplicates else 0
+
+        data_to_export.append({
+            "Title": item.title or "",
+            "Authors": item.authors_raw or "",
+            "Journal / Venue": item.journal_name or "",
+            "Publication Type": item.publication_type or "",
+            "Published": published_display,
+            "Final Status": status_display,
+            "DOI": item.doi or "",
+            "SwePub ID": item.swepub_id or "",
+            "Funding Info": item.funding_info or "",
+            "Alternate Versions": dup_count,
+            "WP Post ID": item.wp_post_id if (item.wp_post_id and item.wp_post_id > 0) else "",
+            "Notes": item.notes or ""
+        })
+
+    headers = [
+        "Title",
+        "Authors",
+        "Journal / Venue",
+        "Publication Type",
+        "Published",
+        "Final Status",
+        "DOI",
+        "SwePub ID",
+        "Funding Info",
+        "Alternate Versions",
+        "WP Post ID",
+        "Notes"
+    ]
+
+    # 4. Generate and Return
+    excel_buffer = generate_excel_response(
+        data_to_export,
+        headers,
+        "Academic Publications Report",
+        filter_info=filter_info
+    )
+
+    filename = "academic_publications_report.xlsx"
 
     return StreamingResponse(
         excel_buffer,

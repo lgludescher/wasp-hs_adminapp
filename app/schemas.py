@@ -1037,6 +1037,7 @@ class MediaUploadSummary(BaseModel):
     total_parsed: int
     new_saved: int
     duplicates_skipped: int
+    outdated_skipped: int
     errors: int
     error_details: List[str]
     dry_run: bool

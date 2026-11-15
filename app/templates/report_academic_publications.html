@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/report_academic_publications.css') }}" />
+  <script type="module" src="{{ url_for('static', path='js/report_academic_publications.js') }}"></script>
+{% endblock %}
+
+{% block body %}
+  <div class="page-header">
+    <h1 class="page-title">Academic Publications Report <span id="academic-total-count" class="title-count"></span></h1>
+    <div class="export-group">
+      <button id="btn-export-excel" class="btn btn-icon" title="Export to Excel">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.17v6h5V9h3.17L12 2z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="actions-bar">
+    <div class="report-controls">
+
+      <div class="filter-row">
+        <span class="filter-group-label">Publication Criteria</span>
+        <div class="filters">
+          <label>Search:
+            <input id="filter-search" type="text" placeholder="Search title, authors, journal, or DOI..." />
+          </label>
+
+          <label>Type:
+            <input id="filter-publication-type" type="text" placeholder="e.g. article, conference..." />
+          </label>
+
+          <label>Status:
+            <select id="filter-final-status">
+              <option value="relevant" selected>All Relevant (Published &amp; Internal)</option>
+              <option value="published">Published to WP Only</option>
+              <option value="internal">Kept Internal Only</option>
+              <option value="rejected">Rejected Only</option>
+              <option value="all">All Archived</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <span class="filter-group-label">Date Range</span>
+        <div class="filters">
+          <label>Published From:
+            <input id="filter-since-date" type="date" />
+          </label>
+
+          <label>Published To:
+            <input id="filter-until-date" type="date" />
+          </label>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="list-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Authors</th>
+          <th>Journal / Venue</th>
+          <th>Type</th>
+          <th>Published&nbsp;&nbsp;&nbsp;</th>
+          <th class="cell-center">Final Status</th>
+          <th class="cell-center">WP Link</th>
+        </tr>
+      </thead>
+      <tbody id="academic-tbody">
+      </tbody>
+    </table>
+  </div>
+
+  <div id="modal-confirm" class="modal hidden">
+    <div class="modal-content">
+      <p id="modal-text"></p>
+      <div class="modal-actions">
+        <button id="modal-confirm-btn" class="btn hidden">Confirm</button>
+        <button id="modal-cancel-btn" class="btn cancel-btn">OK</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}
