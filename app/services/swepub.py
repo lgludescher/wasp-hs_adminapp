@@ -13,7 +13,7 @@ from app import crud, schemas
 logger = logging.getLogger(__name__)
 
 # Discovery API
-SWEPUB_XSEARCH_URL = "http://libris.kb.se/xsearch"
+SWEPUB_XSEARCH_URL = "https://libris.kb.se/xsearch"
 
 # Bibliometrics API (Clean, deduplicated JSON-LD / BIBFRAME version)
 SWEPUB_BIBLIOMETRICS_URL = "https://bibliometri.swepub.kb.se/api/v2/bibliometrics/publications"
@@ -35,8 +35,8 @@ def _build_researcher_chunks(db: Session, chunk_size: int = 12) -> List[str]:
 
     unique_names = set()
     for p in persons:
-        first = p.first_name.strip()
-        last = p.last_name.strip()
+        first = (p.first_name or "").strip()
+        last = (p.last_name or "").strip()
         if first and last:
             unique_names.add(f"{first} {last}")
 
@@ -58,7 +58,7 @@ def _fetch_swepub_xsearch(query_string: str) -> List[dict]:
     start = 1
     n = 200
 
-    with httpx.Client() as client:
+    with httpx.Client(follow_redirects=True) as client:
         while True:
             params = {
                 "database": "swepub",
@@ -169,7 +169,7 @@ def fetch_recent_publications(db: Session, since: Optional[datetime] = None) -> 
 
     # 5. Upgrade to Clean JSON-LD via Bibliometrics API
     final_data = []
-    with httpx.Client(timeout=15.0) as client:
+    with httpx.Client(timeout=15.0, follow_redirects=True) as client:
         for record in xsearch_raw_data:
             oai_id = None
             identifiers = record.get("identifier", [])
@@ -583,12 +583,18 @@ def save_swepub_to_db(db: Session, raw_data: List[dict]) -> int:
     items_duplicate = 0
 
     # Pre-calculate active names as (first, last) tuples for The Shield
-    active_researchers = []
-    for pr in crud.list_person_roles(db, active=True):
-        if pr.person and pr.person.first_name and pr.person.last_name:
-            first = pr.person.first_name.strip().lower()
-            last = pr.person.last_name.strip().lower()
-            active_researchers.append((first, last))
+    # active_researchers = []
+    # for pr in crud.list_person_roles(db, active=True):
+    #     if pr.person and pr.person.first_name and pr.person.last_name:
+    #         first = pr.person.first_name.strip().lower()
+    #         last = pr.person.last_name.strip().lower()
+    #         active_researchers.append((first, last))
+    persons = []
+    for p in crud.list_persons(db):
+        first = (p.first_name or "").strip().lower()
+        last = (p.last_name or "").strip().lower()
+        if first and last:
+            persons.append((first, last))
 
     for record in raw_data:
         if record.get("_format") == "bibframe":
@@ -616,7 +622,8 @@ def save_swepub_to_db(db: Session, raw_data: List[dict]) -> int:
             author_chunks = [chunk.strip() for chunk in authors_raw.lower().split(";")]
 
             is_valid = False
-            for first, last in active_researchers:
+            # for first, last in active_researchers:
+            for first, last in persons:
                 # Check if BOTH the first and last name exist in the SAME chunk
                 if any(first in chunk and last in chunk for chunk in author_chunks):
                     is_valid = True
